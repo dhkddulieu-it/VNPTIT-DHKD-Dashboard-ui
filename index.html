@@ -161,4 +161,162 @@
                     <div class="kpi-sub">Đã ký Hợp đồng</div>
                 </div>
                 <div class="kpi-card highlight-red">
-                    <div class="kpi-title">Tổng số dự án
+                    <div class="kpi-title">Tổng số dự án không thành công</div>
+                    <div class="kpi-value" id="kpi-loss-proj" style="color: var(--red);">0</div>
+                    <div class="kpi-sub">Đóng / Trượt thầu</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">Tổng số dự án đang POC</div>
+                    <div class="kpi-value" id="kpi-poc-proj">0</div>
+                    <div class="kpi-sub">Triển khai thử nghiệm</div>
+                </div>
+                <div class="kpi-card highlight-red">
+                    <div class="kpi-title">Cần LĐ chỉ đạo / hỗ trợ</div>
+                    <div class="kpi-value alert-text" id="kpi-support-proj">0</div>
+                    <div class="kpi-sub">Dự án nguy cơ cao / Vượt thẩm quyền</div>
+                </div>
+            </div>
+
+            <!-- Vùng Dữ liệu chi tiết -->
+            <div class="data-section">
+                <h3>Chi tiết Dự án CĐS Tỉnh/Thành</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Mã NV (Đề án CĐS)</th>
+                            <th>Mã Dự án</th>
+                            <th>Trạng thái Pipeline</th>
+                            <th>Giá trị dự kiến (Tỷ VNĐ)</th>
+                            <th>Tình trạng cảnh báo</th>
+                            <th>Đề xuất chỉ đạo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <!-- Data injected by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. MOCK DATA & ROLE DEFINITIONS ---
+        const currentYear = new Date().getFullYear();
+        let currentRole = "";
+
+        // Giả lập Dữ liệu Database
+        const mockDb = {
+            ceo: {
+                revenue: 3450, planPercent: 82, target: 4200, total: 312, open: 145, win: 80, loss: 12, poc: 55, support: 20,
+                provinces: [{id: "all", name: "-- Tất cả 63 Tỉnh/Thành --"}, {id: "hni", name: "Hà Nội"}, {id: "hcm", name: "TP. Hồ Chí Minh"}, {id: "cmu", name: "Cà Mau"}]
+            },
+            clo_vung_nam: {
+                revenue: 1200, planPercent: 75, target: 1600, total: 120, open: 60, win: 25, loss: 5, poc: 20, support: 10,
+                provinces: [{id: "all", name: "-- Tất cả Vùng Nam --"}, {id: "hcm", name: "TP. Hồ Chí Minh"}, {id: "cmu", name: "Cà Mau"}, {id: "bli", name: "Bạc Liêu"}]
+            },
+            clo_ca_mau: {
+                revenue: 35, planPercent: 70, target: 50, total: 15, open: 6, win: 3, loss: 1, poc: 4, support: 1,
+                provinces: [{id: "cmu", name: "TTP Cà Mau"}]
+            }
+        };
+
+        // Giả lập danh sách Dự án chi tiết (Table)
+        const mockProjects = [
+            { taskCode: "CQ_01_UBND", projCode: "eGP-26-089", status: "Thành công (Ký HĐ)", value: "15.0", alert: "Hoàn thành đúng hạn", alertType: "tag-green", directive: "-" },
+            { taskCode: "KT_04_HTX", projCode: "POC-26-001", status: "Đang POC", value: "2.5", alert: "Chậm tiến độ thiết bị", alertType: "tag-yellow", directive: "Xin ý kiến BGĐ về việc gia hạn POC thêm 2 tuần." },
+            { taskCode: "HT_02_DC", projCode: "DC-26-112", status: "Đang mở (Đàm phán)", value: "45.0", alert: "Cần hỗ trợ ngoại giao", alertType: "tag-red", directive: "Đề nghị TGĐ gặp gỡ Lãnh đạo Tỉnh để chốt phương án đầu tư." },
+            { taskCode: "DL_01_IOC", projCode: "IOC-26-004", status: "Không thành công", value: "12.0", alert: "Trượt thầu (Giá)", alertType: "tag-gray", directive: "Đã báo cáo phân tích đối thủ cạnh tranh." },
+            { taskCode: "XH_05_YTE", projCode: "HIS-26-022", status: "Đang mở (Tiếp cận)", value: "8.0", alert: "Bình thường", alertType: "tag-green", directive: "Tiếp tục bám sát Sở Y tế." }
+        ];
+
+        // --- 2. LOGIC ĐIỀU KHIỂN GIAO DIỆN ---
+        
+        // Khởi tạo danh sách Tháng
+        function initMonthFilter() {
+            const monthSelect = document.getElementById('filter-month');
+            const currentMonth = new Date().getMonth() + 1;
+            for (let i = 1; i <= 12; i++) {
+                let opt = document.createElement('option');
+                opt.value = i;
+                opt.innerHTML = `Tháng ${i}/${currentYear}`;
+                if (i === currentMonth) opt.selected = true;
+                monthSelect.appendChild(opt);
+            }
+        }
+
+        // Xử lý Đăng nhập
+        function login() {
+            currentRole = document.getElementById('role-selector').value;
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('dashboard-container').style.display = 'flex';
+            document.getElementById('main-content').style.display = 'flex';
+            
+            const roleText = document.getElementById('role-selector').options[document.getElementById('role-selector').selectedIndex].text;
+            document.getElementById('current-user-role').innerText = roleText;
+
+            initMonthFilter();
+            loadDashboardData(currentRole);
+        }
+
+        // Xử lý Đăng xuất
+        function logout() {
+            document.getElementById('auth-screen').style.display = 'flex';
+            document.getElementById('dashboard-container').style.display = 'none';
+            currentRole = "";
+        }
+
+        // Tải Dữ liệu theo Role
+        function loadDashboardData(role) {
+            const data = mockDb[role];
+            if (!data) return;
+
+            // Xây dựng Filter Tỉnh/Thành theo phân quyền
+            const provinceSelect = document.getElementById('filter-province');
+            provinceSelect.innerHTML = "";
+            data.provinces.forEach(prov => {
+                let opt = document.createElement('option');
+                opt.value = prov.id;
+                opt.innerHTML = prov.name;
+                provinceSelect.appendChild(opt);
+            });
+            if (role === 'clo_ca_mau') provinceSelect.disabled = true;
+            else provinceSelect.disabled = false;
+
+            // Cập nhật Vùng KPI
+            document.getElementById('kpi-revenue').innerText = data.revenue.toLocaleString();
+            document.getElementById('kpi-plan').innerText = data.planPercent + "%";
+            document.getElementById('kpi-plan-sub').innerText = `Mục tiêu: ${data.target.toLocaleString()} Tỷ`;
+            
+            document.getElementById('kpi-total-proj').innerText = data.total;
+            document.getElementById('kpi-open-proj').innerText = data.open;
+            document.getElementById('kpi-win-proj').innerText = data.win;
+            document.getElementById('kpi-loss-proj').innerText = data.loss;
+            document.getElementById('kpi-poc-proj').innerText = data.poc;
+            document.getElementById('kpi-support-proj').innerText = data.support;
+
+            // Cập nhật Vùng Dữ liệu chi tiết (Table)
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = "";
+            
+            // Lọc giả lập để Table trông khác nhau tùy Role
+            let renderProjects = mockProjects;
+            if (role === 'clo_ca_mau') {
+                renderProjects = [mockProjects[0], mockProjects[1]]; // Cà Mau chỉ thấy 2 dự án của mình
+            }
+
+            renderProjects.forEach(row => {
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${row.taskCode}</strong></td>
+                    <td>${row.projCode}</td>
+                    <td>${row.status}</td>
+                    <td style="font-weight:bold; color:var(--navy);">${row.value}</td>
+                    <td><span class="tag ${row.alertType}">${row.alert}</span></td>
+                    <td style="${row.alertType === 'tag-red' || row.alertType === 'tag-yellow' ? 'color:var(--red); font-weight:500;' : ''}">${row.directive}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>
