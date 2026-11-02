@@ -69,17 +69,17 @@
 </head>
 <body>
 
-    <!-- Màn hình Đăng nhập mô phỏng Role -->
+   <!-- Màn hình Đăng nhập bằng Email -->
     <div id="auth-screen">
         <div class="auth-box">
             <h2 style="color: var(--navy); margin-top: 0;">Đăng nhập Hệ thống Báo cáo</h2>
-            <p style="color: #666; font-size: 0.9rem;">Mô phỏng phân quyền dữ liệu CĐS</p>
-            <select id="role-selector">
-                <option value="ceo">Ban Tổng Giám đốc (Toàn quốc)</option>
-                <option value="clo_vung_nam">CLO Cấp 1 - Vùng Nam</option>
-                <option value="clo_ca_mau">CLO Cấp 2 - TTP Cà Mau</option>
-            </select>
-            <button onclick="login()">Truy cập Dashboard</button>
+            <p style="color: #666; font-size: 0.9rem;">Xác thực phân quyền qua Google Sheets</p>
+            
+            <input type="email" id="email-input" placeholder="Nhập email nội bộ VNPT (@vnpt.vn)" required 
+                   style="width: 100%; padding: 12px; margin-top: 20px; font-size: 1rem; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box;">
+            
+            <button id="login-btn" onclick="login()">Truy cập Dashboard</button>
+            <div id="login-error" style="color: var(--red); margin-top: 15px; font-size: 0.9rem; display: none;"></div>
         </div>
     </div>
 
@@ -245,17 +245,59 @@
         }
 
         // Xử lý Đăng nhập
-        function login() {
-            currentRole = document.getElementById('role-selector').value;
-            document.getElementById('auth-screen').style.display = 'none';
-            document.getElementById('dashboard-container').style.display = 'flex';
-            document.getElementById('main-content').style.display = 'flex';
-            
-            const roleText = document.getElementById('role-selector').options[document.getElementById('role-selector').selectedIndex].text;
-            document.getElementById('current-user-role').innerText = roleText;
+        // Dán URL Web App của Apps Script vào đây
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycb.../exec"; 
 
-            initMonthFilter();
-            loadDashboardData(currentRole);
+        async function login() {
+            const emailInput = document.getElementById('email-input').value.trim();
+            const errorDiv = document.getElementById('login-error');
+            const loginBtn = document.getElementById('login-btn');
+
+            errorDiv.style.display = 'none';
+
+            if (!emailInput) {
+                errorDiv.innerText = "Vui lòng nhập địa chỉ email.";
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            // Đổi trạng thái nút bấm
+            loginBtn.innerText = "Đang kiểm tra quyền...";
+            loginBtn.disabled = true;
+            loginBtn.style.backgroundColor = "#999";
+
+            try {
+                // Gọi API tới Google Sheets
+                const response = await fetch(SCRIPT_URL + "?email=" + encodeURIComponent(emailInput));
+                const data = await response.json();
+
+                if (data.status === "success") {
+                    currentRole = data.role;
+                    
+                    // Chuyển màn hình
+                    document.getElementById('auth-screen').style.display = 'none';
+                    document.getElementById('dashboard-container').style.display = 'flex';
+                    document.getElementById('main-content').style.display = 'flex';
+                    
+                    // Ghi nhận chức danh lên Header
+                    document.getElementById('current-user-role').innerText = data.levelName;
+
+                    initMonthFilter();
+                    loadDashboardData(currentRole);
+                } else {
+                    // Hiển thị lỗi trả về từ Sheet (sai email, không có quyền...)
+                    errorDiv.innerText = data.message;
+                    errorDiv.style.display = 'block';
+                }
+            } catch (error) {
+                errorDiv.innerText = "Lỗi kết nối đến máy chủ xác thực. Vui lòng thử lại.";
+                errorDiv.style.display = 'block';
+            } finally {
+                // Phục hồi nút bấm
+                loginBtn.innerText = "Truy cập Dashboard";
+                loginBtn.disabled = false;
+                loginBtn.style.backgroundColor = "var(--blue)";
+            }
         }
 
         // Xử lý Đăng xuất
