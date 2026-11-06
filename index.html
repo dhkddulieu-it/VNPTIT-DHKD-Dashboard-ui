@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VNPT-IT | Dashboard CĐS Tỉnh/Thành</title>
+    <title>VNPT-IT | Dashboard Pipeline Tỉnh/Thành</title>
     <style>
         :root {
             --navy: #003B7A;
@@ -105,22 +105,23 @@
                     </select>
                 </div>
                 <div class="filter-group">
-                    <label>Trụ cột CĐS</label>
-                    <select id="filter-pillar">
-                        <option value="all">-- Tất cả --</option>
-                        <option value="ht">Hạ tầng số</option>
-                        <option value="dl">Dữ liệu số</option>
-                        <option value="cq">Chính quyền số</option>
-                        <option value="kt">Kinh tế số</option>
-                        <option value="xh">Xã hội số</option>
-                    </select>
-                </div>
-                <div class="filter-group">
                     <label>Tỉnh / Thành phố</label>
                     <select id="filter-province">
                         <!-- Cấp quyền theo Role -->
                     </select>
                 </div>
+                <div class="filter-group">
+                    <label>Nhóm SPDV</label>
+                    <select id="filter-pillar">
+                        <option value="all">-- Tất cả --</option>
+                        <option value="ht">Hạ tầng số</option>
+                        <option value="dl">Dữ liệu số</option>
+                        <option value="cq">Chính quyền số</option>
+                        <option value="gd">Giáo dục số</option>
+                        <option value="yt">Y tế số</option>
+                    </select>
+                </div>
+                
                 <div class="filter-group">
                     <label>PLO (Product Line Owner)</label>
                     <select id="filter-plo">
