@@ -87,7 +87,7 @@
     <div id="dashboard-container" class="dashboard-container" style="display: none;">
         <header>
             <div class="logo-title">
-                COMMAND CENTER | THEO DÕI PIPELINE DỰ ÁN CĐS
+                COMMAND CENTER | THEO DÕI PIPELINE DỰ ÁN
             </div>
             <div class="user-info">
                 Đang truy cập: <span id="current-user-role"></span>
@@ -125,9 +125,21 @@
                     <label>PLO (Product Line Owner)</label>
                     <select id="filter-plo">
                         <option value="all">-- Tất cả --</option>
-                        <option value="plo1">Ban Khách hàng Tổ chức Doanh nghiệp</option>
-                        <option value="plo2">Ban Giải pháp Y tế & Giáo dục</option>
-                        <option value="plo3">Trung tâm An toàn thông tin</option>
+                        <option value="plo1">Đảm bảo an toàn thông tin</option>
+                        <option value="plo2">Hạ tầng số</option>
+                        <option value="plo3">Nền tảng số</option>
+                        <option value="plo4">Công chức số</option>
+                        <option value="plo5">Hành chính số</option>
+                        <option value="plo6">Văn phòng số</option>
+                        <option value="plo7">Chuyển đổi số Giáo dục</option>
+                        <option value="plo8">Nền tảng chỉ đạo, điều hành trên dữ liệu</option>
+                        <option value="plo9">Nền tảng kết nối tích hợp khai thác dữ liệu</option>
+                        <option value="plo10">Chuyển đổi số trong khám chữa bệnh</option>
+                        <option value="plo11">Chuyển đổi số trong quản lý Y tế dự phòng</option>
+                        <option value="plo12">Quản lý đất đai và tài nguyên</option>
+                        <option value="plo13">Cơ sở dữ liệu đa ngành</option>
+                        <option value="plo14">Giải pháp xây dựng, hạ tầng đô thị</option>
+                        <option value="plo15">Chuyển đổi số ngành nông nghiệp</option>
                     </select>
                 </div>
             </div>
@@ -208,7 +220,7 @@
         const mockDb = {
             ceo: {
                 revenue: 3450, planPercent: 82, target: 4200, total: 312, open: 145, win: 80, loss: 12, poc: 55, support: 20,
-                provinces: [{id: "all", name: "-- Tất cả 63 Tỉnh/Thành --"}, {id: "hni", name: "Hà Nội"}, {id: "hcm", name: "TP. Hồ Chí Minh"}, {id: "cmu", name: "Cà Mau"}]
+                provinces: [{id: "all", name: "-- Tất cả 34 Tỉnh/Thành --"}, {id: "hni", name: "Hà Nội"}, {id: "hcm", name: "TP. Hồ Chí Minh"}, {id: "cmu", name: "Cà Mau"}]
             },
             clo_vung_nam: {
                 revenue: 1200, planPercent: 75, target: 1600, total: 120, open: 60, win: 25, loss: 5, poc: 20, support: 10,
@@ -254,38 +266,58 @@
             const loginBtn = document.getElementById('login-btn');
 
             errorDiv.style.display = 'none';
-
             if (!emailInput) {
                 errorDiv.innerText = "Vui lòng nhập địa chỉ email.";
                 errorDiv.style.display = 'block';
                 return;
             }
 
-            // Đổi trạng thái nút bấm
-            loginBtn.innerText = "Đang kiểm tra quyền...";
+            loginBtn.innerText = "Đang kiểm tra quyền và nạp dữ liệu TTP...";
             loginBtn.disabled = true;
             loginBtn.style.backgroundColor = "#999";
 
             try {
-                // Gọi API tới Google Sheets
                 const response = await fetch(SCRIPT_URL + "?email=" + encodeURIComponent(emailInput));
                 const data = await response.json();
 
                 if (data.status === "success") {
-                    currentRole = data.role;
-                    
-                    // Chuyển màn hình
+                    // 1. Chuyển màn hình
                     document.getElementById('auth-screen').style.display = 'none';
                     document.getElementById('dashboard-container').style.display = 'flex';
                     document.getElementById('main-content').style.display = 'flex';
                     
-                    // Ghi nhận chức danh lên Header
+                    // 2. Ghi nhận chức danh lên Header (VD: Hiển thị CLO_L1_MN)
                     document.getElementById('current-user-role').innerText = data.levelName;
 
                     initMonthFilter();
-                    loadDashboardData(currentRole);
+                    
+                    // 3. TỰ ĐỘNG ĐIỀN DANH SÁCH TỈNH VÀO DROPDOWN DỰA TRÊN DATABASE
+                    const provinceSelect = document.getElementById('filter-province');
+                    provinceSelect.innerHTML = "";
+                    
+                    // Nếu danh sách trả về có nhiều hơn 1 Tỉnh (tức là cấp Vùng/Toàn quốc), thêm dòng "Tất cả"
+                    if (data.provinces.length > 1) {
+                        let optAll = document.createElement('option');
+                        optAll.value = "all";
+                        optAll.innerHTML = `-- Tất cả (${data.provinces.length} Tỉnh/Thành) --`;
+                        provinceSelect.appendChild(optAll);
+                    } else {
+                        // Nếu là cấp Tỉnh thì khóa luôn Dropdown, không cho chọn tỉnh khác
+                        provinceSelect.disabled = true; 
+                    }
+                    
+                    // Lặp qua mảng provinces trả về từ Google Sheet để gắn vào HTML
+                    data.provinces.forEach(prov => {
+                        let opt = document.createElement('option');
+                        opt.value = prov.id;
+                        opt.innerHTML = prov.name;
+                        provinceSelect.appendChild(opt);
+                    });
+                    
+                    // Tạm thời hiển thị KPI mẫu (bước tiếp theo ta sẽ gọi API cho dữ liệu thực)
+                    // loadDashboardData(data.level); 
+
                 } else {
-                    // Hiển thị lỗi trả về từ Sheet (sai email, không có quyền...)
                     errorDiv.innerText = data.message;
                     errorDiv.style.display = 'block';
                 }
@@ -293,7 +325,6 @@
                 errorDiv.innerText = "Lỗi kết nối đến máy chủ xác thực. Vui lòng thử lại.";
                 errorDiv.style.display = 'block';
             } finally {
-                // Phục hồi nút bấm
                 loginBtn.innerText = "Truy cập Dashboard";
                 loginBtn.disabled = false;
                 loginBtn.style.backgroundColor = "var(--blue)";
