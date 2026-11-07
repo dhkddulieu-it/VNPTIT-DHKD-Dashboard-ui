@@ -296,18 +296,26 @@
                     const provinceSelect = document.getElementById('filter-province');
                     provinceSelect.innerHTML = "";
                     
-                    // Nếu danh sách trả về có nhiều hơn 1 Tỉnh (tức là cấp Vùng/Toàn quốc), thêm dòng "Tất cả"
+                    // Nếu là Level 0 hoặc CLO Vùng (Có nhiều hơn 1 tỉnh)
                     if (data.provinces.length > 1) {
                         let optAll = document.createElement('option');
                         optAll.value = "all";
-                        optAll.innerHTML = `-- Tất cả (${data.provinces.length} Tỉnh/Thành) --`;
+                        
+                        // Đổi text hiển thị: Nếu mảng trả về đủ 63 tỉnh thì ghi là Toàn quốc
+                        if (data.level == "0" || data.provinces.length >= 60) {
+                            optAll.innerHTML = `-- Toàn quốc (${data.provinces.length} Tỉnh/Thành) --`;
+                        } else {
+                            optAll.innerHTML = `-- Toàn vùng (${data.provinces.length} Tỉnh/Thành) --`;
+                        }
+                        
                         provinceSelect.appendChild(optAll);
+                        provinceSelect.disabled = false; // Mở khóa Dropdown cho phép chọn từng tỉnh
                     } else {
-                        // Nếu là cấp Tỉnh thì khóa luôn Dropdown, không cho chọn tỉnh khác
+                        // Nếu là cấp TTP (Chỉ có 1 tỉnh) thì khóa Dropdown
                         provinceSelect.disabled = true; 
                     }
                     
-                    // Lặp qua mảng provinces trả về từ Google Sheet để gắn vào HTML
+                    // Nạp danh sách các tỉnh vào Dropdown
                     data.provinces.forEach(prov => {
                         let opt = document.createElement('option');
                         opt.value = prov.id;
