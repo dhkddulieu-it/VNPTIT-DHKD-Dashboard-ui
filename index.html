@@ -285,34 +285,31 @@
                     // 1. Chuyển màn hình
                     document.getElementById('auth-screen').style.display = 'none';
                     document.getElementById('dashboard-container').style.display = 'flex';
-                    document.getElementById('main-content').style.display = 'flex';
-                    
-                    // 2. Ghi nhận chức danh lên Header (VD: Hiển thị CLO_L1_MN)
-                    document.getElementById('current-user-role').innerText = data.levelName;
+    
+                    // 2. Đẩy đúng Cột N vào mục "Đang truy cập" trên Header
+                    document.getElementById('current-user-role').innerText = data.colN_MaQuanLy;
+    
+                    // 3. Xử lý Dropdown Tỉnh/Thành
+                    const provSelect = document.getElementById('filter-province');
+                    provSelect.innerHTML = "";
 
-                    initMonthFilter();
-                    
-                    // 3. TỰ ĐỘNG ĐIỀN DANH SÁCH TỈNH VÀO DROPDOWN DỰA TRÊN DATABASE
-                    const provinceSelect = document.getElementById('filter-province');
-                    provinceSelect.innerHTML = "";
-                    
-                    // Nếu là Level 0 hoặc CLO Vùng (Có nhiều hơn 1 tỉnh)
-                    if (data.provinces.length > 1) {
-                        let optAll = document.createElement('option');
-                        optAll.value = "all";
-                        
-                        // Đổi text hiển thị: Nếu mảng trả về đủ 63 tỉnh thì ghi là Toàn quốc
-                        if (data.level == "0" || data.provinces.length >= 60) {
-                            optAll.innerHTML = `-- Toàn quốc (${data.provinces.length} Tỉnh/Thành) --`;
-                        } else {
-                            optAll.innerHTML = `-- Toàn vùng (${data.provinces.length} Tỉnh/Thành) --`;
-                        }
-                        
-                        provinceSelect.appendChild(optAll);
-                        provinceSelect.disabled = false; // Mở khóa Dropdown cho phép chọn từng tỉnh
+                    // Gắn giá trị Cột L làm Option mặc định (Giá trị value="all" để lúc lọc không bị lỗi logic)
+                    let optAll = document.createElement('option');
+                    optAll.value = "all";
+                    optAll.innerHTML = data.colL_UserName; 
+                    provSelect.appendChild(optAll);
+    
+                    // Nếu tài khoản được phân quyền > 1 tỉnh, liệt kê danh sách tỉnh ở dưới để khoan sâu (drill-down)
+                    if (data.allowedProvinces.length > 1) {
+                        provSelect.disabled = false;
+                        data.allowedProvinces.forEach(p => {
+                            let opt = document.createElement('option');
+                            opt.value = p;
+                            opt.innerHTML = p;
+                            provSelect.appendChild(opt);
+                        });
                     } else {
-                        // Nếu là cấp TTP (Chỉ có 1 tỉnh) thì khóa Dropdown
-                        provinceSelect.disabled = true; 
+                        provSelect.disabled = true; // Khóa cứng dropdown nếu chỉ quản lý 1 TTP
                     }
                     
                     // Nạp danh sách các tỉnh vào Dropdown
