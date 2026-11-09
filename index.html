@@ -3,398 +3,226 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VNPT-IT | Dashboard Pipeline Tỉnh/Thành</title>
+    <title>VNPT-IT | CRM Dashboard</title>
     <style>
         :root {
-            --navy: #003B7A;
-            --blue: #0094D9;
-            --green: #28a745;
-            --red: #dc3545;
-            --yellow: #ffc107;
-            --bg-light: #f4f7f6;
-            --text-dark: #333;
-            --border-color: #e0e0e0;
+            --bg-color: #f0f4f8; --text-dark: #333; --border-color: #e0e0e0; --navy: #003B7A;
+            --c-total-sales: linear-gradient(135deg, #5b51d8, #6f64e6);
+            --c-won-deals: linear-gradient(135deg, #0d5c9e, #1374c4);
+            --c-win-rate: linear-gradient(135deg, #18b982, #1fd396);
+            --c-avg-days: linear-gradient(135deg, #df5b6e, #f1687d);
+            --c-pipe-val: linear-gradient(135deg, #8854b9, #9e64d6);
+            --c-open-deals: linear-gradient(135deg, #5b51d8, #6f64e6);
+            --c-exp-rev: linear-gradient(135deg, #0d5c9e, #1374c4);
+            --c-avg-age: linear-gradient(135deg, #18b982, #1fd396);
         }
-        body, html { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-light); color: var(--text-dark); }
+        body, html { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); color: var(--text-dark); }
         
         /* Layout */
-        .dashboard-container { max-width: 1600px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
-        
-        /* Header */
-        header { background-color: var(--navy); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        .logo-title { font-size: 1.2rem; font-weight: bold; display: flex; align-items: center; gap: 10px; }
-        .user-info span { font-weight: bold; color: var(--blue); background: white; padding: 4px 10px; border-radius: 4px; margin-left: 10px; cursor: pointer; }
-        
-        /* Auth Screen */
         #auth-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: var(--navy); }
         .auth-box { background: white; padding: 40px; border-radius: 8px; width: 450px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-        .auth-box select, .auth-box button { width: 100%; padding: 12px; margin-top: 20px; font-size: 1rem; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
-        .auth-box button { background-color: var(--blue); color: white; border: none; font-weight: bold; cursor: pointer; }
+        .auth-box input, .auth-box button { width: 100%; padding: 12px; margin-top: 20px; font-size: 1rem; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
+        .auth-box button { background-color: #0094D9; color: white; border: none; font-weight: bold; cursor: pointer; }
         
-        /* Main Content */
-        #main-content { padding: 20px 30px; display: none; flex-direction: column; gap: 20px; }
+        header { background-color: var(--navy); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        #dashboard-container { display: none; padding: 20px 40px; flex-direction: column; gap: 20px; }
         
-        /* Filters Area */
-        .filter-bar { background: white; padding: 15px 20px; border-radius: 8px; display: flex; gap: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); align-items: center; flex-wrap: wrap; border-left: 4px solid var(--blue); }
-        .filter-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 150px; }
-        .filter-group label { font-size: 0.85rem; font-weight: bold; color: var(--navy); }
-        .filter-group select { padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.95rem; outline: none; }
+        /* Filters */
+        .filter-bar { background: white; padding: 20px; border-radius: 12px; display: flex; gap: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); flex-wrap: wrap; border: 1px solid var(--border-color); }
+        .filter-group { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 180px; }
+        .filter-group label { font-size: 0.85rem; font-weight: 600; color: #555; }
+        .filter-group select, .filter-group input { padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.95rem; outline: none; }
         
-        /* KPI Grid - 4x2 Layout */
-        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
-        .kpi-card { background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 3px solid var(--navy); display: flex; flex-direction: column; justify-content: space-between; }
-        .kpi-card.highlight-green { border-top-color: var(--green); }
-        .kpi-card.highlight-red { border-top-color: var(--red); }
-        .kpi-title { font-size: 0.85rem; color: #666; text-transform: uppercase; font-weight: 600; line-height: 1.3; margin-bottom: 5px; height: 32px;}
-        .kpi-value { font-size: 1.8rem; font-weight: bold; color: var(--navy); }
-        .kpi-sub { font-size: 0.8rem; color: #888; margin-top: 5px; }
+        /* KPIs */
+        .kpi-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 15px; }
+        .kpi-card { padding: 20px; border-radius: 12px; color: white; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .kpi-card .title { font-size: 0.9rem; margin-bottom: 8px; font-weight: 500; }
+        .kpi-card .value { font-size: 2rem; font-weight: bold; margin-bottom: 5px; line-height: 1.1; }
         
-        /* Data Table */
-        .data-section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); overflow-x: auto; }
-        .data-section h3 { margin: 0 0 15px 0; color: var(--navy); }
-        table { width: 100%; border-collapse: collapse; min-width: 1000px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border-color); font-size: 0.95rem; }
-        th { background-color: var(--navy); color: white; font-weight: 500; white-space: nowrap; }
-        tbody tr:hover { background-color: #f9fbff; }
-        
-        /* Status Tags */
-        .tag { padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: bold; display: inline-block; white-space: nowrap;}
-        .tag-green { background: #e6f4ea; color: #1e8e3e; }
-        .tag-yellow { background: #fef7e0; color: #b06000; }
-        .tag-red { background: #fce8e6; color: #d93025; }
-        .tag-gray { background: #f1f3f4; color: #5f6368; }
-        
-        .alert-text { color: var(--red); font-weight: bold; }
+        .c1 { background: var(--c-total-sales); } .c2 { background: var(--c-won-deals); } .c3 { background: var(--c-win-rate); } .c4 { background: var(--c-avg-days); }
+        .c5 { background: var(--c-pipe-val); } .c6 { background: var(--c-open-deals); } .c7 { background: var(--c-exp-rev); } .c8 { background: var(--c-avg-age); }
     </style>
 </head>
 <body>
 
-   <!-- Màn hình Đăng nhập bằng Email -->
     <div id="auth-screen">
         <div class="auth-box">
-            <h2 style="color: var(--navy); margin-top: 0;">Đăng nhập Hệ thống Báo cáo</h2>
-            <p style="color: #666; font-size: 0.9rem;">Xác thực phân quyền qua Google Sheets</p>
-            
-            <input type="email" id="email-input" placeholder="Nhập email nội bộ VNPT (@vnpt.vn)" required 
-                   style="width: 100%; padding: 12px; margin-top: 20px; font-size: 1rem; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box;">
-            
-            <button id="login-btn" onclick="login()">Truy cập Dashboard</button>
-            <div id="login-error" style="color: var(--red); margin-top: 15px; font-size: 0.9rem; display: none;"></div>
+            <h2 style="color: var(--navy); margin-top: 0;">Đăng nhập Dashboard</h2>
+            <input type="email" id="email-input" placeholder="Nhập email nội bộ VNPT" required>
+            <button id="login-btn" onclick="login()">Truy cập</button>
+            <div id="login-error" style="color: red; margin-top: 15px; font-size: 0.9rem; display: none;"></div>
         </div>
     </div>
 
-    <!-- Màn hình Dashboard -->
-    <div id="dashboard-container" class="dashboard-container" style="display: none;">
+    <div id="dashboard-container">
         <header>
-            <div class="logo-title">
-                COMMAND CENTER | THEO DÕI PIPELINE DỰ ÁN
-            </div>
-            <div class="user-info">
-                Đang truy cập: <span id="current-user-role"></span>
-                <span onclick="logout()" style="background: var(--red); color: white;">Thoát</span>
+            <div style="font-weight: bold; font-size:1.2rem;">COMMAND CENTER</div>
+            <div style="font-size: 0.9rem;">
+                Đang truy cập: <span id="current-user-role" style="font-weight: bold; color: #0094D9; background: white; padding: 4px 10px; border-radius: 4px; margin-left: 10px;"></span>
             </div>
         </header>
 
-        <div id="main-content">
-            <!-- Vùng Điều hướng (Filters) -->
-            <div class="filter-bar">
-                <div class="filter-group">
-                    <label>Tháng báo cáo</label>
-                    <select id="filter-month">
-                        <!-- Options generated by JS -->
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>Tỉnh / Thành phố</label>
-                    <select id="filter-province">
-                        <!-- Cấp quyền theo Role -->
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>Nhóm SPDV</label>
-                    <select id="filter-pillar">
-                        <option value="all">-- Tất cả --</option>
-                        <option value="ht">Hạ tầng số</option>
-                        <option value="dl">Dữ liệu số</option>
-                        <option value="cq">Chính quyền số</option>
-                        <option value="gd">Giáo dục số</option>
-                        <option value="yt">Y tế số</option>
-                    </select>
-                </div>
-                
-                <div class="filter-group">
-                    <label>PLO (Product Line Owner)</label>
-                    <select id="filter-plo">
-                        <option value="all">-- Tất cả --</option>
-                        <option value="plo1">Đảm bảo an toàn thông tin</option>
-                        <option value="plo2">Hạ tầng số</option>
-                        <option value="plo3">Nền tảng số</option>
-                        <option value="plo4">Công chức số</option>
-                        <option value="plo5">Hành chính số</option>
-                        <option value="plo6">Văn phòng số</option>
-                        <option value="plo7">Chuyển đổi số Giáo dục</option>
-                        <option value="plo8">Nền tảng chỉ đạo, điều hành trên dữ liệu</option>
-                        <option value="plo9">Nền tảng kết nối tích hợp khai thác dữ liệu</option>
-                        <option value="plo10">Chuyển đổi số trong khám chữa bệnh</option>
-                        <option value="plo11">Chuyển đổi số trong quản lý Y tế dự phòng</option>
-                        <option value="plo12">Quản lý đất đai và tài nguyên</option>
-                        <option value="plo13">Cơ sở dữ liệu đa ngành</option>
-                        <option value="plo14">Giải pháp xây dựng, hạ tầng đô thị</option>
-                        <option value="plo15">Chuyển đổi số ngành nông nghiệp</option>
-                    </select>
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label>Owner: Tỉnh/Thành</label>
+                <select id="filter-province" onchange="calculateMetrics()"></select>
+            </div>
+            <div class="filter-group">
+                <label>Opportunity: Stage</label>
+                <select id="filter-stage" onchange="calculateMetrics()">
+                    <option value="all">All</option>
+                    <option value="7">7-Ký Hợp Đồng</option>
+                    <option value="5">5-Đấu Thầu</option>
+                    <option value="4">4-Trình Diễn POC</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Opportunity: Type</label>
+                <select id="filter-type" onchange="calculateMetrics()">
+                    <option value="all">All</option>
+                    <option value="Chính quyền số">Chính quyền số</option>
+                    <option value="Hạ tầng số">Hạ tầng số</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Opportunity: Created date</label>
+                <div style="display:flex; gap:10px;">
+                    <input type="date" id="date-from" value="2026-01-01" style="width:50%" onchange="calculateMetrics()">
+                    <input type="date" id="date-to" value="2027-12-31" style="width:50%" onchange="calculateMetrics()">
                 </div>
             </div>
+        </div>
 
-            <!-- Vùng KPI -->
-            <div class="kpi-grid">
-                <div class="kpi-card highlight-green">
-                    <div class="kpi-title">Tổng DT thực hiện đến tháng</div>
-                    <div class="kpi-value" id="kpi-revenue">0</div>
-                    <div class="kpi-sub">Tỷ VNĐ</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-title">% Hoàn thành KH Năm</div>
-                    <div class="kpi-value" id="kpi-plan">0%</div>
-                    <div class="kpi-sub" id="kpi-plan-sub">Mục tiêu: 0 Tỷ</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-title">Tổng số dự án</div>
-                    <div class="kpi-value" id="kpi-total-proj">0</div>
-                    <div class="kpi-sub">Dự án trong Pipeline</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-title">Tổng số dự án đang mở</div>
-                    <div class="kpi-value" id="kpi-open-proj">0</div>
-                    <div class="kpi-sub">Giai đoạn Tiếp cận & Đàm phán</div>
-                </div>
-                
-                <div class="kpi-card highlight-green">
-                    <div class="kpi-title">Tổng số dự án thành công</div>
-                    <div class="kpi-value" id="kpi-win-proj" style="color: var(--green);">0</div>
-                    <div class="kpi-sub">Đã ký Hợp đồng</div>
-                </div>
-                <div class="kpi-card highlight-red">
-                    <div class="kpi-title">Tổng số dự án không thành công</div>
-                    <div class="kpi-value" id="kpi-loss-proj" style="color: var(--red);">0</div>
-                    <div class="kpi-sub">Đóng / Trượt thầu</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-title">Tổng số dự án đang POC</div>
-                    <div class="kpi-value" id="kpi-poc-proj">0</div>
-                    <div class="kpi-sub">Triển khai thử nghiệm</div>
-                </div>
-                <div class="kpi-card highlight-red">
-                    <div class="kpi-title">Cần LĐ chỉ đạo / hỗ trợ</div>
-                    <div class="kpi-value alert-text" id="kpi-support-proj">0</div>
-                    <div class="kpi-sub">Dự án nguy cơ cao / Vượt thẩm quyền</div>
-                </div>
-            </div>
-
-            <!-- Vùng Dữ liệu chi tiết -->
-            <div class="data-section">
-                <h3>Chi tiết Dự án CĐS Tỉnh/Thành</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Mã NV (Đề án CĐS)</th>
-                            <th>Mã Dự án</th>
-                            <th>Trạng thái Pipeline</th>
-                            <th>Giá trị dự kiến (Tỷ VNĐ)</th>
-                            <th>Tình trạng cảnh báo</th>
-                            <th>Đề xuất chỉ đạo</th>
-                        </tr>
-                    </thead>
-                    <tbody id="table-body">
-                        <!-- Data injected by JS -->
-                    </tbody>
-                </table>
-            </div>
+        <div class="kpi-grid">
+            <div class="kpi-card c1"><div class="title">Total sales</div><div class="value" id="kpi-total-sales">0</div></div>
+            <div class="kpi-card c2"><div class="title">Won deals</div><div class="value" id="kpi-won-deals">0</div></div>
+            <div class="kpi-card c3"><div class="title">Win rate</div><div class="value" id="kpi-win-rate">0%</div></div>
+            <div class="kpi-card c4"><div class="title">Avg days to close</div><div class="value" id="kpi-avg-days">0</div></div>
+            <div class="kpi-card c5"><div class="title">Pipeline value</div><div class="value" id="kpi-pipe-val">0</div></div>
+            <div class="kpi-card c6"><div class="title">Open deals</div><div class="value" id="kpi-open-deals">0</div></div>
+            <div class="kpi-card c7"><div class="title">Expected revenue</div><div class="value" id="kpi-exp-rev">0</div></div>
+            <div class="kpi-card c8"><div class="title">Avg open deal age</div><div class="value" id="kpi-avg-age">0</div></div>
         </div>
     </div>
 
     <script>
-        // --- 1. MOCK DATA & ROLE DEFINITIONS ---
-        const currentYear = new Date().getFullYear();
-        let currentRole = "";
-
-        // Giả lập Dữ liệu Database
-        const mockDb = {
-            ceo: {
-                revenue: 3450, planPercent: 82, target: 4200, total: 312, open: 145, win: 80, loss: 12, poc: 55, support: 20,
-                provinces: [{id: "all", name: "-- Tất cả 34 Tỉnh/Thành --"}, {id: "hni", name: "Hà Nội"}, {id: "hcm", name: "TP. Hồ Chí Minh"}, {id: "cmu", name: "Cà Mau"}]
-            },
-            clo_vung_nam: {
-                revenue: 1200, planPercent: 75, target: 1600, total: 120, open: 60, win: 25, loss: 5, poc: 20, support: 10,
-                provinces: [{id: "all", name: "-- Tất cả Vùng Nam --"}, {id: "hcm", name: "TP. Hồ Chí Minh"}, {id: "cmu", name: "Cà Mau"}, {id: "bli", name: "Bạc Liêu"}]
-            },
-            clo_ca_mau: {
-                revenue: 35, planPercent: 70, target: 50, total: 15, open: 6, win: 3, loss: 1, poc: 4, support: 1,
-                provinces: [{id: "cmu", name: "TTP Cà Mau"}]
-            }
-        };
-
-        // Giả lập danh sách Dự án chi tiết (Table)
-        const mockProjects = [
-            { taskCode: "CQ_01_UBND", projCode: "eGP-26-089", status: "Thành công (Ký HĐ)", value: "15.0", alert: "Hoàn thành đúng hạn", alertType: "tag-green", directive: "-" },
-            { taskCode: "KT_04_HTX", projCode: "POC-26-001", status: "Đang POC", value: "2.5", alert: "Chậm tiến độ thiết bị", alertType: "tag-yellow", directive: "Xin ý kiến BGĐ về việc gia hạn POC thêm 2 tuần." },
-            { taskCode: "HT_02_DC", projCode: "DC-26-112", status: "Đang mở (Đàm phán)", value: "45.0", alert: "Cần hỗ trợ ngoại giao", alertType: "tag-red", directive: "Đề nghị TGĐ gặp gỡ Lãnh đạo Tỉnh để chốt phương án đầu tư." },
-            { taskCode: "DL_01_IOC", projCode: "IOC-26-004", status: "Không thành công", value: "12.0", alert: "Trượt thầu (Giá)", alertType: "tag-gray", directive: "Đã báo cáo phân tích đối thủ cạnh tranh." },
-            { taskCode: "XH_05_YTE", projCode: "HIS-26-022", status: "Đang mở (Tiếp cận)", value: "8.0", alert: "Bình thường", alertType: "tag-green", directive: "Tiếp tục bám sát Sở Y tế." }
-        ];
-
-        // --- 2. LOGIC ĐIỀU KHIỂN GIAO DIỆN ---
-        
-        // Khởi tạo danh sách Tháng
-        function initMonthFilter() {
-            const monthSelect = document.getElementById('filter-month');
-            const currentMonth = new Date().getMonth() + 1;
-            for (let i = 1; i <= 12; i++) {
-                let opt = document.createElement('option');
-                opt.value = i;
-                opt.innerHTML = `Tháng ${i}/${currentYear}`;
-                if (i === currentMonth) opt.selected = true;
-                monthSelect.appendChild(opt);
-            }
-        }
-
-        // Xử lý Đăng nhập
-        // Dán URL Web App của Apps Script vào đây
+        // QUAN TRỌNG: SỬA ĐƯỜNG LINK WEB APP CỦA BẠN VÀO ĐÂY
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx2MtNKD9w7zDl2eosyOJ71gI9_eXApwgLNUqWxrn0-tW4L5oDDZT8rMNjO0ShRD7V6/exec"; 
+        
+        let dbPipeline = [];
+        let allowedProvincesList = [];
 
         async function login() {
             const emailInput = document.getElementById('email-input').value.trim();
-            const errorDiv = document.getElementById('login-error');
-            const loginBtn = document.getElementById('login-btn');
+            const err = document.getElementById('login-error');
+            const btn = document.getElementById('login-btn');
+            err.style.display = 'none';
 
-            errorDiv.style.display = 'none';
-            if (!emailInput) {
-                errorDiv.innerText = "Vui lòng nhập địa chỉ email.";
-                errorDiv.style.display = 'block';
-                return;
-            }
+            if (!emailInput) { err.innerText = "Vui lòng nhập email"; err.style.display = 'block'; return; }
 
-            loginBtn.innerText = "Đang kiểm tra quyền và nạp dữ liệu TTP...";
-            loginBtn.disabled = true;
-            loginBtn.style.backgroundColor = "#999";
+            btn.innerText = "Đang đồng bộ dữ liệu...";
+            btn.disabled = true;
 
             try {
                 const response = await fetch(SCRIPT_URL + "?email=" + encodeURIComponent(emailInput));
                 const data = await response.json();
 
                 if (data.status === "success") {
-                    // 1. Chuyển màn hình
                     document.getElementById('auth-screen').style.display = 'none';
                     document.getElementById('dashboard-container').style.display = 'flex';
-    
-                    // 2. Đẩy đúng Cột N vào mục "Đang truy cập" trên Header
+                    
+                    // Hiện đúng Mã Quản Lý (Cột N) lên Header
                     document.getElementById('current-user-role').innerText = data.colN_MaQuanLy;
-    
-                    // 3. Xử lý Dropdown Tỉnh/Thành
+
+                    dbPipeline = data.pipelineData;
+                    allowedProvincesList = data.allowedProvinces;
+
+                    // Xử lý Dropdown Tỉnh/Thành
                     const provSelect = document.getElementById('filter-province');
                     provSelect.innerHTML = "";
-
-                    // Gắn giá trị Cột L làm Option mặc định (Giá trị value="all" để lúc lọc không bị lỗi logic)
+                    
+                    // Hiện đúng Tên Người Dùng (Cột L) làm mục All
                     let optAll = document.createElement('option');
                     optAll.value = "all";
                     optAll.innerHTML = data.colL_UserName; 
                     provSelect.appendChild(optAll);
-    
-                    // Nếu tài khoản được phân quyền > 1 tỉnh, liệt kê danh sách tỉnh ở dưới để khoan sâu (drill-down)
-                    if (data.allowedProvinces.length > 1) {
+
+                    if (allowedProvincesList.length > 1) {
                         provSelect.disabled = false;
-                        data.allowedProvinces.forEach(p => {
+                        allowedProvincesList.forEach(p => {
                             let opt = document.createElement('option');
-                            opt.value = p;
-                            opt.innerHTML = p;
+                            opt.value = p; opt.innerHTML = p;
                             provSelect.appendChild(opt);
                         });
                     } else {
-                        provSelect.disabled = true; // Khóa cứng dropdown nếu chỉ quản lý 1 TTP
+                        provSelect.disabled = true; // Khóa dropdown nếu chỉ có 1 tỉnh
                     }
-                    
-                    // Nạp danh sách các tỉnh vào Dropdown
-                    data.provinces.forEach(prov => {
-                        let opt = document.createElement('option');
-                        opt.value = prov.id;
-                        opt.innerHTML = prov.name;
-                        provinceSelect.appendChild(opt);
-                    });
-                    
-                    // Tạm thời hiển thị KPI mẫu (bước tiếp theo ta sẽ gọi API cho dữ liệu thực)
-                    // loadDashboardData(data.level); 
 
+                    // Gọi hàm tính toán để đổ số ra màn hình
+                    calculateMetrics();
                 } else {
-                    errorDiv.innerText = data.message;
-                    errorDiv.style.display = 'block';
+                    err.innerText = data.message;
+                    err.style.display = 'block';
                 }
             } catch (error) {
-                errorDiv.innerText = "Lỗi kết nối đến máy chủ xác thực. Vui lòng thử lại.";
-                errorDiv.style.display = 'block';
+                err.innerText = "Lỗi kết nối máy chủ. Thử lại sau.";
+                err.style.display = 'block';
             } finally {
-                loginBtn.innerText = "Truy cập Dashboard";
-                loginBtn.disabled = false;
-                loginBtn.style.backgroundColor = "var(--blue)";
+                btn.innerText = "Truy cập";
+                btn.disabled = false;
             }
         }
 
-        // Xử lý Đăng xuất
-        function logout() {
-            document.getElementById('auth-screen').style.display = 'flex';
-            document.getElementById('dashboard-container').style.display = 'none';
-            currentRole = "";
+        function formatCurrency(value) {
+            if (value >= 1e9) return (value / 1e9).toFixed(1) + 'B';
+            if (value >= 1e6) return (value / 1e6).toFixed(1) + 'M';
+            return value;
         }
 
-        // Tải Dữ liệu theo Role
-        function loadDashboardData(role) {
-            const data = mockDb[role];
-            if (!data) return;
+        function calculateMetrics() {
+            if (!dbPipeline || dbPipeline.length === 0) return;
 
-            // Xây dựng Filter Tỉnh/Thành theo phân quyền
-            const provinceSelect = document.getElementById('filter-province');
-            provinceSelect.innerHTML = "";
-            data.provinces.forEach(prov => {
-                let opt = document.createElement('option');
-                opt.value = prov.id;
-                opt.innerHTML = prov.name;
-                provinceSelect.appendChild(opt);
+            const provFilter = document.getElementById('filter-province').value;
+            const stageFilter = document.getElementById('filter-stage').value;
+            const typeFilter = document.getElementById('filter-type').value;
+            const dFrom = new Date(document.getElementById('date-from').value).getTime();
+            const dTo = new Date(document.getElementById('date-to').value).getTime();
+
+            let totalSales = 0, wonDeals = 0, openDeals = 0, lostDeals = 0;
+            let pipeValue = 0, expRev = 0, sumDaysToClose = 0, sumOpenAge = 0;
+            const today = new Date().getTime();
+
+            dbPipeline.forEach(row => {
+                if (provFilter !== "all" && row['Khách Hàng/Tỉnh'] !== provFilter) return;
+                if (stageFilter !== "all" && !row['Trạng Thái Pipeline'].includes(stageFilter)) return;
+                if (typeFilter !== "all" && row['Nhóm SPDV'] !== typeFilter) return;
+                if (row['Ngày Tiếp Cận'] < dFrom || row['Ngày Tiếp Cận'] > dTo) return;
+
+                const isWon = row['Trạng Thái Pipeline'].includes("7");
+                const isLost = row['Trạng Thái Pipeline'].includes("8") || row['Trạng Thái Pipeline'].toLowerCase().includes("đóng");
+
+                if (isWon) {
+                    wonDeals++; totalSales += row['Doanh Thu Dự Báo (VND)'];
+                    let diff = (row['Ngày Chốt'] - row['Ngày Tiếp Cận']) / (1000 * 3600 * 24);
+                    if(diff > 0) sumDaysToClose += diff;
+                } else if (isLost) {
+                    lostDeals++;
+                } else {
+                    openDeals++; pipeValue += row['Ngân Sách Dự Kiến (VND)']; expRev += row['Doanh Thu Dự Báo (VND)'];
+                    let diffOpen = (today - row['Ngày Tiếp Cận']) / (1000 * 3600 * 24);
+                    if(diffOpen > 0) sumOpenAge += diffOpen;
+                }
             });
-            if (role === 'clo_ca_mau') provinceSelect.disabled = true;
-            else provinceSelect.disabled = false;
 
-            // Cập nhật Vùng KPI
-            document.getElementById('kpi-revenue').innerText = data.revenue.toLocaleString();
-            document.getElementById('kpi-plan').innerText = data.planPercent + "%";
-            document.getElementById('kpi-plan-sub').innerText = `Mục tiêu: ${data.target.toLocaleString()} Tỷ`;
-            
-            document.getElementById('kpi-total-proj').innerText = data.total;
-            document.getElementById('kpi-open-proj').innerText = data.open;
-            document.getElementById('kpi-win-proj').innerText = data.win;
-            document.getElementById('kpi-loss-proj').innerText = data.loss;
-            document.getElementById('kpi-poc-proj').innerText = data.poc;
-            document.getElementById('kpi-support-proj').innerText = data.support;
-
-            // Cập nhật Vùng Dữ liệu chi tiết (Table)
-            const tbody = document.getElementById('table-body');
-            tbody.innerHTML = "";
-            
-            // Lọc giả lập để Table trông khác nhau tùy Role
-            let renderProjects = mockProjects;
-            if (role === 'clo_ca_mau') {
-                renderProjects = [mockProjects[0], mockProjects[1]]; // Cà Mau chỉ thấy 2 dự án của mình
-            }
-
-            renderProjects.forEach(row => {
-                let tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><strong>${row.taskCode}</strong></td>
-                    <td>${row.projCode}</td>
-                    <td>${row.status}</td>
-                    <td style="font-weight:bold; color:var(--navy);">${row.value}</td>
-                    <td><span class="tag ${row.alertType}">${row.alert}</span></td>
-                    <td style="${row.alertType === 'tag-red' || row.alertType === 'tag-yellow' ? 'color:var(--red); font-weight:500;' : ''}">${row.directive}</td>
-                `;
-                tbody.appendChild(tr);
-            });
+            const totalDeals = wonDeals + lostDeals;
+            document.getElementById('kpi-total-sales').innerText = formatCurrency(totalSales);
+            document.getElementById('kpi-won-deals').innerText = wonDeals;
+            document.getElementById('kpi-win-rate').innerText = totalDeals > 0 ? ((wonDeals / totalDeals) * 100).toFixed(1) + "%" : "0%";
+            document.getElementById('kpi-avg-days').innerText = wonDeals > 0 ? (sumDaysToClose / wonDeals).toFixed(0) : "0";
+            document.getElementById('kpi-pipe-val').innerText = formatCurrency(pipeValue);
+            document.getElementById('kpi-open-deals').innerText = openDeals;
+            document.getElementById('kpi-exp-rev').innerText = formatCurrency(expRev);
+            document.getElementById('kpi-avg-age').innerText = openDeals > 0 ? (sumOpenAge / openDeals).toFixed(0) : "0";
         }
     </script>
 </body>
