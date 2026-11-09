@@ -3,226 +3,260 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VNPT-IT | CRM Dashboard</title>
+    <title>VNPT-IT | COMMAND CENTER</title>
     <style>
         :root {
-            --bg-color: #f0f4f8; --text-dark: #333; --border-color: #e0e0e0; --navy: #003B7A;
-            --c-total-sales: linear-gradient(135deg, #5b51d8, #6f64e6);
-            --c-won-deals: linear-gradient(135deg, #0d5c9e, #1374c4);
-            --c-win-rate: linear-gradient(135deg, #18b982, #1fd396);
-            --c-avg-days: linear-gradient(135deg, #df5b6e, #f1687d);
-            --c-pipe-val: linear-gradient(135deg, #8854b9, #9e64d6);
-            --c-open-deals: linear-gradient(135deg, #5b51d8, #6f64e6);
-            --c-exp-rev: linear-gradient(135deg, #0d5c9e, #1374c4);
-            --c-avg-age: linear-gradient(135deg, #18b982, #1fd396);
+            --bg-color: #f4f7fa; --text-dark: #2c3e50; --border: #e2e8f0; --navy: #0f172a;
+            --c-achieve: linear-gradient(135deg, #3b82f6, #2563eb);
+            --c-exp: linear-gradient(135deg, #0ea5e9, #0284c7);
+            --c-win: linear-gradient(135deg, #10b981, #059669);
+            --c-size: linear-gradient(135deg, #f59e0b, #d97706);
+            --c-cover: linear-gradient(135deg, #ec4899, #db2777);
         }
         body, html { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); color: var(--text-dark); }
         
-        /* Layout */
+        /* Auth */
         #auth-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: var(--navy); }
-        .auth-box { background: white; padding: 40px; border-radius: 8px; width: 450px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-        .auth-box input, .auth-box button { width: 100%; padding: 12px; margin-top: 20px; font-size: 1rem; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
-        .auth-box button { background-color: #0094D9; color: white; border: none; font-weight: bold; cursor: pointer; }
+        .auth-box { background: white; padding: 40px; border-radius: 12px; width: 400px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .auth-box input, .auth-box button { width: 100%; padding: 12px; margin-top: 20px; font-size: 1rem; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; }
+        .auth-box button { background-color: #2563eb; color: white; border: none; font-weight: bold; cursor: pointer; }
         
-        header { background-color: var(--navy); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        #dashboard-container { display: none; padding: 20px 40px; flex-direction: column; gap: 20px; }
+        /* Layout */
+        header { background-color: white; color: var(--navy); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+        #dashboard-container { display: none; padding: 25px 30px; flex-direction: column; gap: 20px; }
         
         /* Filters */
-        .filter-bar { background: white; padding: 20px; border-radius: 12px; display: flex; gap: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); flex-wrap: wrap; border: 1px solid var(--border-color); }
-        .filter-group { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 180px; }
-        .filter-group label { font-size: 0.85rem; font-weight: 600; color: #555; }
-        .filter-group select, .filter-group input { padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.95rem; outline: none; }
+        .filter-bar { background: white; padding: 20px; border-radius: 12px; display: flex; gap: 15px; border: 1px solid var(--border); flex-wrap: wrap; }
+        .filter-group { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 150px; }
+        .filter-group label { font-size: 0.8rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
+        .filter-group select { padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; outline: none; background: #f8fafc; }
         
-        /* KPIs */
-        .kpi-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 15px; }
-        .kpi-card { padding: 20px; border-radius: 12px; color: white; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .kpi-card .title { font-size: 0.9rem; margin-bottom: 8px; font-weight: 500; }
-        .kpi-card .value { font-size: 2rem; font-weight: bold; margin-bottom: 5px; line-height: 1.1; }
+        /* 5 KPIs Board */
+        .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; }
+        .kpi-card { padding: 25px 20px; border-radius: 12px; color: white; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .kpi-card .title { font-size: 0.9rem; font-weight: 600; opacity: 0.9; margin-bottom: 10px; line-height: 1.3; }
+        .kpi-card .value { font-size: 2.2rem; font-weight: bold; margin-bottom: 5px; line-height: 1; }
+        .kpi-card .sub { font-size: 0.85rem; font-weight: 500; background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 4px; display: inline-table; margin-top: 5px;}
         
-        .c1 { background: var(--c-total-sales); } .c2 { background: var(--c-won-deals); } .c3 { background: var(--c-win-rate); } .c4 { background: var(--c-avg-days); }
-        .c5 { background: var(--c-pipe-val); } .c6 { background: var(--c-open-deals); } .c7 { background: var(--c-exp-rev); } .c8 { background: var(--c-avg-age); }
+        .c1 { background: var(--c-achieve); } .c2 { background: var(--c-exp); } .c3 { background: var(--c-win); } .c4 { background: var(--c-size); } .c5 { background: var(--c-cover); }
     </style>
 </head>
 <body>
 
     <div id="auth-screen">
         <div class="auth-box">
-            <h2 style="color: var(--navy); margin-top: 0;">Đăng nhập Dashboard</h2>
-            <input type="email" id="email-input" placeholder="Nhập email nội bộ VNPT" required>
-            <button id="login-btn" onclick="login()">Truy cập</button>
-            <div id="login-error" style="color: red; margin-top: 15px; font-size: 0.9rem; display: none;"></div>
+            <h2 style="color: var(--navy); margin-top: 0;">Đăng nhập Hệ thống</h2>
+            <input type="email" id="email-input" placeholder="Nhập email VNPT-IT" required>
+            <button id="login-btn" onclick="login()">Truy cập Dashboard</button>
+            <div id="login-error" style="color: #dc2626; margin-top: 15px; font-size: 0.9rem; display: none;"></div>
         </div>
     </div>
 
     <div id="dashboard-container">
         <header>
-            <div style="font-weight: bold; font-size:1.2rem;">COMMAND CENTER</div>
-            <div style="font-size: 0.9rem;">
-                Đang truy cập: <span id="current-user-role" style="font-weight: bold; color: #0094D9; background: white; padding: 4px 10px; border-radius: 4px; margin-left: 10px;"></span>
+            <div style="font-weight: 800; font-size:1.2rem; letter-spacing: 0.5px;">B2B COMMAND CENTER</div>
+            <div style="font-size: 0.9rem; font-weight: 500;">
+                <span style="color: #64748b;">Đang quản lý:</span> <span id="current-user-role" style="color: #2563eb; background: #eff6ff; padding: 4px 12px; border-radius: 20px; margin-left: 5px;"></span>
             </div>
         </header>
 
+        <!-- Vùng Điều Hướng -->
         <div class="filter-bar">
             <div class="filter-group">
-                <label>Owner: Tỉnh/Thành</label>
-                <select id="filter-province" onchange="calculateMetrics()"></select>
-            </div>
-            <div class="filter-group">
-                <label>Opportunity: Stage</label>
-                <select id="filter-stage" onchange="calculateMetrics()">
-                    <option value="all">All</option>
-                    <option value="7">7-Ký Hợp Đồng</option>
-                    <option value="5">5-Đấu Thầu</option>
-                    <option value="4">4-Trình Diễn POC</option>
+                <label>Tháng Báo Cáo</label>
+                <select id="filter-month" onchange="calculateKPIs()">
+                    <option value="all">Toàn thời gian</option>
+                    <!-- Tự sinh 12 tháng bằng JS -->
                 </select>
             </div>
             <div class="filter-group">
-                <label>Opportunity: Type</label>
-                <select id="filter-type" onchange="calculateMetrics()">
-                    <option value="all">All</option>
-                    <option value="Chính quyền số">Chính quyền số</option>
-                    <option value="Hạ tầng số">Hạ tầng số</option>
-                </select>
+                <label>Tỉnh / Thành Phố</label>
+                <select id="filter-province" onchange="calculateKPIs()"></select>
             </div>
             <div class="filter-group">
-                <label>Opportunity: Created date</label>
-                <div style="display:flex; gap:10px;">
-                    <input type="date" id="date-from" value="2026-01-01" style="width:50%" onchange="calculateMetrics()">
-                    <input type="date" id="date-to" value="2027-12-31" style="width:50%" onchange="calculateMetrics()">
-                </div>
+                <label>Product Line Owner (PLO)</label>
+                <select id="filter-plo" onchange="calculateKPIs()"></select>
+            </div>
+            <div class="filter-group">
+                <label>Nhóm SPDV</label>
+                <select id="filter-spdv" onchange="calculateKPIs()"></select>
             </div>
         </div>
 
+        <!-- Vùng 5 KPIs Chiến Lược -->
         <div class="kpi-grid">
-            <div class="kpi-card c1"><div class="title">Total sales</div><div class="value" id="kpi-total-sales">0</div></div>
-            <div class="kpi-card c2"><div class="title">Won deals</div><div class="value" id="kpi-won-deals">0</div></div>
-            <div class="kpi-card c3"><div class="title">Win rate</div><div class="value" id="kpi-win-rate">0%</div></div>
-            <div class="kpi-card c4"><div class="title">Avg days to close</div><div class="value" id="kpi-avg-days">0</div></div>
-            <div class="kpi-card c5"><div class="title">Pipeline value</div><div class="value" id="kpi-pipe-val">0</div></div>
-            <div class="kpi-card c6"><div class="title">Open deals</div><div class="value" id="kpi-open-deals">0</div></div>
-            <div class="kpi-card c7"><div class="title">Expected revenue</div><div class="value" id="kpi-exp-rev">0</div></div>
-            <div class="kpi-card c8"><div class="title">Avg open deal age</div><div class="value" id="kpi-avg-age">0</div></div>
+            <div class="kpi-card c1">
+                <div class="title">Tỷ lệ hoàn thành mục tiêu</div>
+                <div class="value" id="kpi1-achieve">0%</div>
+                <div class="sub" id="kpi1-sub">Doanh thu đạt: 0</div>
+            </div>
+            <div class="kpi-card c2">
+                <div class="title">Doanh thu kỳ vọng từ Pipeline</div>
+                <div class="value" id="kpi2-pipe-rev">0</div>
+                <div class="sub">Đang mở đàm phán</div>
+            </div>
+            <div class="kpi-card c3">
+                <div class="title">Tỷ lệ chốt đơn (Win Rate)</div>
+                <div class="value" id="kpi3-win-rate">0%</div>
+                <div class="sub" id="kpi3-sub">Thắng: 0 deal</div>
+            </div>
+            <div class="kpi-card c4">
+                <div class="title">Quy mô HĐ trung bình</div>
+                <div class="value" id="kpi4-avg-size">0</div>
+                <div class="sub" id="kpi4-sub">Tổng Deals: 0</div>
+            </div>
+            <div class="kpi-card c5">
+                <div class="title">Hệ số bao phủ (Coverage)</div>
+                <div class="value" id="kpi5-coverage">0x</div>
+                <div class="sub" id="kpi5-sub">Thiếu hụt KH: 0</div>
+            </div>
         </div>
     </div>
 
     <script>
-        // QUAN TRỌNG: SỬA ĐƯỜNG LINK WEB APP CỦA BẠN VÀO ĐÂY
+        // QUAN TRỌNG: ĐỔI LINK WEB APP CỦA BẠN VÀO ĐÂY
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx2MtNKD9w7zDl2eosyOJ71gI9_eXApwgLNUqWxrn0-tW4L5oDDZT8rMNjO0ShRD7V6/exec"; 
         
-        let dbPipeline = [];
-        let allowedProvincesList = [];
+        let dbPlan = [], dbPipeline = [];
+
+        // Khởi tạo List Tháng
+        for(let i=1; i<=12; i++) {
+            let m = (i < 10 ? '0'+i : i) + '/2026';
+            document.getElementById('filter-month').innerHTML += `<option value="${m}">Tháng ${i}/2026</option>`;
+        }
+
+        function buildDropdown(elementId, dataList, defaultText) {
+            const select = document.getElementById(elementId);
+            select.innerHTML = `<option value="all">${defaultText}</option>`;
+            dataList.forEach(item => {
+                if(item) select.innerHTML += `<option value="${item}">${item}</option>`;
+            });
+        }
 
         async function login() {
-            const emailInput = document.getElementById('email-input').value.trim();
-            const err = document.getElementById('login-error');
+            const email = document.getElementById('email-input').value.trim();
             const btn = document.getElementById('login-btn');
+            const err = document.getElementById('login-error');
             err.style.display = 'none';
 
-            if (!emailInput) { err.innerText = "Vui lòng nhập email"; err.style.display = 'block'; return; }
+            if (!email) { err.innerText = "Vui lòng nhập email"; err.style.display = 'block'; return; }
 
-            btn.innerText = "Đang đồng bộ dữ liệu...";
+            btn.innerText = "Đang tải dữ liệu doanh nghiệp...";
             btn.disabled = true;
 
             try {
-                const response = await fetch(SCRIPT_URL + "?email=" + encodeURIComponent(emailInput));
+                const response = await fetch(SCRIPT_URL + "?email=" + encodeURIComponent(email));
                 const data = await response.json();
 
                 if (data.status === "success") {
                     document.getElementById('auth-screen').style.display = 'none';
                     document.getElementById('dashboard-container').style.display = 'flex';
+                    document.getElementById('current-user-role').innerText = data.colN_MaQuanLy + " | " + data.colL_UserName;
+
+                    // Lưu dữ liệu vào biến Global
+                    dbPlan = data.safePlanData;
+                    dbPipeline = data.safePipelineData;
+
+                    // Đổ dữ liệu vào các Dropdown
+                    buildDropdown('filter-province', data.allowedProvinces, data.allowedProvinces.length > 1 ? "Tất cả Tỉnh/Thành" : data.allowedProvinces[0]);
+                    buildDropdown('filter-plo', data.listPLO, "Tất cả PLO");
+                    buildDropdown('filter-spdv', data.listSPDV, "Tất cả SPDV");
                     
-                    // Hiện đúng Mã Quản Lý (Cột N) lên Header
-                    document.getElementById('current-user-role').innerText = data.colN_MaQuanLy;
+                    if(data.allowedProvinces.length === 1) document.getElementById('filter-province').disabled = true;
 
-                    dbPipeline = data.pipelineData;
-                    allowedProvincesList = data.allowedProvinces;
-
-                    // Xử lý Dropdown Tỉnh/Thành
-                    const provSelect = document.getElementById('filter-province');
-                    provSelect.innerHTML = "";
-                    
-                    // Hiện đúng Tên Người Dùng (Cột L) làm mục All
-                    let optAll = document.createElement('option');
-                    optAll.value = "all";
-                    optAll.innerHTML = data.colL_UserName; 
-                    provSelect.appendChild(optAll);
-
-                    if (allowedProvincesList.length > 1) {
-                        provSelect.disabled = false;
-                        allowedProvincesList.forEach(p => {
-                            let opt = document.createElement('option');
-                            opt.value = p; opt.innerHTML = p;
-                            provSelect.appendChild(opt);
-                        });
-                    } else {
-                        provSelect.disabled = true; // Khóa dropdown nếu chỉ có 1 tỉnh
-                    }
-
-                    // Gọi hàm tính toán để đổ số ra màn hình
-                    calculateMetrics();
+                    // Tính toán lần đầu
+                    calculateKPIs();
                 } else {
                     err.innerText = data.message;
                     err.style.display = 'block';
                 }
             } catch (error) {
-                err.innerText = "Lỗi kết nối máy chủ. Thử lại sau.";
+                err.innerText = "Lỗi kết nối. Vui lòng kiểm tra lại cấu hình Apps Script.";
                 err.style.display = 'block';
             } finally {
-                btn.innerText = "Truy cập";
+                btn.innerText = "Truy cập Dashboard";
                 btn.disabled = false;
             }
         }
 
-        function formatCurrency(value) {
-            if (value >= 1e9) return (value / 1e9).toFixed(1) + 'B';
-            if (value >= 1e6) return (value / 1e6).toFixed(1) + 'M';
-            return value;
+        function formatBillion(value) {
+            return (value / 1000).toFixed(1) + ' Tỷ'; // Dữ liệu gốc là trVND, chia 1000 để ra Tỷ
         }
 
-        function calculateMetrics() {
-            if (!dbPipeline || dbPipeline.length === 0) return;
+        // HÀM LÕI TÍNH TOÁN REAL-TIME 5 KPIs
+        function calculateKPIs() {
+            if (!dbPlan || !dbPipeline) return;
 
-            const provFilter = document.getElementById('filter-province').value;
-            const stageFilter = document.getElementById('filter-stage').value;
-            const typeFilter = document.getElementById('filter-type').value;
-            const dFrom = new Date(document.getElementById('date-from').value).getTime();
-            const dTo = new Date(document.getElementById('date-to').value).getTime();
+            const fMonth = document.getElementById('filter-month').value;
+            const fProv = document.getElementById('filter-province').value;
+            const fPlo = document.getElementById('filter-plo').value;
+            const fSpdv = document.getElementById('filter-spdv').value;
 
-            let totalSales = 0, wonDeals = 0, openDeals = 0, lostDeals = 0;
-            let pipeValue = 0, expRev = 0, sumDaysToClose = 0, sumOpenAge = 0;
-            const today = new Date().getTime();
-
-            dbPipeline.forEach(row => {
-                if (provFilter !== "all" && row['Khách Hàng/Tỉnh'] !== provFilter) return;
-                if (stageFilter !== "all" && !row['Trạng Thái Pipeline'].includes(stageFilter)) return;
-                if (typeFilter !== "all" && row['Nhóm SPDV'] !== typeFilter) return;
-                if (row['Ngày Tiếp Cận'] < dFrom || row['Ngày Tiếp Cận'] > dTo) return;
-
-                const isWon = row['Trạng Thái Pipeline'].includes("7");
-                const isLost = row['Trạng Thái Pipeline'].includes("8") || row['Trạng Thái Pipeline'].toLowerCase().includes("đóng");
-
-                if (isWon) {
-                    wonDeals++; totalSales += row['Doanh Thu Dự Báo (VND)'];
-                    let diff = (row['Ngày Chốt'] - row['Ngày Tiếp Cận']) / (1000 * 3600 * 24);
-                    if(diff > 0) sumDaysToClose += diff;
-                } else if (isLost) {
-                    lostDeals++;
-                } else {
-                    openDeals++; pipeValue += row['Ngân Sách Dự Kiến (VND)']; expRev += row['Doanh Thu Dự Báo (VND)'];
-                    let diffOpen = (today - row['Ngày Tiếp Cận']) / (1000 * 3600 * 24);
-                    if(diffOpen > 0) sumOpenAge += diffOpen;
-                }
+            // Tính 1: Kế Hoạch
+            let targetRev = 0;
+            dbPlan.forEach(r => {
+                // Tùy biến logic lọc Kế hoạch: Nếu lọc theo Tháng, Kế hoạch thường được chia đều hoặc có cột kế hoạch tháng. 
+                // Ở đây ta đơn giản lấy tổng Kế hoạch nếu các filter khớp (hoặc thiết kế lại mapping nếu có cột kế hoạch tháng).
+                if(fProv !== "all" && r.tinh !== fProv && fProv !== document.getElementById('filter-province').options[0].text) return;
+                if(fPlo !== "all" && r.plo !== fPlo) return;
+                if(fSpdv !== "all" && r.spdv !== fSpdv) return;
+                targetRev += r.target;
             });
 
-            const totalDeals = wonDeals + lostDeals;
-            document.getElementById('kpi-total-sales').innerText = formatCurrency(totalSales);
-            document.getElementById('kpi-won-deals').innerText = wonDeals;
-            document.getElementById('kpi-win-rate').innerText = totalDeals > 0 ? ((wonDeals / totalDeals) * 100).toFixed(1) + "%" : "0%";
-            document.getElementById('kpi-avg-days').innerText = wonDeals > 0 ? (sumDaysToClose / wonDeals).toFixed(0) : "0";
-            document.getElementById('kpi-pipe-val').innerText = formatCurrency(pipeValue);
-            document.getElementById('kpi-open-deals').innerText = openDeals;
-            document.getElementById('kpi-exp-rev').innerText = formatCurrency(expRev);
-            document.getElementById('kpi-avg-age').innerText = openDeals > 0 ? (sumOpenAge / openDeals).toFixed(0) : "0";
+            // Tính 2: Pipeline
+            let totalSales = 0, wonDeals = 0, lostDeals = 0, openDeals = 0;
+            let openPipeRev = 0, totalNganSach = 0, totalDealsCount = 0;
+
+            dbPipeline.forEach(r => {
+                if(fMonth !== "all" && r.thang !== fMonth) return;
+                if(fProv !== "all" && r.tinh !== fProv && fProv !== document.getElementById('filter-province').options[0].text) return;
+                if(fPlo !== "all" && r.plo !== fPlo) return;
+                if(fSpdv !== "all" && r.spdv !== fSpdv) return;
+
+                totalDealsCount++;
+                totalNganSach += r.nganSach;
+                
+                const isWon = r.trangThai.includes("7");
+                const isLost = r.trangThai.includes("8") || r.trangThai.includes("đóng") || r.trangThai.includes("lost");
+
+                if (isWon) { wonDeals++; totalSales += r.doanhThu; } 
+                else if (isLost) { lostDeals++; } 
+                else { openDeals++; openPipeRev += r.doanhThu; }
+            });
+
+            // 1. Tỷ lệ hoàn thành
+            let achieveRate = targetRev > 0 ? ((totalSales / targetRev) * 100).toFixed(1) : 0;
+            document.getElementById('kpi1-achieve').innerText = achieveRate + '%';
+            document.getElementById('kpi1-sub').innerText = `Kế hoạch: ${formatBillion(targetRev)}`;
+
+            // 2. Doanh thu kỳ vọng
+            document.getElementById('kpi2-pipe-rev').innerText = formatBillion(openPipeRev);
+
+            // 3. Tỷ lệ chốt đơn (Win Rate)
+            let closedDeals = wonDeals + lostDeals;
+            let winRate = closedDeals > 0 ? ((wonDeals / closedDeals) * 100).toFixed(1) : 0;
+            document.getElementById('kpi3-win-rate').innerText = winRate + '%';
+            document.getElementById('kpi3-sub').innerText = `Thắng: ${wonDeals} / ${closedDeals} deal đóng`;
+
+            // 4. Quy mô HĐ Trung bình
+            let avgSize = totalDealsCount > 0 ? (totalNganSach / totalDealsCount) : 0;
+            document.getElementById('kpi4-avg-size').innerText = formatBillion(avgSize);
+            document.getElementById('kpi4-sub').innerText = `Tổng Deals pipeline: ${totalDealsCount}`;
+
+            // 5. Hệ số bao phủ
+            let gap = targetRev - totalSales;
+            let coverage = 0;
+            if (gap > 0) coverage = (openPipeRev / gap).toFixed(1);
+            else if (gap <= 0 && openPipeRev > 0) coverage = 999;
+            
+            document.getElementById('kpi5-coverage').innerText = (coverage == 999 ? "An toàn" : coverage + 'x');
+            document.getElementById('kpi5-sub').innerText = gap > 0 ? `Thiếu hụt: ${formatBillion(gap)}` : `Vượt mức KH: ${formatBillion(Math.abs(gap))}`;
+            
+            // Đổi màu cảnh báo hệ số bao phủ (Nếu < 2.0x thì đổi thành Đỏ)
+            const kpi5Card = document.querySelector('.c5');
+            if (coverage < 2.0 && coverage > 0) kpi5Card.style.background = 'linear-gradient(135deg, #ef4444, #b91c1c)'; // Đỏ
+            else if (coverage >= 2.0 && coverage < 3.0) kpi5Card.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)'; // Vàng
+            else kpi5Card.style.background = 'linear-gradient(135deg, #ec4899, #db2777)'; // Hồng gốc
         }
     </script>
 </body>
