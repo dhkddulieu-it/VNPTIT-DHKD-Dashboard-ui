@@ -88,14 +88,27 @@
         <!-- Vùng Điều Hướng theo Cấu trúc Mới -->
         <div class="filter-row">
             <div class="filter-item">
-                <label style="font-weight:bold; color:var(--bg-sidebar);">Vùng điều hướng</label>
+                <label>CLO L1:</label>
+                <select id="filter-clol1" >
+                    <option value="all">-- Tất cả --</option>
+                    <option value="CLO-L1-MB">CLO-L1-MB</option>
+                    <option value="CLO-L1-NM">CLO-L1-NM</option>
+                </select>
             </div>
             <div class="filter-item">
-                <label>Tỉnh/Thành phố</label>
+                <label>CLO Địa bàn:</label>
                 <select id="filter-province" style="background-color: #fff3cd;" onchange="calculateKPIs()"></select>
             </div>
             <div class="filter-item">
-                <label>Nhóm SPDV</label>
+                <label>Phân luồng SPDV:</label>
+                <select id="filter-luong" >
+                    <option value="all">-- Tất cả --</option>
+                    <option value="NHOMA">A</option>
+                    <option value="NHOMBC">B,C</option>
+                </select>
+            
+            <div class="filter-item">
+                <label>Nhóm SPDV:</label>
                 <select id="filter-spdv" onchange="calculateKPIs()"></select>
             </div>
             <div class="filter-item">
@@ -104,32 +117,48 @@
             </div>
         </div>
 
-        <!-- 5 KPIs Board Chốt Phương Án 1 -->
+        <!-- 8 KPIs Board Chốt Phương Án 1 -->
         <div class="kpi-board">
             <div class="kpi-box">
-                <div class="kpi-title">Tỷ lệ hoàn thành mục tiêu</div>
-                <div class="kpi-value" id="kpi1-achieve">0%</div>
-                <div class="kpi-compare" id="kpi1-sub">Doanh thu đạt: 0</div>
+                <div class="kpi-title">Doanh thu thực hiện</div>
+                <div class="kpi-value" id="kpi1-achieve">112.36 <small>tỷ</small></div>
+                <div class="kpi-compare" id="kpi1-sub">Doanh thu kế hoạch: 135 tỷ</div>
             </div>
             <div class="kpi-box">
-                <div class="kpi-title">Doanh thu dự kiến Pipeline</div>
-                <div class="kpi-value" id="kpi2-pipe-rev">0 <small>tỷ</small></div>
-                <div class="kpi-compare">Đang mở đàm phán</div>
+                <div class="kpi-title">Tỷ lệ hoàn thành kế hoạch</div>
+                <div class="kpi-value" id="kpi1-achieve">83.23%</div>
+                <div class="kpi-compare" id="kpi1-sub">vs tháng trước: tăng 5%</div>
+            </div>
+            <div class="kpi-box">
+                <div class="kpi-title">Tổng giá trị Pipeline</div>
+                <div class="kpi-value" id="kpi2-pipe-rev">68.45 <small>tỷ</small></div>
+                <div class="kpi-compare">Số lượng: 23</div>
+            </div>
+            <div class="kpi-box">
+                <div class="kpi-title">Giá trị Pipeline mở</div>
+                <div class="kpi-value" id="kpi2-pipe-rev">12.7 <small>tỷ</small></div>
+                <div class="kpi-compare">Số lượng: 8</div>
+            </div>
+            
+            <div class="kpi-box">
+                <div class="kpi-title">Giá trị Pipeline đóng thành công</div>
+                <div class="kpi-value" id="kpi2-pipe-rev">15.9 <small>tỷ</small></div>
+                <div class="kpi-compare">Số lượng: 12</div>
             </div>
             <div class="kpi-box">
                 <div class="kpi-title">Win Rate (Tỷ lệ chốt đơn)</div>
-                <div class="kpi-value" id="kpi3-win-rate">0%</div>
-                <div class="kpi-compare" id="kpi3-sub">Thắng: 0 deal</div>
+                <div class="kpi-value" id="kpi3-win-rate">60.25%</div>
+                <div class="kpi-compare" id="kpi3-sub">vs tháng trước: tăng 3.25%</div>
             </div>
             <div class="kpi-box">
                 <div class="kpi-title">Avg Deal Size</div>
-                <div class="kpi-value" id="kpi4-avg-size">0 <small>tỷ</small></div>
-                <div class="kpi-compare" id="kpi4-sub">Tổng Deals: 0</div>
+                <div class="kpi-value" id="kpi4-avg-size"> 3.85 <small>tỷ</small></div>
+                <div class="kpi-compare" id="kpi4-sub">Tổng Deals: 2</div>
             </div>
             <div class="kpi-box">
-                <div class="kpi-title">Hệ số bao phủ (Coverage)</div>
-                <div class="kpi-value" id="kpi5-coverage">0x</div>
-                <div class="kpi-compare" id="kpi5-sub" style="font-weight:bold; color:var(--color-danger);">Thiếu hụt KH: 0</div>
+                <div class="kpi-title">Dự báo doanh thu</div>
+                <div class="kpi-value" id="kpi5-forecast">132.80<small>tỷ</div>
+                <div class="kpi-compare" id="kpi5-sub" style="font-weight:bold; color:var(--color-danger);">Thiếu hụt KH: 2.2 tỷ</div>
             </div>
         </div>
 
