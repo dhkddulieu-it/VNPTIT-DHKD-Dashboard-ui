@@ -3,126 +3,158 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VNPT-IT | COMMAND CENTER</title>
+    <title>VNPT-IT | Dashboard</title>
     <style>
         :root {
-            --bg-color: #f4f7fa; --text-dark: #2c3e50; --border: #e2e8f0; --navy: #0f172a;
-            --c-achieve: linear-gradient(135deg, #3b82f6, #2563eb);
-            --c-exp: linear-gradient(135deg, #0ea5e9, #0284c7);
-            --c-win: linear-gradient(135deg, #10b981, #059669);
-            --c-size: linear-gradient(135deg, #f59e0b, #d97706);
-            --c-cover: linear-gradient(135deg, #ec4899, #db2777);
+            --bg-body: #f4f6f9; --bg-sidebar: #0f3057; --bg-card: #ffffff;
+            --text-main: #333333; --text-muted: #6c757d; --color-primary: #007bff;
+            --color-success: #28a745; --color-danger: #dc3545; --color-warning: #ffc107;
+            --border-color: #dee2e6;
         }
-        body, html { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); color: var(--text-dark); }
+        body, html { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-body); color: var(--text-main); height: 100vh; display: flex; overflow: hidden; }
         
-        /* Auth */
-        #auth-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: var(--navy); }
-        .auth-box { background: white; padding: 40px; border-radius: 12px; width: 400px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-        .auth-box input, .auth-box button { width: 100%; padding: 12px; margin-top: 20px; font-size: 1rem; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; }
-        .auth-box button { background-color: #2563eb; color: white; border: none; font-weight: bold; cursor: pointer; }
+        /* Auth Overlay */
+        #auth-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg-sidebar); display: flex; justify-content: center; align-items: center; z-index: 9999; }
+        .login-box { background: white; padding: 30px; border-radius: 8px; width: 300px; text-align: center; }
+        .login-box input, .login-box button { width: 100%; padding: 10px; margin-top: 15px; box-sizing: border-box; }
+        .login-box button { background: var(--color-primary); color: white; border: none; cursor: pointer; font-weight: bold; }
+        #login-error { color: var(--color-danger); font-size: 12px; margin-top: 10px; display: none; }
+
+        /* Sidebar & Main */
+        .sidebar { width: 220px; background-color: var(--bg-sidebar); color: white; display: flex; flex-direction: column; padding-top: 20px; flex-shrink: 0; }
+        .menu-item { padding: 12px 20px; margin: 5px 15px; border: 1px solid transparent; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+        .menu-item:hover, .menu-item.active { border-color: white; background-color: rgba(255,255,255,0.1); }
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 20px; }
+
+        /* Top Nav & Filters */
+        .top-nav { display: flex; justify-content: space-between; align-items: center; background-color: var(--bg-card); padding: 10px 20px; border-radius: 4px; border: 1px solid var(--border-color); margin-bottom: 15px; font-size: 13px; }
+        .filter-row { display: flex; gap: 20px; background-color: var(--bg-card); padding: 15px 20px; border-radius: 4px; border: 1px solid var(--border-color); margin-bottom: 20px; }
+        .filter-item { flex: 1; display: flex; align-items: center; gap: 10px; }
+        .filter-item label { font-size: 13px; font-weight: 500; white-space: nowrap;}
+        .filter-item select, .top-nav select { flex-grow: 1; padding: 6px; border: 1px solid #ccc; border-radius: 3px; font-size: 13px;}
         
-        /* Layout */
-        header { background-color: white; color: var(--navy); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
-        #dashboard-container { display: none; padding: 25px 30px; flex-direction: column; gap: 20px; }
+        /* KPI Board (5 KPIs) */
+        .kpi-board { display: grid; grid-template-columns: repeat(5, 1fr); background-color: var(--bg-card); border: 2px solid var(--bg-sidebar); border-radius: 4px; margin-bottom: 20px; }
+        .kpi-box { padding: 15px; text-align: center; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: center; }
+        .kpi-box:last-child { border-right: none; }
+        .kpi-title { font-size: 11px; font-weight: 700; color: var(--color-primary); text-transform: uppercase; margin-bottom: 8px;}
+        .kpi-value { font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 5px; }
+        .kpi-compare { font-size: 11px; color: var(--text-muted); margin-bottom: 3px;}
         
-        /* Filters */
-        .filter-bar { background: white; padding: 20px; border-radius: 12px; display: flex; gap: 15px; border: 1px solid var(--border); flex-wrap: wrap; }
-        .filter-group { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 150px; }
-        .filter-group label { font-size: 0.8rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
-        .filter-group select { padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; outline: none; background: #f8fafc; }
+        /* Dashboard Layout */
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .section-title { font-size: 14px; font-weight: 600; margin-bottom: 10px; color: var(--text-main);}
+        .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 4px; padding: 15px;}
         
-        /* 5 KPIs Board */
-        .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; }
-        .kpi-card { padding: 25px 20px; border-radius: 12px; color: white; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .kpi-card .title { font-size: 0.9rem; font-weight: 600; opacity: 0.9; margin-bottom: 10px; line-height: 1.3; }
-        .kpi-card .value { font-size: 2.2rem; font-weight: bold; margin-bottom: 5px; line-height: 1; }
-        .kpi-card .sub { font-size: 0.85rem; font-weight: 500; background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 4px; display: inline-table; margin-top: 5px;}
-        
-        .c1 { background: var(--c-achieve); } .c2 { background: var(--c-exp); } .c3 { background: var(--c-win); } .c4 { background: var(--c-size); } .c5 { background: var(--c-cover); }
+        /* Image placeholders for the complex widgets */
+        .placeholder-box { background: #f8f9fa; border: 1px dashed #ccc; padding: 40px; text-align: center; color: #999; font-size: 12px; }
     </style>
 </head>
 <body>
 
-    <div id="auth-screen">
-        <div class="auth-box">
-            <h2 style="color: var(--navy); margin-top: 0;">Đăng nhập Hệ thống</h2>
-            <input type="email" id="email-input" placeholder="Nhập email VNPT-IT" required>
-            <button id="login-btn" onclick="login()">Truy cập Dashboard</button>
-            <div id="login-error" style="color: #dc2626; margin-top: 15px; font-size: 0.9rem; display: none;"></div>
+    <div id="auth-overlay">
+        <div class="login-box">
+            <h3 style="margin-top: 0; color: var(--bg-sidebar);">Đăng nhập</h3>
+            <input type="email" id="email-input" placeholder="Email (VD: tgd@vnpt.vn)" required>
+            <button id="login-btn" onclick="login()">Đăng nhập</button>
+            <div id="login-error"></div>
         </div>
     </div>
 
-    <div id="dashboard-container">
-        <header>
-            <div style="font-weight: 800; font-size:1.2rem; letter-spacing: 0.5px;">B2B COMMAND CENTER</div>
-            <div style="font-size: 0.9rem; font-weight: 500;">
-                <span style="color: #64748b;">Đang quản lý:</span> <span id="current-user-role" style="color: #2563eb; background: #eff6ff; padding: 4px 12px; border-radius: 20px; margin-left: 5px;"></span>
-            </div>
-        </header>
+    <div class="sidebar">
+        <div class="menu-item active">Dashboard</div>
+        <div class="menu-item">Đề án, KH</div>
+        <div class="menu-item">CHKD</div>
+        <div class="menu-item">Khách hàng</div>
+        <div class="menu-item">Hợp đồng</div>
+        <div class="menu-item">Danh mục</div>
+    </div>
 
-        <!-- Vùng Điều Hướng -->
-        <div class="filter-bar">
-            <div class="filter-group">
-                <label>Tháng Báo Cáo</label>
+    <div class="main-content">
+        <div class="top-nav">
+            <div></div>
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <label>Tháng báo cáo</label>
                 <select id="filter-month" onchange="calculateKPIs()">
                     <option value="all">Toàn thời gian</option>
-                    <!-- Tự sinh 12 tháng bằng JS -->
+                    <!-- Tự sinh 12 tháng -->
                 </select>
-            </div>
-            <div class="filter-group">
-                <label>Tỉnh / Thành Phố</label>
-                <select id="filter-province" onchange="calculateKPIs()"></select>
-            </div>
-            <div class="filter-group">
-                <label>Product Line Owner (PLO)</label>
-                <select id="filter-plo" onchange="calculateKPIs()"></select>
-            </div>
-            <div class="filter-group">
-                <label>Nhóm SPDV</label>
-                <select id="filter-spdv" onchange="calculateKPIs()"></select>
+                <span>Đăng nhập</span>
+                <span id="display-role" style="font-weight: bold; color: var(--color-primary);">---</span>
+                <a href="#" onclick="location.reload()" style="color: var(--text-muted); text-decoration: none;">Thoát</a>
             </div>
         </div>
 
-        <!-- Vùng 5 KPIs Chiến Lược -->
-        <div class="kpi-grid">
-            <div class="kpi-card c1">
-                <div class="title">Tỷ lệ hoàn thành mục tiêu</div>
-                <div class="value" id="kpi1-achieve">0%</div>
-                <div class="sub" id="kpi1-sub">Doanh thu đạt: 0</div>
+        <!-- Vùng Điều Hướng theo Cấu trúc Mới -->
+        <div class="filter-row">
+            <div class="filter-item">
+                <label style="font-weight:bold; color:var(--bg-sidebar);">Vùng điều hướng</label>
             </div>
-            <div class="kpi-card c2">
-                <div class="title">Doanh thu kỳ vọng từ Pipeline</div>
-                <div class="value" id="kpi2-pipe-rev">0</div>
-                <div class="sub">Đang mở đàm phán</div>
+            <div class="filter-item">
+                <label>Tỉnh/Thành phố</label>
+                <select id="filter-province" style="background-color: #fff3cd;" onchange="calculateKPIs()"></select>
             </div>
-            <div class="kpi-card c3">
-                <div class="title">Tỷ lệ chốt đơn (Win Rate)</div>
-                <div class="value" id="kpi3-win-rate">0%</div>
-                <div class="sub" id="kpi3-sub">Thắng: 0 deal</div>
+            <div class="filter-item">
+                <label>Nhóm SPDV</label>
+                <select id="filter-spdv" onchange="calculateKPIs()"></select>
             </div>
-            <div class="kpi-card c4">
-                <div class="title">Quy mô HĐ trung bình</div>
-                <div class="value" id="kpi4-avg-size">0</div>
-                <div class="sub" id="kpi4-sub">Tổng Deals: 0</div>
+            <div class="filter-item">
+                <label>PLO</label>
+                <select id="filter-plo" onchange="calculateKPIs()"></select>
             </div>
-            <div class="kpi-card c5">
-                <div class="title">Hệ số bao phủ (Coverage)</div>
-                <div class="value" id="kpi5-coverage">0x</div>
-                <div class="sub" id="kpi5-sub">Thiếu hụt KH: 0</div>
+        </div>
+
+        <!-- 5 KPIs Board Chốt Phương Án 1 -->
+        <div class="kpi-board">
+            <div class="kpi-box">
+                <div class="kpi-title">Tỷ lệ hoàn thành mục tiêu</div>
+                <div class="kpi-value" id="kpi1-achieve">0%</div>
+                <div class="kpi-compare" id="kpi1-sub">Doanh thu đạt: 0</div>
+            </div>
+            <div class="kpi-box">
+                <div class="kpi-title">Doanh thu dự kiến Pipeline</div>
+                <div class="kpi-value" id="kpi2-pipe-rev">0 <small>tỷ</small></div>
+                <div class="kpi-compare">Đang mở đàm phán</div>
+            </div>
+            <div class="kpi-box">
+                <div class="kpi-title">Win Rate (Tỷ lệ chốt đơn)</div>
+                <div class="kpi-value" id="kpi3-win-rate">0%</div>
+                <div class="kpi-compare" id="kpi3-sub">Thắng: 0 deal</div>
+            </div>
+            <div class="kpi-box">
+                <div class="kpi-title">Avg Deal Size</div>
+                <div class="kpi-value" id="kpi4-avg-size">0 <small>tỷ</small></div>
+                <div class="kpi-compare" id="kpi4-sub">Tổng Deals: 0</div>
+            </div>
+            <div class="kpi-box">
+                <div class="kpi-title">Hệ số bao phủ (Coverage)</div>
+                <div class="kpi-value" id="kpi5-coverage">0x</div>
+                <div class="kpi-compare" id="kpi5-sub" style="font-weight:bold; color:var(--color-danger);">Thiếu hụt KH: 0</div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div>
+                <div class="section-title">Chiến dịch, đề án</div>
+                <div class="card placeholder-box">Dữ liệu widget Chiến dịch/Đề án</div>
+            </div>
+            <div>
+                <div class="section-title">CHKD</div>
+                <div class="card placeholder-box">Dữ liệu widget Funnel / Biểu đồ</div>
             </div>
         </div>
     </div>
 
     <script>
-        // QUAN TRỌNG: ĐỔI LINK WEB APP CỦA BẠN VÀO ĐÂY
+        // SỬA SCRIPT_URL CỦA BẠN VÀO ĐÂY (Link Backend Google Apps Script)
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx2MtNKD9w7zDl2eosyOJ71gI9_eXApwgLNUqWxrn0-tW4L5oDDZT8rMNjO0ShRD7V6/exec"; 
         
         let dbPlan = [], dbPipeline = [];
 
-        // Khởi tạo List Tháng
+        // Khởi tạo tháng (1 đến 12)
         for(let i=1; i<=12; i++) {
             let m = (i < 10 ? '0'+i : i) + '/2026';
-            document.getElementById('filter-month').innerHTML += `<option value="${m}">Tháng ${i}/2026</option>`;
+            document.getElementById('filter-month').innerHTML += `<option value="${m}">${m}</option>`;
         }
 
         function buildDropdown(elementId, dataList, defaultText) {
@@ -141,49 +173,56 @@
 
             if (!email) { err.innerText = "Vui lòng nhập email"; err.style.display = 'block'; return; }
 
-            btn.innerText = "Đang tải dữ liệu doanh nghiệp...";
+            btn.innerText = "Đang kết nối Server...";
             btn.disabled = true;
 
             try {
+                // GỌI THẲNG LÊN BACKEND MÀ CHÚNG TA ĐÃ VIẾT Ở GOOGLE APPS SCRIPT
                 const response = await fetch(SCRIPT_URL + "?email=" + encodeURIComponent(email));
                 const data = await response.json();
 
                 if (data.status === "success") {
-                    document.getElementById('auth-screen').style.display = 'none';
-                    document.getElementById('dashboard-container').style.display = 'flex';
-                    document.getElementById('current-user-role').innerText = data.colN_MaQuanLy + " | " + data.colL_UserName;
+                    document.getElementById('auth-overlay').style.display = 'none';
+                    
+                    // HIỂN THỊ CỘT N LÊN GÓC TRÊN CÙNG (Role quản lý)
+                    document.getElementById('display-role').innerText = data.colN_MaQuanLy;
 
-                    // Lưu dữ liệu vào biến Global
                     dbPlan = data.safePlanData;
                     dbPipeline = data.safePipelineData;
 
-                    // Đổ dữ liệu vào các Dropdown
-                    buildDropdown('filter-province', data.allowedProvinces, data.allowedProvinces.length > 1 ? "Tất cả Tỉnh/Thành" : data.allowedProvinces[0]);
+                    // ĐỔ BỘ LỌC CHUẨN XÁC TỪ BACKEND
+                    const provSelect = document.getElementById('filter-province');
+                    provSelect.innerHTML = ""; 
+                    // Tên Cột L làm Text mặc định
+                    provSelect.innerHTML += `<option value="all">${data.colL_UserName}</option>`;
+                    if (data.allowedProvinces.length > 1) {
+                        data.allowedProvinces.forEach(p => provSelect.innerHTML += `<option value="${p}">${p}</option>`);
+                    } else {
+                        provSelect.disabled = true;
+                    }
+
                     buildDropdown('filter-plo', data.listPLO, "Tất cả PLO");
                     buildDropdown('filter-spdv', data.listSPDV, "Tất cả SPDV");
                     
-                    if(data.allowedProvinces.length === 1) document.getElementById('filter-province').disabled = true;
-
-                    // Tính toán lần đầu
                     calculateKPIs();
                 } else {
                     err.innerText = data.message;
                     err.style.display = 'block';
                 }
             } catch (error) {
-                err.innerText = "Lỗi kết nối. Vui lòng kiểm tra lại cấu hình Apps Script.";
+                err.innerText = "Lỗi CORS hoặc sai SCRIPT_URL.";
                 err.style.display = 'block';
             } finally {
-                btn.innerText = "Truy cập Dashboard";
+                btn.innerText = "Đăng nhập";
                 btn.disabled = false;
             }
         }
 
         function formatBillion(value) {
-            return (value / 1000).toFixed(1) + ' Tỷ'; // Dữ liệu gốc là trVND, chia 1000 để ra Tỷ
+            return (value / 1000).toFixed(1); 
         }
 
-        // HÀM LÕI TÍNH TOÁN REAL-TIME 5 KPIs
+        // TÍNH TOÁN 5 KPIs THEO FILTER
         function calculateKPIs() {
             if (!dbPlan || !dbPipeline) return;
 
@@ -192,24 +231,22 @@
             const fPlo = document.getElementById('filter-plo').value;
             const fSpdv = document.getElementById('filter-spdv').value;
 
-            // Tính 1: Kế Hoạch
+            // 1. Kế Hoạch
             let targetRev = 0;
             dbPlan.forEach(r => {
-                // Tùy biến logic lọc Kế hoạch: Nếu lọc theo Tháng, Kế hoạch thường được chia đều hoặc có cột kế hoạch tháng. 
-                // Ở đây ta đơn giản lấy tổng Kế hoạch nếu các filter khớp (hoặc thiết kế lại mapping nếu có cột kế hoạch tháng).
-                if(fProv !== "all" && r.tinh !== fProv && fProv !== document.getElementById('filter-province').options[0].text) return;
+                if(fProv !== "all" && r.tinh !== fProv) return;
                 if(fPlo !== "all" && r.plo !== fPlo) return;
                 if(fSpdv !== "all" && r.spdv !== fSpdv) return;
                 targetRev += r.target;
             });
 
-            // Tính 2: Pipeline
+            // 2. Pipeline
             let totalSales = 0, wonDeals = 0, lostDeals = 0, openDeals = 0;
             let openPipeRev = 0, totalNganSach = 0, totalDealsCount = 0;
 
             dbPipeline.forEach(r => {
                 if(fMonth !== "all" && r.thang !== fMonth) return;
-                if(fProv !== "all" && r.tinh !== fProv && fProv !== document.getElementById('filter-province').options[0].text) return;
+                if(fProv !== "all" && r.tinh !== fProv) return;
                 if(fPlo !== "all" && r.plo !== fPlo) return;
                 if(fSpdv !== "all" && r.spdv !== fSpdv) return;
 
@@ -224,39 +261,34 @@
                 else { openDeals++; openPipeRev += r.doanhThu; }
             });
 
-            // 1. Tỷ lệ hoàn thành
-            let achieveRate = targetRev > 0 ? ((totalSales / targetRev) * 100).toFixed(1) : 0;
+            // Gán dữ liệu KPI 1
+            let achieveRate = targetRev > 0 ? ((totalSales / targetRev) * 100).toFixed(2) : 0;
             document.getElementById('kpi1-achieve').innerText = achieveRate + '%';
-            document.getElementById('kpi1-sub').innerText = `Kế hoạch: ${formatBillion(targetRev)}`;
+            document.getElementById('kpi1-sub').innerText = `Doanh thu đạt: ${formatBillion(totalSales)} tỷ`;
 
-            // 2. Doanh thu kỳ vọng
-            document.getElementById('kpi2-pipe-rev').innerText = formatBillion(openPipeRev);
+            // KPI 2
+            document.getElementById('kpi2-pipe-rev').innerHTML = `${formatBillion(openPipeRev)} <small>tỷ</small>`;
 
-            // 3. Tỷ lệ chốt đơn (Win Rate)
+            // KPI 3
             let closedDeals = wonDeals + lostDeals;
-            let winRate = closedDeals > 0 ? ((wonDeals / closedDeals) * 100).toFixed(1) : 0;
+            let winRate = closedDeals > 0 ? ((wonDeals / closedDeals) * 100).toFixed(2) : 0;
             document.getElementById('kpi3-win-rate').innerText = winRate + '%';
             document.getElementById('kpi3-sub').innerText = `Thắng: ${wonDeals} / ${closedDeals} deal đóng`;
 
-            // 4. Quy mô HĐ Trung bình
+            // KPI 4
             let avgSize = totalDealsCount > 0 ? (totalNganSach / totalDealsCount) : 0;
-            document.getElementById('kpi4-avg-size').innerText = formatBillion(avgSize);
+            document.getElementById('kpi4-avg-size').innerHTML = `${formatBillion(avgSize)} <small>tỷ</small>`;
             document.getElementById('kpi4-sub').innerText = `Tổng Deals pipeline: ${totalDealsCount}`;
 
-            // 5. Hệ số bao phủ
+            // KPI 5
             let gap = targetRev - totalSales;
             let coverage = 0;
             if (gap > 0) coverage = (openPipeRev / gap).toFixed(1);
             else if (gap <= 0 && openPipeRev > 0) coverage = 999;
             
             document.getElementById('kpi5-coverage').innerText = (coverage == 999 ? "An toàn" : coverage + 'x');
-            document.getElementById('kpi5-sub').innerText = gap > 0 ? `Thiếu hụt: ${formatBillion(gap)}` : `Vượt mức KH: ${formatBillion(Math.abs(gap))}`;
-            
-            // Đổi màu cảnh báo hệ số bao phủ (Nếu < 2.0x thì đổi thành Đỏ)
-            const kpi5Card = document.querySelector('.c5');
-            if (coverage < 2.0 && coverage > 0) kpi5Card.style.background = 'linear-gradient(135deg, #ef4444, #b91c1c)'; // Đỏ
-            else if (coverage >= 2.0 && coverage < 3.0) kpi5Card.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)'; // Vàng
-            else kpi5Card.style.background = 'linear-gradient(135deg, #ec4899, #db2777)'; // Hồng gốc
+            document.getElementById('kpi5-sub').innerText = gap > 0 ? `Thiếu hụt KH: ${formatBillion(gap)} tỷ` : `Vượt mức KH: ${formatBillion(Math.abs(gap))} tỷ`;
+            document.getElementById('kpi5-sub').style.color = gap > 0 ? "var(--color-danger)" : "var(--color-success)";
         }
     </script>
 </body>
