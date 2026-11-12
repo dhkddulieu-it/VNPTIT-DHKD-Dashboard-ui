@@ -2,15 +2,19 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <title>VNPTIT-KDGP | Executive Dashboard</title>
-  <!-- Core -->
-  <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <title>Executive Dashboard - VNPT</title>
+  
+  <!-- Chốt cứng version React & DOM (v17) -->
+  <script src="https://unpkg.com/react@17.0.2/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.23.6/babel.min.js"></script>
+  
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Recharts -->
-  <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
-  <script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
+  
+  <!-- Chốt cứng version Recharts (v2.1.12) & Dependencies -->
+  <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
+  <script src="https://unpkg.com/recharts@2.1.12/umd/Recharts.js"></script>
 
   <script>
     tailwind.config = {
@@ -21,273 +25,226 @@
   </script>
 </head>
 <body class="bg-gray-100 text-gray-800 min-h-screen flex items-center justify-center font-sans">
-  <div id="root" class="w-full h-full max-w-[1920px] aspect-video bg-white shadow-2xl overflow-hidden flex flex-col"></div>
+  
+  <div id="root" class="w-full h-full max-w-[1920px] aspect-video bg-white shadow-2xl overflow-hidden flex flex-col">
+    <!-- Fallback nếu React crash -->
+    <div class="p-10 text-center text-risk font-bold mt-20">Đang tải hệ thống... Nếu màn hình dừng ở đây quá 5s, vui lòng kiểm tra kết nối mạng.</div>
+  </div>
 
   <script type="text/babel">
-    const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = window.Recharts;
-    const API_URL = 'https://script.google.com/macros/s/AKfycby6E6r6KhZ54J6by2s1PF8MqtOSJu74GcyqO4GsFnSwWd-GmDScZFrS5Brq0IwXlO1N/exec'; // ĐIỀN URL CỦA BẠN VÀO ĐÂY
-
-    // Giả lập dữ liệu Biểu đồ (10 tháng) và Danh sách Dự án
-    const mockChartData = Array.from({length: 10}, (_, i) => ({
-      thang: `T${i + 1}`,
-      thucHien: Math.floor(Math.random() * 400 + 600),
-      keHoach: 1000
-    }));
-
-    const mockProjects = Array.from({length: 10}, (_, i) => ({
-      id: i + 1,
-      ten: `Dự án CĐS Khối Chính quyền/Y tế ${i+1}`,
-      giaTri: Math.floor(Math.random() * 50 + 10) + ' Tỷ',
-      trangThai: i % 3 === 0 ? 'Rủi ro' : 'Đang bám sát'
-    }));
-
-    // Xử lý lỗi an toàn cho LocalStorage
-    const getUserFromStorage = () => {
-      try {
-        const data = localStorage.getItem('vnpt_user');
-        return data ? JSON.parse(data) : null;
-      } catch (e) {
-        localStorage.removeItem('vnpt_user');
-        return null;
-      }
-    };
-
-    function App() {
-      const [user, setUser] = React.useState(getUserFromStorage());
-      const [email, setEmail] = React.useState('');
-      const [loading, setLoading] = React.useState(false);
+    try {
+      // 1. Lấy Component Biểu đồ an toàn sau khi load xong CDN
+      const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = window.Recharts || {};
       
-      const [rawData, setRawData] = React.useState([]);
-      const [ploList, setPloList] = React.useState([]);
-      const [filters, setFilters] = React.useState({
-        thoiGian: '', maTinh: 'ALL', luongSPDV: 'ALL', nhomSPDV: 'ALL', plo: 'ALL'
-      });
+      const API_URL = 'ĐIỀN_URL_WEBAPP_GAS_CỦA_BẠN'; 
 
-      React.useEffect(() => {
-        if (user) fetchDashboardData();
-      }, [user]);
+      // 2. Dữ liệu giả lập
+      const mockChartData = Array.from({length: 10}, (_, i) => ({
+        thang: `T${i + 1}`, thucHien: Math.floor(Math.random() * 400 + 600), keHoach: 1000
+      }));
+      const mockProjects = Array.from({length: 10}, (_, i) => ({
+        id: i + 1, ten: `Dự án CĐS Khối Chính quyền/Y tế ${i+1}`,
+        giaTri: Math.floor(Math.random() * 50 + 10) + ' Tỷ', trangThai: i % 3 === 0 ? 'Rủi ro' : 'Đang bám sát'
+      }));
 
-      // API Thật: Đăng nhập
-      const handleLogin = async (e) => {
-        e.preventDefault();
-        setLoading(true);
+      // 3. Xử lý LocalStorage chống lỗi cache rác
+      const getUserFromStorage = () => {
         try {
-          const res = await fetch(API_URL, {
-            method: 'POST', body: JSON.stringify({ action: 'login', email })
-          }).then(r => r.json());
-
-          if (res.status === 'success') {
-            localStorage.setItem('vnpt_user', JSON.stringify(res.user));
-            setUser(res.user);
-          } else {
-            alert('Không có quyền truy cập hoặc sai email!');
-          }
-        } catch (err) {
-          alert('Lỗi kết nối máy chủ Backend GAS.');
+          const data = localStorage.getItem('vnpt_user');
+          return data ? JSON.parse(data) : null;
+        } catch (e) {
+          localStorage.removeItem('vnpt_user');
+          return null;
         }
-        setLoading(false);
       };
 
-      // API Thật: Kéo Dữ liệu
-      const fetchDashboardData = async () => {
-        setLoading(true);
-        try {
-          const res = await fetch(API_URL, {
-            method: 'POST', body: JSON.stringify({ action: 'getData', provinces: user.provinces })
-          }).then(r => r.json());
+      function App() {
+        const [user, setUser] = React.useState(getUserFromStorage());
+        const [email, setEmail] = React.useState('');
+        const [loading, setLoading] = React.useState(false);
+        const [rawData, setRawData] = React.useState([]);
+        const [ploList, setPloList] = React.useState([]);
+        const [filters, setFilters] = React.useState({
+          thoiGian: '', maTinh: 'ALL', luongSPDV: 'ALL', nhomSPDV: 'ALL', plo: 'ALL'
+        });
 
-          if (res.status === 'success') {
-            setRawData(res.data || []);
-            setPloList(res.ploData || []);
-            if(res.data && res.data.length > 0) setFilters(f => ({ ...f, thoiGian: res.data[0]['thang'] || '' }));
+        React.useEffect(() => { if (user) fetchDashboardData(); }, [user]);
+
+        const handleLogin = async (e) => {
+          e.preventDefault();
+          setLoading(true);
+          try {
+            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'login', email }) }).then(r => r.json());
+            if (res.status === 'success') {
+              localStorage.setItem('vnpt_user', JSON.stringify(res.user));
+              setUser(res.user);
+            } else {
+              alert('Không có quyền truy cập hoặc sai email!');
+            }
+          } catch (err) {
+            alert('Lỗi kết nối máy chủ Backend GAS. Đang chạy chế độ Giả lập (Test UI)');
+            // Kích hoạt giả lập để Test UI nếu GAS bị lỗi
+            setUser({ email, level: 1, tenClo: 'CLO_L1_MB', provinces: ['HN', 'HP'] });
           }
-        } catch (err) {
-          console.error("Lỗi kéo dữ liệu:", err);
+          setLoading(false);
+        };
+
+        const fetchDashboardData = async () => {
+          setLoading(true);
+          try {
+            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'getData', provinces: user.provinces }) }).then(r => r.json());
+            if (res.status === 'success') {
+              setRawData(res.data || []);
+              setPloList(res.ploData || []);
+              if(res.data && res.data.length > 0) setFilters(f => ({ ...f, thoiGian: res.data[0]['thang'] || '' }));
+            }
+          } catch (err) {
+            console.warn("GAS Error, using empty data.");
+          }
+          setLoading(false);
+        };
+
+        const fmtNum = (num) => new Intl.NumberFormat('vi-VN').format(num || 0);
+        const fmtPct = (num) => `${(num * 100).toFixed(1)}%`;
+
+        // UI ĐĂNG NHẬP
+        if (!user) {
+          return (
+            <div className="flex flex-col items-center justify-center h-full bg-gray-200 w-full">
+              <form onSubmit={handleLogin} className="bg-white p-10 border-t-4 border-vnpt shadow-xl w-96 rounded">
+                <h2 className="text-2xl font-bold text-navy mb-2 text-center">BI EXECUTIVE LOGIN</h2>
+                <input className="w-full mb-6 p-3 border rounded focus:outline-vnpt" 
+                       placeholder="Ví dụ: phanyen1520@gmail.com" value={email} onChange={e => setEmail(e.target.value)} required />
+                <button disabled={loading} className="w-full bg-vnpt text-white py-3 font-bold rounded hover:bg-navy transition">
+                  {loading ? 'ĐANG XÁC THỰC...' : 'VÀO HỆ THỐNG'}
+                </button>
+              </form>
+            </div>
+          );
         }
-        setLoading(false);
-      };
 
-      const handleLogout = () => {
-        setUser(null);
-        localStorage.removeItem('vnpt_user');
-      };
+        // TÍNH TOÁN KPI
+        const filteredData = rawData.filter(d => 
+          (filters.thoiGian === '' || d['thang'] === filters.thoiGian) &&
+          (filters.maTinh === 'ALL' || d['ma_tinh'] === filters.maTinh) &&
+          (filters.luongSPDV === 'ALL' || d['luong_spdv'] === filters.luongSPDV) &&
+          (filters.nhomSPDV === 'ALL' || d['nhomspdv_code'] === filters.nhomSPDV) &&
+          (filters.plo === 'ALL' || d['plo_code'] === filters.plo)
+        );
 
-      const fmtNum = (num) => new Intl.NumberFormat('vi-VN').format(num || 0);
-      const fmtPct = (num) => `${(num * 100).toFixed(1)}%`;
+        const kpi = filteredData.reduce((acc, curr) => {
+          acc.dtThucHien += Number(curr['dt_thuc_hien'] || 0); acc.dtKeHoach += Number(curr['dt_ke_hoach'] || 0);
+          acc.dtThangTruoc += Number(curr['dt_thang_truoc'] || 0); acc.pipeTongGt += Number(curr['pipe_tong_gt'] || 0);
+          acc.pipeTongSl += Number(curr['pipe_tong_sl'] || 0); acc.pipeMoGt += Number(curr['pipe_mo_gt'] || 0);
+          acc.pipeMoSl += Number(curr['pipe_mo_sl'] || 0); acc.pipeDongGt += Number(curr['pipe_dong_gt'] || 0);
+          acc.pipeDongSl += Number(curr['pipe_dong_sl'] || 0); acc.duBaoDt += Number(curr['du_bao_dt'] || 0);
+          return acc;
+        }, { dtThucHien: 0, dtKeHoach: 0, dtThangTruoc: 0, pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeMoSl: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0 });
 
-      if (!user) {
-        return (
-          <div className="flex flex-col items-center justify-center h-full bg-gray-200 w-full">
-            <form onSubmit={handleLogin} className="bg-white p-10 border-t-4 border-vnpt shadow-xl w-96 rounded">
-              <h2 className="text-2xl font-bold text-navy mb-2 text-center">BI EXECUTIVE LOGIN</h2>
-              <p className="text-sm text-center text-gray-500 mb-6">Đăng nhập bằng Email Hệ thống</p>
-              <input className="w-full mb-6 p-3 border rounded focus:outline-vnpt" 
-                     placeholder="Ví dụ: ceo@vnpt.vn" value={email} onChange={e => setEmail(e.target.value)} required />
-              <button disabled={loading} className="w-full bg-vnpt text-white py-3 font-bold rounded hover:bg-navy transition">
-                {loading ? 'ĐANG XÁC THỰC...' : 'VÀO HỆ THỐNG'}
-              </button>
-            </form>
+        const tyLeHT = kpi.dtKeHoach ? kpi.dtThucHien / kpi.dtKeHoach : 0;
+        const tangGiam = kpi.dtThangTruoc ? (kpi.dtThucHien - kpi.dtThangTruoc) / kpi.dtThangTruoc : 0;
+        const uocHT = kpi.dtKeHoach ? kpi.duBaoDt / kpi.dtKeHoach : 0;
+        const thieuHut = Math.max(kpi.dtKeHoach - kpi.dtThucHien, 0);
+        const tyLeThieu = kpi.dtKeHoach ? thieuHut / kpi.dtKeHoach : 0;
+        const winRate = kpi.pipeTongSl ? kpi.pipeDongSl / kpi.pipeTongSl : 0;
+
+        const KpiCard = ({ title, v1, l1, v2, l2, st }) => (
+          <div className="bg-white border rounded flex-1 p-3 shadow-sm flex flex-col justify-between hover:border-vnpt transition min-w-[140px]">
+            <h3 className="text-navy font-bold text-[11px] mb-2 uppercase truncate">{title}</h3>
+            <div>
+              <div className={`text-xl font-bold mb-1 ${st === 'good' ? 'text-good' : st === 'risk' ? 'text-risk' : 'text-vnpt'}`}>{v1}</div>
+              <div className="text-[10px] text-gray-500 mb-2 truncate">{l1}</div>
+              <div className="text-sm font-bold text-gray-700 border-t pt-1">{v2}</div>
+              <div className="text-[10px] text-gray-500 truncate">{l2}</div>
+            </div>
           </div>
         );
+
+        // UI DASHBOARD
+        return (
+          <React.Fragment>
+            <header className="bg-navy text-white px-6 py-3 flex justify-between items-center shrink-0">
+              <h1 className="text-lg font-bold">EXECUTIVE DASHBOARD: KẾT QUẢ SẢN XUẤT KINH DOANH</h1>
+              <div className="flex items-center gap-4 text-sm">
+                <span className="bg-vnpt px-3 py-1 rounded-full font-semibold">{user.tenClo}</span>
+                <span className="opacity-90">{user.email}</span>
+                <button onClick={() => { setUser(null); localStorage.removeItem('vnpt_user'); }} className="bg-risk px-3 py-1 rounded font-bold hover:bg-red-600">Đăng xuất</button>
+              </div>
+            </header>
+
+            <div className="bg-white px-6 py-2 flex flex-wrap gap-4 shrink-0 border-b items-end">
+              <div className="flex flex-col"><label className="text-[11px] font-bold text-navy">Tháng</label><select className="border p-1 rounded text-sm w-28"><option>ALL</option></select></div>
+              <div className="flex flex-col"><label className="text-[11px] font-bold text-navy">CLO địa bàn</label><select className="border p-1 rounded text-sm w-36"><option>Toàn địa bàn</option></select></div>
+              <div className="flex flex-col"><label className="text-[11px] font-bold text-navy">Luồng SPDV</label><select className="border p-1 rounded text-sm w-32"><option>Tất cả</option></select></div>
+              <div className="flex flex-col"><label className="text-[11px] font-bold text-navy">Nhóm SPDV</label><select className="border p-1 rounded text-sm w-40"><option>Tất cả</option></select></div>
+              <div className="flex flex-col flex-1"><label className="text-[11px] font-bold text-navy">Dịch vụ (PLO)</label><select className="border p-1 rounded text-sm w-full"><option>Tất cả</option></select></div>
+            </div>
+
+            <div className="flex gap-3 px-6 py-4 bg-gray-50 shrink-0 overflow-x-auto">
+              <KpiCard title="1. DOANH THU" v1={fmtNum(kpi.dtThucHien)} l1="Thực hiện (VNĐ)" v2={fmtNum(kpi.dtKeHoach)} l2="Kế hoạch" st="neutral" />
+              <KpiCard title="2. HIỆU SUẤT" v1={fmtPct(tyLeHT)} l1="Tỷ lệ HT Kế hoạch" v2={fmtPct(tangGiam)} l2="Tăng/Giảm (MoM)" st={tyLeHT >= 1 ? 'good' : 'risk'} />
+              <KpiCard title="3. PIPELINE (TỔNG)" v1={fmtNum(kpi.pipeTongGt)} l1="Giá trị (VNĐ)" v2={fmtNum(kpi.pipeTongSl)} l2="Số lượng" st="neutral" />
+              <KpiCard title="4. PIPELINE (ĐANG MỞ)" v1={fmtNum(kpi.pipeMoGt)} l1="Giá trị xử lý" v2={fmtNum(kpi.pipeMoSl)} l2="Số lượng" st="neutral" />
+              <KpiCard title="5. PIPELINE (CHỐT)" v1={fmtNum(kpi.pipeDongGt)} l1="Giá trị chốt" v2={fmtNum(kpi.pipeDongSl)} l2="Số lượng chốt" st="good" />
+              <KpiCard title="6. CHUYỂN ĐỔI" v1={fmtPct(winRate)} l1="Winrate" v2={fmtNum(kpi.pipeDongSl)} l2="Deal thành công" st={winRate >= 0.3 ? 'good' : 'risk'} />
+              <KpiCard title="7. DỰ BÁO" v1={fmtNum(kpi.duBaoDt)} l1="Dự báo cuối kỳ" v2={fmtPct(uocHT)} l2="Tỷ lệ Ước tính" st={uocHT >= 1 ? 'good' : 'risk'} />
+              <KpiCard title="8. KHOẢNG TRỐNG" v1={fmtNum(thieuHut)} l1="Cần bù đắp" v2={fmtPct(tyLeThieu)} l2="Tỷ lệ thiếu hụt" st={thieuHut > 0 ? 'risk' : 'good'} />
+            </div>
+
+            <main className="flex-1 px-6 pb-6 bg-gray-50 flex gap-6 overflow-hidden">
+              <div className="flex-[2] bg-white border rounded shadow-sm p-4 flex flex-col">
+                <h2 className="text-navy font-bold text-sm mb-4">DOANH THU THỰC HIỆN VS KẾ HOẠCH (10 THÁNG)</h2>
+                <div className="flex-1 w-full min-h-[300px]">
+                  {window.Recharts && (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={mockChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="thang" tick={{fontSize: 12}} />
+                        <YAxis tick={{fontSize: 12}} />
+                        <Tooltip cursor={{fill: '#f3f4f6'}} />
+                        <Legend wrapperStyle={{fontSize: '12px'}}/>
+                        <Bar dataKey="thucHien" name="Thực hiện" fill="#0094D9" radius={[4,4,0,0]} />
+                        <Bar dataKey="keHoach" name="Kế hoạch" fill="#cbd5e1" radius={[4,4,0,0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              </div>
+              <div className="flex-[1] bg-white border rounded shadow-sm p-4 flex flex-col overflow-hidden">
+                <h2 className="text-navy font-bold text-sm mb-4">DỰ ÁN CẦN THÚC ĐẨY</h2>
+                <div className="overflow-auto flex-1">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-gray-100 text-navy sticky top-0">
+                      <tr><th className="p-2">Dự án</th><th className="p-2 text-right">Quy mô</th><th className="p-2 text-center">Trạng thái</th></tr>
+                    </thead>
+                    <tbody>
+                      {mockProjects.map(p => (
+                        <tr key={p.id} className="border-b">
+                          <td className="p-2 truncate max-w-[120px]">{p.ten}</td>
+                          <td className="p-2 text-right font-bold text-vnpt">{p.giaTri}</td>
+                          <td className="p-2 text-center">
+                            <span className={`text-[10px] px-2 py-1 rounded-full font-bold ${p.trangThai === 'Rủi ro' ? 'bg-red-100 text-risk' : 'bg-green-100 text-good'}`}>{p.trangThai}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </main>
+          </React.Fragment>
+        );
       }
+      
+      ReactDOM.render(<App />, document.getElementById('root'));
 
-      const filteredData = rawData.filter(d => 
-        (filters.thoiGian === '' || d['thang'] === filters.thoiGian) &&
-        (filters.maTinh === 'ALL' || d['ma_tinh'] === filters.maTinh) &&
-        (filters.luongSPDV === 'ALL' || d['luong_spdv'] === filters.luongSPDV) &&
-        (filters.nhomSPDV === 'ALL' || d['nhomspdv_code'] === filters.nhomSPDV) &&
-        (filters.plo === 'ALL' || d['plo_code'] === filters.plo)
-      );
-
-      const kpi = filteredData.reduce((acc, curr) => {
-        acc.doanhThuThucHien += Number(curr['dt_thuc_hien'] || 0);
-        acc.doanhThuKeHoach += Number(curr['dt_ke_hoach'] || 0);
-        acc.doanhThuThangTruoc += Number(curr['dt_thang_truoc'] || 0);
-        acc.pipeTongGt += Number(curr['pipe_tong_gt'] || 0);
-        acc.pipeTongSl += Number(curr['pipe_tong_sl'] || 0);
-        acc.pipeMoGt += Number(curr['pipe_mo_gt'] || 0);
-        acc.pipeMoSl += Number(curr['pipe_mo_sl'] || 0);
-        acc.pipeDongGt += Number(curr['pipe_dong_gt'] || 0);
-        acc.pipeDongSl += Number(curr['pipe_dong_sl'] || 0);
-        acc.duBaoDt += Number(curr['du_bao_dt'] || 0);
-        return acc;
-      }, {
-        doanhThuThucHien: 0, doanhThuKeHoach: 0, doanhThuThangTruoc: 0,
-        pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeMoSl: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0
-      });
-
-      const tyLeHT = kpi.doanhThuKeHoach ? kpi.doanhThuThucHien / kpi.doanhThuKeHoach : 0;
-      const tangGiamMoM = kpi.doanhThuThangTruoc ? (kpi.doanhThuThucHien - kpi.doanhThuThangTruoc) / kpi.doanhThuThangTruoc : 0;
-      const tyLeUocHT = kpi.doanhThuKeHoach ? kpi.duBaoDt / kpi.doanhThuKeHoach : 0;
-      const thieuHut = Math.max(kpi.doanhThuKeHoach - kpi.doanhThuThucHien, 0);
-      const tyLeThieu = kpi.doanhThuKeHoach ? thieuHut / kpi.doanhThuKeHoach : 0;
-      const winRate = kpi.pipeTongSl ? kpi.pipeDongSl / kpi.pipeTongSl : 0;
-
-      const KpiCard = ({ title, val1, lbl1, val2, lbl2, status }) => (
-        <div className="bg-white border border-gray-200 rounded flex-1 p-3 shadow-sm flex flex-col justify-between hover:border-vnpt transition min-w-[140px]">
-          <h3 className="text-navy font-bold text-[11px] mb-2 uppercase truncate">{title}</h3>
-          <div>
-            <div className={`text-xl font-bold mb-1 ${status === 'good' ? 'text-good' : status === 'risk' ? 'text-risk' : 'text-vnpt'}`}>{val1}</div>
-            <div className="text-[10px] text-gray-500 mb-2 truncate">{lbl1}</div>
-            <div className="text-sm font-bold text-gray-700 border-t pt-1">{val2}</div>
-            <div className="text-[10px] text-gray-500 truncate">{lbl2}</div>
-          </div>
-        </div>
-      );
-
-      return (
-        <React.Fragment>
-          <header className="bg-navy text-white px-6 py-3 flex justify-between items-center shrink-0">
-            <h1 className="text-lg font-bold tracking-wide">EXECUTIVE DASHBOARD: KẾT QUẢ SẢN XUẤT KINH DOANH</h1>
-            <div className="flex items-center gap-4 text-sm">
-              <span className="bg-vnpt px-3 py-1 rounded-full font-semibold">{user.tenClo}</span>
-              <span className="opacity-90">{user.email}</span>
-              <button onClick={handleLogout} className="bg-risk px-3 py-1 rounded font-bold hover:bg-red-600 transition">Đăng xuất</button>
-            </div>
-          </header>
-
-          <div className="bg-white px-6 py-2 flex flex-wrap gap-4 shrink-0 border-b items-end">
-            <div className="flex flex-col">
-              <label className="text-[11px] font-bold text-navy">Thời gian (mm/yyyy)</label>
-              <select className="border p-1.5 rounded text-sm w-36" value={filters.thoiGian} onChange={e => setFilters({...filters, thoiGian: e.target.value})}>
-                <option value="">-- Tất cả --</option>
-                {[...new Set(rawData.map(d => d['thang']).filter(Boolean))].map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-            <div className="flex flex-col">
-              <label className="text-[11px] font-bold text-navy">CLO địa bàn</label>
-              <select className="border p-1.5 rounded text-sm w-36" value={filters.maTinh} onChange={e => setFilters({...filters, maTinh: e.target.value})}>
-                <option value="ALL">Toàn địa bàn</option>
-                {user.provinces.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
-            <div className="flex flex-col">
-              <label className="text-[11px] font-bold text-navy">Luồng SPDV</label>
-              <select className="border p-1.5 rounded text-sm w-36" value={filters.luongSPDV} onChange={e => setFilters({...filters, luongSPDV: e.target.value})}>
-                <option value="ALL">Tất cả</option>
-                <option value="Nhóm A">Nhóm A</option>
-                <option value="Nhóm B-C">Nhóm B-C</option>
-              </select>
-            </div>
-            <div className="flex flex-col">
-              <label className="text-[11px] font-bold text-navy">Nhóm SPDV</label>
-              <select className="border p-1.5 rounded text-sm w-40" value={filters.nhomSPDV} onChange={e => setFilters({...filters, nhomSPDV: e.target.value})}>
-                <option value="ALL">Tất cả</option>
-                {[...new Set(ploList.map(p => p['nhomspdv_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}
-              </select>
-            </div>
-            <div className="flex flex-col flex-1">
-              <label className="text-[11px] font-bold text-navy">Dịch vụ (PLO)</label>
-              <select className="border p-1.5 rounded text-sm w-full" value={filters.plo} onChange={e => setFilters({...filters, plo: e.target.value})}>
-                <option value="ALL">Tất cả</option>
-                {[...new Set(ploList.map(p => p['plo_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}
-              </select>
-            </div>
-          </div>
-
-          {loading && <div className="text-center text-vnpt text-xs py-1 font-bold animate-pulse bg-gray-50">Đang đồng bộ dữ liệu hệ thống...</div>}
-
-          <div className="flex gap-3 px-6 py-4 bg-gray-50 shrink-0 overflow-x-auto">
-            <KpiCard title="1. DOANH THU" val1={fmtNum(kpi.doanhThuThucHien)} lbl1="Thực hiện (VNĐ)" val2={fmtNum(kpi.doanhThuKeHoach)} lbl2="Kế hoạch (VNĐ)" status="neutral" />
-            <KpiCard title="2. HIỆU SUẤT" val1={fmtPct(tyLeHT)} lbl1="Tỷ lệ HT Kế hoạch" val2={fmtPct(tangGiamMoM)} lbl2="Tăng/Giảm (MoM)" status={tyLeHT >= 1 ? 'good' : 'risk'} />
-            <KpiCard title="3. PIPELINE (TỔNG)" val1={fmtNum(kpi.pipeTongGt)} lbl1="Tổng giá trị (VNĐ)" val2={fmtNum(kpi.pipeTongSl)} lbl2="Số lượng cơ hội" status="neutral" />
-            <KpiCard title="4. PIPELINE (ĐANG MỞ)" val1={fmtNum(kpi.pipeMoGt)} lbl1="Giá trị xử lý (VNĐ)" val2={fmtNum(kpi.pipeMoSl)} lbl2="Số lượng" status="neutral" />
-            <KpiCard title="5. PIPELINE (CHỐT)" val1={fmtNum(kpi.pipeDongGt)} lbl1="Giá trị chốt (VNĐ)" val2={fmtNum(kpi.pipeDongSl)} lbl2="Số lượng chốt" status="good" />
-            <KpiCard title="6. TỶ LỆ CHUYỂN ĐỔI" val1={fmtPct(winRate)} lbl1="Winrate (Theo số lượng)" val2={fmtNum(kpi.pipeDongSl)} lbl2="Deal thành công" status={winRate >= 0.3 ? 'good' : 'risk'} />
-            <KpiCard title="7. DỰ BÁO (FORECAST)" val1={fmtNum(kpi.duBaoDt)} lbl1="Dự báo (VNĐ)" val2={fmtPct(tyLeUocHT)} lbl2="Tỷ lệ Ước hoàn thành" status={tyLeUocHT >= 1 ? 'good' : 'risk'} />
-            <KpiCard title="8. KHOẢNG TRỐNG" val1={fmtNum(thieuHut)} lbl1="Cần bù đắp (VNĐ)" val2={fmtPct(tyLeThieu)} lbl2="Tỷ lệ thiếu hụt" status={thieuHut > 0 ? 'risk' : 'good'} />
-          </div>
-
-          <main className="flex-1 px-6 pb-6 bg-gray-50 flex gap-6 overflow-hidden">
-            <div className="flex-[2] bg-white border rounded shadow-sm p-4 flex flex-col">
-              <h2 className="text-navy font-bold text-sm mb-4">BIỂU ĐỒ DOANH THU THỰC HIỆN VS KẾ HOẠCH (10 THÁNG) - ĐVT: TỶ ĐỒNG</h2>
-              <div className="flex-1 w-full min-h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={mockChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="thang" tick={{fontSize: 12}} />
-                    <YAxis tick={{fontSize: 12}} />
-                    <Tooltip cursor={{fill: '#f3f4f6'}} />
-                    <Legend wrapperStyle={{fontSize: '12px', paddingTop: '10px'}}/>
-                    <Bar dataKey="thucHien" name="Doanh thu Thực hiện" fill="#0094D9" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="keHoach" name="Kế hoạch giao" fill="#cbd5e1" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            <div className="flex-[1] bg-white border rounded shadow-sm p-4 flex flex-col overflow-hidden">
-              <h2 className="text-navy font-bold text-sm mb-4">TOP 10 DỰ ÁN CẦN THÚC ĐẨY THÁNG TỚI</h2>
-              <div className="overflow-auto flex-1">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-gray-100 text-navy sticky top-0">
-                    <tr>
-                      <th className="p-2 font-semibold">Tên Dự án</th>
-                      <th className="p-2 font-semibold text-right">Quy mô</th>
-                      <th className="p-2 font-semibold text-center">Trạng thái</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mockProjects.map(p => (
-                      <tr key={p.id} className="border-b hover:bg-gray-50">
-                        <td className="p-2 font-medium text-gray-700 truncate max-w-[150px]">{p.ten}</td>
-                        <td className="p-2 text-right font-bold text-vnpt">{p.giaTri}</td>
-                        <td className="p-2 text-center">
-                          <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${p.trangThai === 'Rủi ro' ? 'bg-red-100 text-risk' : 'bg-green-100 text-good'}`}>
-                            {p.trangThai}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </main>
-        </React.Fragment>
-      );
+    } catch (err) {
+      document.getElementById('root').innerHTML = `
+        <div class="p-10 text-center">
+          <h2 class="text-risk font-bold text-2xl mb-4">Lỗi Render React Component</h2>
+          <p class="text-gray-600 bg-gray-100 p-4 rounded border border-gray-300 font-mono text-left">${err.message}</p>
+        </div>`;
     }
-    ReactDOM.render(<App />, document.getElementById('root'));
   </script>
 </body>
 </html>
