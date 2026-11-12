@@ -1,476 +1,217 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VNPT-IT | Dashboard</title>
-    <!-- Tải FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --bg-body: #f4f6f9; 
-            --bg-navy: #003B7A; /* Màu xanh VNPT */
-            --bg-sidebar: #0c2a4d;
-            --bg-card: #ffffff;
-            --text-main: #333333; 
-            --color-primary: #007bff;
-            --border-color: #dee2e6;
-            --color-danger: #dc3545;
-            --color-success: #28a745;
-        }
-        
-        /* Reset và Layout Tổng thể */
-        body, html { 
-            margin: 0; 
-            padding: 0; 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background-color: var(--bg-body); 
-            color: var(--text-main); 
-            height: 100vh; 
-            display: flex; 
-            flex-direction: column; 
-            overflow: hidden; /* Cố định trang, không cuộn */
-        }
-
-        /* 1. MÀN HÌNH ĐĂNG NHẬP */
-        #auth-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg-navy); display: flex; justify-content: center; align-items: center; z-index: 9999; }
-        .login-box { background: white; padding: 30px; border-radius: 8px; width: 320px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3);}
-        .login-box input, .login-box button { width: 100%; padding: 12px; margin-top: 15px; box-sizing: border-box; border-radius: 4px; border: 1px solid #ccc;}
-        .login-box button { background: var(--color-primary); color: white; border: none; cursor: pointer; font-weight: bold; }
-        #login-error { color: var(--color-danger); font-size: 12px; margin-top: 10px; display: none; }
-
-        /* Vùng chứa toàn bộ Dashboard */
-        #dashboard-container { 
-            display: none; 
-            flex-direction: column; 
-            height: 100%; 
-            width: 100%; 
-        }
-
-        /* 2. HEADER - SỬ DỤNG GRID ĐỂ CHIA 2 CỘT CỐ ĐỊNH */
-        header { 
-            display: grid; 
-            grid-template-columns: 220px 1fr; /* Cột 1 = Sidebar, Cột 2 = Phần còn lại */
-            background-color: var(--bg-navy); 
-            color: white; 
-            flex-shrink: 0; 
-            border-bottom: 2px solid #002244; 
-        }
-        
-        /* Header Cột 1: Logo */
-        .header-col-1 { 
-            background-color: var(--bg-sidebar); 
-            border-right: 1px solid #061930; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            padding: 15px; 
-        }
-        .logo-text { font-size: 26px; font-weight: 900; font-style: italic; letter-spacing: 1px;}
-        .brand-text { font-size: 11px; font-weight: 600; margin-top: 5px; opacity: 0.8;}
-
-        /* Header Cột 2: Tiêu đề & Điều hướng */
-        .header-col-2 { display: flex; flex-direction: column; padding: 15px 25px; gap: 15px; }
-
-        .header-top-row { display: flex; justify-content: space-between; align-items: center; }
-        .header-title { font-size: 22px; font-weight: 800; text-transform: uppercase; }
-        .header-subtitle { font-size: 12px; font-style: italic; opacity: 0.8; margin-top: 3px; }
-        .header-user { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
-        .role-badge { background: white; color: var(--bg-navy); padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
-
-        /* Thanh Bộ Lọc (6 Dropdown) */
-        .filter-nav { background-color: white; border-radius: 6px; padding: 8px 15px; display: flex; gap: 10px; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);}
-        .filter-group { display: flex; align-items: center; gap: 8px; flex: 1; border-right: 1px solid #eee; padding-right: 10px; min-width: 0;}
-        .filter-group:last-child { border-right: none; padding-right: 0; }
-        .filter-icon { color: var(--color-primary); font-size: 16px; width: 18px; text-align: center; }
-        .filter-content { display: flex; flex-direction: column; flex-grow: 1; min-width: 0;}
-        .filter-content label { font-size: 10px; font-weight: 700; color: var(--bg-navy); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-        .filter-content select { border: none; font-size: 12px; font-weight: 600; color: var(--text-main); outline: none; padding: 2px 0; background: transparent; cursor: pointer; width: 100%; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;}
-        .btn-clear { background: var(--color-primary); color: white; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 11px; cursor: pointer; white-space: nowrap; }
-
-        /* 3. KHỐI NỘI DUNG BÊN DƯỚI HEADER */
-        .body-wrapper { 
-            display: flex; 
-            flex-grow: 1; 
-            overflow: hidden; /* Ẩn cuộn ở wrapper, chỉ cuộn ở main-content */
-        }
-        
-        /* Sidebar */
-        .sidebar { 
-            width: 220px; 
-            background-color: var(--bg-sidebar); 
-            color: white; 
-            display: flex; 
-            flex-direction: column; 
-            padding-top: 15px; 
-            flex-shrink: 0; 
-            border-right: 1px solid #061930; 
-        }
-        .menu-item { padding: 12px 20px; margin: 2px 10px; cursor: pointer; font-size: 13px; font-weight: 500; border-radius: 4px; border: 1px solid transparent; }
-        .menu-item:hover, .menu-item.active { background-color: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
-        
-        /* Phần Nội Dung Chính */
-        .main-content { 
-            flex-grow: 1; 
-            display: flex; 
-            flex-direction: column; 
-            overflow-y: auto; /* Cho phép cuộn dọc */
-            padding: 20px; 
-        }
-
-        /* 4. BẢNG 8 KPIs */
-        .kpi-board { display: grid; grid-template-columns: repeat(8, 1fr); background-color: var(--bg-card); border-top: 3px solid var(--bg-navy); border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px; flex-shrink: 0;}
-        .kpi-box { padding: 12px 8px; text-align: center; border-right: 1px dashed var(--border-color); display: flex; flex-direction: column; justify-content: center; }
-        .kpi-box:last-child { border-right: none; }
-        .kpi-title { font-size: 10px; font-weight: 800; color: var(--text-main); text-transform: uppercase; margin-bottom: 8px;}
-        .kpi-value { font-size: 18px; font-weight: 800; color: #000; margin-bottom: 5px; }
-        .kpi-compare { font-size: 10px; color: var(--color-primary); font-weight: 600;}
-
-        /* Bố cục Placeholder */
-        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .section-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--bg-navy); border-bottom: 2px solid var(--color-primary); display: inline-block; padding-bottom: 5px;}
-        .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 4px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.02);}
-        .placeholder-box { background: #f8f9fa; border: 1px dashed #ccc; padding: 40px; text-align: center; color: #999; font-size: 12px; }
-
-        /* 5. FOOTER */
-        footer { 
-            background-color: white; 
-            color: #6c757d; 
-            text-align: right; 
-            padding: 10px 20px; 
-            font-size: 11px; 
-            font-weight: 600; 
-            border-top: 1px solid var(--border-color); 
-            flex-shrink: 0; 
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Executive Dashboard - VNPT</title>
+  <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: { colors: { vnpt: '#0094D9', navy: '#003B7A', good: '#22c55e', risk: '#ef4444' } }
+      }
+    }
+  </script>
 </head>
-<body>
+<body class="bg-gray-50 text-gray-800 min-h-screen flex items-center justify-center font-sans">
+  <div id="root" class="w-full h-full max-w-[1920px] aspect-video bg-white shadow-2xl overflow-hidden flex flex-col"></div>
 
-    <!-- MÀN HÌNH LOGIN -->
-    <div id="auth-overlay">
-        <div class="login-box">
-            <h2 style="margin-top: 0; color: var(--bg-navy); font-weight: 800;">COMMAND CENTER</h2>
-            <input type="email" id="email-input" placeholder="Email (VD: tgd@vnpt.vn)" required>
-            <button id="login-btn" onclick="login()">ĐĂNG NHẬP HỆ THỐNG</button>
-            <div id="login-error"></div>
+  <script type="text/babel">
+    const API_URL = 'https://script.google.com/macros/s/AKfycby6E6r6KhZ54J6by2s1PF8MqtOSJu74GcyqO4GsFnSwWd-GmDScZFrS5Brq0IwXlO1N/exec';
+
+    function App() {
+      const [user, setUser] = React.useState(JSON.parse(localStorage.getItem('vnpt_user')));
+      const [email, setEmail] = React.useState('');
+      const [loading, setLoading] = React.useState(false);
+      
+      const [rawData, setRawData] = React.useState([]);
+      const [ploList, setPloList] = React.useState([]);
+      
+      // Filter States
+      const [filters, setFilters] = React.useState({
+        thoiGian: '', maTinh: 'ALL', luongSPDV: 'ALL', nhomSPDV: 'ALL', plo: 'ALL'
+      });
+
+      React.useEffect(() => {
+        if (user) fetchDashboardData();
+      }, [user]);
+
+      const handleLogin = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        const res = await fetch(API_URL, {
+          method: 'POST', body: JSON.stringify({ action: 'login', email })
+        }).then(r => r.json());
+
+        if (res.status === 'success') {
+          localStorage.setItem('vnpt_user', JSON.stringify(res.user));
+          setUser(res.user);
+        } else {
+          alert('Không có quyền truy cập hoặc sai email!');
+        }
+        setLoading(false);
+      };
+
+      const fetchDashboardData = async () => {
+        setLoading(true);
+        const res = await fetch(API_URL, {
+          method: 'POST', body: JSON.stringify({ action: 'getData', provinces: user.provinces })
+        }).then(r => r.json());
+
+        if (res.status === 'success') {
+          setRawData(res.data);
+          setPloList(res.ploData);
+          if(res.data.length > 0) setFilters(f => ({ ...f, thoiGian: res.data[0]['thang'] || '' }));
+        }
+        setLoading(false);
+      };
+
+      // Helper: Format số liệu
+      const fmtNum = (num) => new Intl.NumberFormat('vi-VN').format(num || 0);
+      const fmtPct = (num) => `${(num * 100).toFixed(1)}%`;
+
+      if (!user) {
+        return (
+          <div className="flex flex-col items-center justify-center h-full bg-gray-200 w-full">
+            <form onSubmit={handleLogin} className="bg-white p-10 border-t-4 border-vnpt shadow-xl w-96 rounded">
+              <h2 className="text-2xl font-bold text-navy mb-2 text-center">BI EXECUTIVE LOGIN</h2>
+              <p className="text-sm text-center text-gray-500 mb-6">Đăng nhập bằng Email Hệ thống</p>
+              <input className="w-full mb-6 p-3 border rounded focus:outline-vnpt" 
+                     placeholder="Ví dụ: tiamovnn@gmail.com" 
+                     value={email} onChange={e => setEmail(e.target.value)} required />
+              <button disabled={loading} className="w-full bg-vnpt text-white py-3 font-bold rounded hover:bg-navy transition">
+                {loading ? 'ĐANG XÁC THỰC...' : 'VÀO HỆ THỐNG'}
+              </button>
+            </form>
+          </div>
+        );
+      }
+
+      // Logic Lọc Dữ liệu
+      let filteredData = rawData.filter(d => 
+        (filters.thoiGian === '' || d['thang'] === filters.thoiGian) &&
+        (filters.maTinh === 'ALL' || d['ma_tinh'] === filters.maTinh) &&
+        (filters.luongSPDV === 'ALL' || d['luong_spdv'] === filters.luongSPDV) &&
+        (filters.nhomSPDV === 'ALL' || d['nhomspdv_code'] === filters.nhomSPDV) &&
+        (filters.plo === 'ALL' || d['plo_code'] === filters.plo)
+      );
+
+      // Core Aggregation Engine (Tính toán 8 KPIs)
+      const kpi = filteredData.reduce((acc, curr) => {
+        acc.doanhThuThucHien += Number(curr['dt_thuc_hien'] || 0);
+        acc.doanhThuKeHoach += Number(curr['dt_ke_hoach'] || 0);
+        acc.doanhThuThangTruoc += Number(curr['dt_thang_truoc'] || 0);
+        acc.pipeTongGt += Number(curr['pipe_tong_gt'] || 0);
+        acc.pipeTongSl += Number(curr['pipe_tong_sl'] || 0);
+        acc.pipeMoGt += Number(curr['pipe_mo_gt'] || 0);
+        acc.pipeMoSl += Number(curr['pipe_mo_sl'] || 0);
+        acc.pipeDongGt += Number(curr['pipe_dong_gt'] || 0);
+        acc.pipeDongSl += Number(curr['pipe_dong_sl'] || 0);
+        acc.duBaoDt += Number(curr['du_bao_dt'] || 0);
+        return acc;
+      }, {
+        doanhThuThucHien: 0, doanhThuKeHoach: 0, doanhThuThangTruoc: 0,
+        pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeMoSl: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0
+      });
+
+      // Các tỷ lệ phái sinh
+      const tyLeHT = kpi.doanhThuKeHoach ? kpi.doanhThuThucHien / kpi.doanhThuKeHoach : 0;
+      const tangGiamMoM = kpi.doanhThuThangTruoc ? (kpi.doanhThuThucHien - kpi.doanhThuThangTruoc) / kpi.doanhThuThangTruoc : 0;
+      const tyLeUocHT = kpi.doanhThuKeHoach ? kpi.duBaoDt / kpi.doanhThuKeHoach : 0;
+      const thieuHut = kpi.doanhThuKeHoach - kpi.doanhThuThucHien > 0 ? kpi.doanhThuKeHoach - kpi.doanhThuThucHien : 0;
+      const tyLeThieu = kpi.doanhThuKeHoach ? thieuHut / kpi.doanhThuKeHoach : 0;
+
+      // Card Component
+      const KpiCard = ({ title, val1, lbl1, val2, lbl2, status }) => (
+        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col justify-between">
+          <h3 className="text-gray-500 font-semibold text-sm mb-2">{title}</h3>
+          <div>
+            <div className={`text-2xl font-bold ${status === 'good' ? 'text-good' : status === 'risk' ? 'text-risk' : 'text-navy'}`}>{val1}</div>
+            <div className="text-xs text-gray-400 mb-2">{lbl1}</div>
+            <div className="text-lg font-bold text-gray-700 border-t pt-2">{val2}</div>
+            <div className="text-xs text-gray-400">{lbl2}</div>
+          </div>
         </div>
-    </div>
+      );
 
-    <!-- TOÀN BỘ TRANG SAU KHI ĐĂNG NHẬP -->
-    <div id="dashboard-container">
-        
-        <!-- HEADER (CHIA 2 CỘT BẰNG GRID) -->
-        <header>
-            <div class="header-col-1">
-                <div class="logo-text">VNPT</div>
-                <div class="brand-text">VNPT IT</div>
+      return (
+        <React.Fragment>
+          {/* Header */}
+          <header className="bg-navy text-white px-6 py-3 flex justify-between items-center shrink-0">
+            <h1 className="text-xl font-bold tracking-wide">EXECUTIVE DASHBOARD: SXKD - CHKD</h1>
+            <div className="flex items-center gap-4 text-sm">
+              <span className="bg-vnpt px-3 py-1 rounded-full">{user.tenClo}</span>
+              <span>{user.email}</span>
+              <button onClick={() => { setUser(null); localStorage.clear(); }} className="hover:text-risk font-bold ml-4">Đăng xuất</button>
             </div>
-            
-            <div class="header-col-2">
-                <div class="header-top-row">
-                    <div>
-                        <div class="header-title">DASHBOARD – ĐIỀU HÀNH SXKD</div>
-                        <div class="header-subtitle">Dashboard Quản trị Điều hành dành cho Cấp Quản lý</div>
-                    </div>
-                    <div class="header-user">
-                        <div class="role-badge" id="display-role">---</div>
-                        <a href="#" onclick="location.reload()" style="color: #cbd5e1; text-decoration: none; font-size: 11px; margin-top: 5px;"><i class="fa-solid fa-power-off"></i> Đăng xuất</a>
-                    </div>
-                </div>
+          </header>
 
-                <!-- 6 DROPDOWNS -->
-                <div class="filter-nav">
-                    <div class="filter-group">
-                        <div class="filter-icon"><i class="fa-regular fa-calendar-days"></i></div>
-                        <div class="filter-content">
-                            <label>Tháng Báo Cáo</label>
-                            <select id="filter-month" onchange="calculate8KPIs()">
-                                <option value="all">Toàn thời gian</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="filter-group">
-                        <div class="filter-icon"><i class="fa-solid fa-map"></i></div>
-                        <div class="filter-content">
-                            <label>CLO Vùng (L1)</label>
-                            <select id="filter-clo1" onchange="calculate8KPIs()"></select>
-                        </div>
-                    </div>
-                    <div class="filter-group">
-                        <div class="filter-icon"><i class="fa-solid fa-location-dot"></i></div>
-                        <div class="filter-content">
-                            <label>CLO Địa Bàn</label>
-                            <select id="filter-clo3" onchange="calculate8KPIs()"></select>
-                        </div>
-                    </div>
-                    <div class="filter-group">
-                        <div class="filter-icon"><i class="fa-solid fa-layer-group"></i></div>
-                        <div class="filter-content">
-                            <label>Nhóm SPDV</label>
-                            <select id="filter-spdv" onchange="calculate8KPIs()"></select>
-                        </div>
-                    </div>
-                    <div class="filter-group">
-                        <div class="filter-icon"><i class="fa-solid fa-code-branch"></i></div>
-                        <div class="filter-content">
-                            <label>Luồng SPDV</label>
-                            <select id="filter-luong" onchange="calculate8KPIs()">
-                                <option value="all">Tất cả</option>
-                                <option value="A">Nhóm A</option>
-                                <option value="B,C">Nhóm B,C</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="filter-group">
-                        <div class="filter-icon"><i class="fa-solid fa-user-tie"></i></div>
-                        <div class="filter-content">
-                            <label>PLO</label>
-                            <select id="filter-plo" onchange="calculate8KPIs()"></select>
-                        </div>
-                    </div>
-                    <button class="btn-clear" onclick="resetFilters()">
-                        <i class="fa-solid fa-filter-circle-xmark"></i> Xóa Lọc
-                    </button>
-                </div>
+          {/* Filter Bar */}
+          <div className="bg-gray-100 px-6 py-3 flex gap-4 shrink-0 border-b">
+            <select className="border p-2 rounded text-sm w-40" value={filters.thoiGian} onChange={e => setFilters({...filters, thoiGian: e.target.value})}>
+              <option value="">-- Thời gian --</option>
+              {[...new Set(rawData.map(d => d['thang']))].map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <select className="border p-2 rounded text-sm w-40" value={filters.maTinh} onChange={e => setFilters({...filters, maTinh: e.target.value})}>
+              <option value="ALL">Toàn địa bàn ({user.provinces.length})</option>
+              {user.provinces.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <select className="border p-2 rounded text-sm w-40" value={filters.luongSPDV} onChange={e => setFilters({...filters, luongSPDV: e.target.value})}>
+              <option value="ALL">Tất cả Luồng SPDV</option>
+              <option value="Nhóm A">Nhóm A</option>
+              <option value="Nhóm B-C">Nhóm B-C</option>
+            </select>
+            <select className="border p-2 rounded text-sm w-48" value={filters.nhomSPDV} onChange={e => setFilters({...filters, nhomSPDV: e.target.value})}>
+              <option value="ALL">Tất cả Nhóm SPDV</option>
+              {[...new Set(ploList.map(p => p['nhomspdv_code']))].map(n => n && <option key={n} value={n}>{n}</option>)}
+            </select>
+            <select className="border p-2 rounded text-sm flex-1" value={filters.plo} onChange={e => setFilters({...filters, plo: e.target.value})}>
+              <option value="ALL">Tất cả PLO</option>
+              {[...new Set(ploList.filter(p => filters.nhomSPDV === 'ALL' || p['nhomspdv_code'] === filters.nhomSPDV).map(p => p['plo_code']))].map(n => n && <option key={n} value={n}>{n}</option>)}
+            </select>
+          </div>
+
+          {/* KPIs Grid */}
+          <main className="flex-1 p-6 bg-gray-50 overflow-auto">
+            {loading && <div className="text-center text-vnpt font-bold mb-4">Đang đồng bộ dữ liệu...</div>}
+            <div className="grid grid-cols-4 gap-6 h-full">
+              
+              <KpiCard title="1. DOANH THU (THỰC HIỆN / KH)" 
+                val1={fmtNum(kpi.doanhThuThucHien)} lbl1="Thực hiện (VNĐ)" 
+                val2={fmtNum(kpi.doanhThuKeHoach)} lbl2="Kế hoạch (VNĐ)" status="neutral" />
+              
+              <KpiCard title="2. TỶ LỆ HOÀN THÀNH & TĂNG TRƯỞNG" 
+                val1={fmtPct(tyLeHT)} lbl1="Tỷ lệ HT Kế hoạch" 
+                val2={fmtPct(tangGiamMoM)} lbl2="Tăng/Giảm so với tháng trước" status={tyLeHT >= 1 ? 'good' : 'risk'} />
+              
+              <KpiCard title="3. PIPELINE (TỔNG KHỐI LƯỢNG)" 
+                val1={fmtNum(kpi.pipeTongGt)} lbl1="Tổng giá trị (VNĐ)" 
+                val2={fmtNum(kpi.pipeTongSl)} lbl2="Số lượng cơ hội" status="neutral" />
+              
+              <KpiCard title="4. PIPELINE MỞ (ĐANG XỬ LÝ)" 
+                val1={fmtNum(kpi.pipeMoGt)} lbl1="Giá trị đang mở (VNĐ)" 
+                val2={fmtNum(kpi.pipeMoSl)} lbl2="Số lượng" status="neutral" />
+              
+              <KpiCard title="5. PIPELINE ĐÓNG (THÀNH CÔNG)" 
+                val1={fmtNum(kpi.pipeDongGt)} lbl1="Giá trị chốt deal (VNĐ)" 
+                val2={fmtNum(kpi.pipeDongSl)} lbl2="Số lượng hợp đồng" status="good" />
+              
+              <KpiCard title="6. FORECAST (DỰ BÁO DOANH THU)" 
+                val1={fmtNum(kpi.duBaoDt)} lbl1="Dự báo cuối kỳ (VNĐ)" 
+                val2={fmtPct(tyLeUocHT)} lbl2="Tỷ lệ Ước hoàn thành" status={tyLeUocHT >= 1 ? 'good' : 'risk'} />
+              
+              <KpiCard title="7. GAP (KHOẢNG TRỐNG KẾ HOẠCH)" 
+                val1={fmtNum(thieuHut)} lbl1="Thiếu hụt cần bù đắp (VNĐ)" 
+                val2={fmtPct(tyLeThieu)} lbl2="Tỷ lệ thiếu" status={thieuHut > 0 ? 'risk' : 'good'} />
+
             </div>
-        </header>
-
-        <!-- PHẦN DƯỚI (SIDEBAR + MAIN CONTENT) -->
-        <div class="body-wrapper">
-            
-            <!-- Sidebar -->
-            <div class="sidebar">
-                <div class="menu-item active"><i class="fa-solid fa-chart-pie" style="width: 25px;"></i> Dashboard</div>
-                <div class="menu-item"><i class="fa-solid fa-folder-open" style="width: 25px;"></i> Đề án, KH</div>
-                <div class="menu-item"><i class="fa-solid fa-bullseye" style="width: 25px;"></i> Cơ hội KD</div>
-                <div class="menu-item"><i class="fa-solid fa-users" style="width: 25px;"></i> Khách hàng</div>
-                <div class="menu-item"><i class="fa-solid fa-file-signature" style="width: 25px;"></i> Hợp đồng</div>
-                <div class="menu-item"><i class="fa-solid fa-list-check" style="width: 25px;"></i> Danh mục</div>
-            </div>
-
-            <!-- Nội Dung Chính -->
-            <div class="main-content">
-                
-                <!-- 8 KPIs Board -->
-                <div class="kpi-board">
-                    <div class="kpi-box">
-                        <div class="kpi-title">DOANH THU THỰC HIỆN (YTD)</div>
-                        <div class="kpi-value" id="kpi1-val">0 <small>trđ</small></div>
-                        <div class="kpi-compare" id="kpi1-sub">KẾ HOẠCH: 0 trđ</div>
-                    </div>
-                    <div class="kpi-box">
-                        <div class="kpi-title">% HOÀN THÀNH KH</div>
-                        <div class="kpi-value" id="kpi2-val">0%</div>
-                        <div class="kpi-compare" id="kpi2-sub">-</div>
-                    </div>
-                    <div class="kpi-box">
-                        <div class="kpi-title">TỔNG GIÁ TRỊ PIPELINE</div>
-                        <div class="kpi-value" id="kpi3-val">0 <small>trđ</small></div>
-                        <div class="kpi-compare" id="kpi3-sub">SL: 0</div>
-                    </div>
-                    <div class="kpi-box">
-                        <div class="kpi-title">PIPELINE MỞ</div>
-                        <div class="kpi-value" id="kpi4-val">0 <small>trđ</small></div>
-                        <div class="kpi-compare" id="kpi4-sub">SL: 0</div>
-                    </div>
-                    <div class="kpi-box">
-                        <div class="kpi-title">PIPELINE ĐÓNG THÀNH CÔNG</div>
-                        <div class="kpi-value" id="kpi5-val">0 <small>trđ</small></div>
-                        <div class="kpi-compare" id="kpi5-sub">SL: 0</div>
-                    </div>
-                    <div class="kpi-box">
-                        <div class="kpi-title">WINRATE (%)</div>
-                        <div class="kpi-value" id="kpi6-val">0%</div>
-                        <div class="kpi-compare" id="kpi6-sub">-</div>
-                    </div>
-                    <div class="kpi-box">
-                        <div class="kpi-title">DỰ BÁO DOANH THU</div>
-                        <div class="kpi-value" id="kpi7-val">0 <small>trđ</small></div>
-                        <div class="kpi-compare" id="kpi7-sub">TỈ LỆ HOÀN THÀNH: 0%</div>
-                    </div>
-                    <div class="kpi-box">
-                        <div class="kpi-title">THIẾU HỤT</div>
-                        <div class="kpi-value" id="kpi8-val" style="color:var(--color-danger)">0 <small>trđ</small></div>
-                        <div class="kpi-compare" id="kpi8-sub">TỈ LỆ: 0%</div>
-                    </div>
-                </div>
-
-                <!-- Các khối Widget bên dưới -->
-                <div class="dashboard-grid">
-                    <div>
-                        <div class="section-title">Tiến độ Chiến dịch & Đề án</div>
-                        <div class="card placeholder-box">Dữ liệu widget Chiến dịch/Đề án</div>
-                    </div>
-                    <div>
-                        <div class="section-title">Phễu Cơ hội Kinh doanh (Funnel)</div>
-                        <div class="card placeholder-box">Dữ liệu widget Funnel / Biểu đồ</div>
-                    </div>
-                </div>
-
-            </div> <!-- End Main Content -->
-        </div> <!-- End Body Wrapper -->
-
-        <!-- FOOTER -->
-        <footer>
-            Tổ dữ liệu - TTĐHKD - Ban KDGP - VNPTIT
-        </footer>
-
-    </div> <!-- End Dashboard Container -->
-
-    <script>
-        // SỬA LINK WEB APP CỦA BẠN VÀO ĐÂY
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx2MtNKD9w7zDl2eosyOJ71gI9_eXApwgLNUqWxrn0-tW4L5oDDZT8rMNjO0ShRD7V6/exec"; 
-        
-        let dbPlan = [], dbPipeline = [];
-
-        // Generate Month Filter
-        for(let i=1; i<=12; i++) {
-            let m = (i < 10 ? '0'+i : i) + '/2026';
-            document.getElementById('filter-month').innerHTML += `<option value="${m}">${m}</option>`;
-        }
-
-        function buildDropdown(elId, dataList, defaultText) {
-            const select = document.getElementById(elId);
-            select.innerHTML = `<option value="all">${defaultText}</option>`;
-            dataList.forEach(item => { if(item) select.innerHTML += `<option value="${item}">${item}</option>`; });
-        }
-
-        async function login() {
-            const email = document.getElementById('email-input').value.trim();
-            const btn = document.getElementById('login-btn');
-            const err = document.getElementById('login-error');
-            err.style.display = 'none';
-
-            if (!email) { err.innerText = "Vui lòng nhập email"; err.style.display = 'block'; return; }
-
-            btn.innerText = "ĐANG TẢI DỮ LIỆU...";
-            btn.disabled = true;
-
-            try {
-                const response = await fetch(SCRIPT_URL + "?email=" + encodeURIComponent(email));
-                const data = await response.json();
-
-                if (data.status === "success") {
-                    document.getElementById('auth-overlay').style.display = 'none';
-                    document.getElementById('dashboard-container').style.display = 'flex';
-                    
-                    document.getElementById('display-role').innerText = data.colN_MaQuanLy + " | " + data.colL_UserName;
-
-                    dbPlan = data.safePlanData;
-                    dbPipeline = data.safePipelineData;
-
-                    // Build Dropdowns
-                    buildDropdown('filter-clo1', data.listCLO1, "Tất cả CLO Vùng");
-                    
-                    const provSelect = document.getElementById('filter-clo3');
-                    provSelect.innerHTML = `<option value="all">Tất cả Tỉnh/TP</option>`;
-                    data.allowedProvinces.forEach(p => provSelect.innerHTML += `<option value="${p}">${p}</option>`);
-                    if (data.allowedProvinces.length === 1) provSelect.disabled = true;
-
-                    buildDropdown('filter-spdv', data.listSPDV, "Tất cả SPDV");
-                    buildDropdown('filter-plo', data.listPLO, "Tất cả PLO");
-
-                    calculate8KPIs();
-                } else {
-                    err.innerText = data.message;
-                    err.style.display = 'block';
-                }
-            } catch (error) {
-                err.innerText = "Lỗi kết nối máy chủ dữ liệu.";
-                err.style.display = 'block';
-            } finally {
-                btn.innerText = "ĐĂNG NHẬP HỆ THỐNG";
-                btn.disabled = false;
-            }
-        }
-
-        function resetFilters() {
-            ['filter-month', 'filter-clo1', 'filter-spdv', 'filter-luong', 'filter-plo'].forEach(id => document.getElementById(id).value = 'all');
-            const pSel = document.getElementById('filter-clo3');
-            if(!pSel.disabled) pSel.value = 'all';
-            calculate8KPIs();
-        }
-
-        function formatNumber(num) {
-            return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
-
-        function calculate8KPIs() {
-            if (!dbPlan || !dbPipeline) return;
-        
-            const fMonth = document.getElementById('filter-month').value;
-            const fProv = document.getElementById('filter-clo3').value;
-            const fPlo = document.getElementById('filter-plo').value;
-            const fSpdv = document.getElementById('filter-spdv').value;
-            const fLuong = document.getElementById('filter-luong').value;
-        
-            let target = 0;
-            dbPlan.forEach(r => {
-                if(fProv !== "all" && r.tinh !== fProv) return;
-                if(fPlo !== "all" && r.plo !== fPlo) return;
-                if(fSpdv !== "all" && r.spdv !== fSpdv) return;
-                if(fLuong !== "all" && r.luong !== fLuong) return; 
-                target += r.target; 
-            });
-        
-            let countTotal = 0, countWon = 0, countLost = 0, countOpen = 0;
-            let valTotalPipe = 0, valOpenPipe = 0, valWonPipe = 0;
-            let revWon = 0, revOpen = 0;
-        
-            dbPipeline.forEach(r => {
-                if(fMonth !== "all" && r.thang !== fMonth) return;
-                if(fProv !== "all" && r.tinh !== fProv) return;
-                if(fPlo !== "all" && r.plo !== fPlo) return;
-                if(fSpdv !== "all" && r.spdv !== fSpdv) return;
-        
-                countTotal++;
-                valTotalPipe += r.nganSach; 
-        
-                const isWon = (r.trangThai === "closed");
-                const isLost = (r.trangThai === "lost");
-        
-                if (isWon) { 
-                    countWon++; 
-                    valWonPipe += r.nganSach; 
-                    revWon += r.doanhThu; 
-                } 
-                else if (isLost) { 
-                    countLost++; 
-                } 
-                else { 
-                    countOpen++; 
-                    valOpenPipe += r.nganSach; 
-                    revOpen += r.doanhThu; 
-                }
-            });
-        
-            let kpi1 = revWon;
-            let kpi2 = target > 0 ? (kpi1 / target) * 100 : 0;
-            let kpi6 = (countWon + countLost) > 0 ? (countWon / (countWon + countLost)) * 100 : 0;
-            let kpi7 = revWon + revOpen;
-            let kpi7Rate = target > 0 ? (kpi7 / target) * 100 : 0;
-            let kpi8 = kpi7 - target;
-            let kpi8Rate = target > 0 ? (kpi8 / target) * 100 : 0;
-        
-            document.getElementById('kpi1-val').innerHTML = `${formatNumber(kpi1)} <small>trđ</small>`;
-            document.getElementById('kpi1-sub').innerText = `KẾ HOẠCH: ${formatNumber(target)} trđ`;
-            document.getElementById('kpi2-val').innerText = `${kpi2.toFixed(2)}%`;
-            document.getElementById('kpi3-val').innerHTML = `${formatNumber(valTotalPipe)} <small>trđ</small>`;
-            document.getElementById('kpi3-sub').innerText = `SL: ${countTotal}`;
-            document.getElementById('kpi4-val').innerHTML = `${formatNumber(valOpenPipe)} <small>trđ</small>`;
-            document.getElementById('kpi4-sub').innerText = `SL: ${countOpen}`;
-            document.getElementById('kpi5-val').innerHTML = `${formatNumber(valWonPipe)} <small>trđ</small>`;
-            document.getElementById('kpi5-sub').innerText = `SL: ${countWon}`;
-            document.getElementById('kpi6-val').innerText = `${kpi6.toFixed(2)}%`;
-            document.getElementById('kpi7-val').innerHTML = `${formatNumber(kpi7)} <small>trđ</small>`;
-            document.getElementById('kpi7-sub').innerText = `TỈ LỆ HOÀN THÀNH: ${kpi7Rate.toFixed(1)}%`;
-            document.getElementById('kpi8-val').innerHTML = `${formatNumber(kpi8)} <small>trđ</small>`;
-            document.getElementById('kpi8-sub').innerText = `TỈ LỆ: ${kpi8Rate.toFixed(1)}%`;
-            
-            document.getElementById('kpi8-val').style.color = kpi8 < 0 ? "var(--color-danger)" : "var(--color-success)";
-        }
-    </script>
+          </main>
+        </React.Fragment>
+      );
+    }
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
 </body>
 </html>
