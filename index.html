@@ -167,18 +167,42 @@
                   {[...new Set(rawData.map(d => d['luong_spdv']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
+              {/* DROPDOWN NHÓM SPDV */}
               <div className="flex flex-col">
                 <label className="text-[11px] font-bold text-navy">Nhóm SPDV</label>
-                <select className="border p-1.5 rounded text-sm w-44 focus:outline-vnpt" value={filters.nhomSPDV} onChange={e => setFilters({...filters, nhomSPDV: e.target.value})}>
+                <select 
+                  className="border p-1.5 rounded text-sm w-44 focus:outline-vnpt" 
+                  value={filters.nhomSPDV} 
+                  onChange={e => setFilters({...filters, nhomSPDV: e.target.value, plo: 'ALL'})} // Reset PLO khi đổi Nhóm
+                >
                   <option value="ALL">Tất cả Nhóm</option>
-                  {[...new Set(ploList.map(p => p['nhomspdv_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}
+                  {
+                    [...new Set(ploList.map(p => p['nhomspdv_code']).filter(Boolean))].map(nhom => (
+                      <option key={nhom} value={nhom}>{nhom}</option>
+                    ))
+                  }
                 </select>
               </div>
+              
+              {/* DROPDOWN DỊCH VỤ (PLO) */}
               <div className="flex flex-col flex-1">
                 <label className="text-[11px] font-bold text-navy">Dịch vụ (PLO)</label>
-                <select className="border p-1.5 rounded text-sm w-full focus:outline-vnpt" value={filters.plo} onChange={e => setFilters({...filters, plo: e.target.value})}>
+                <select 
+                  className="border p-1.5 rounded text-sm w-full focus:outline-vnpt" 
+                  value={filters.plo} 
+                  onChange={e => setFilters({...filters, plo: e.target.value})}
+                >
                   <option value="ALL">Tất cả PLO</option>
-                  {[...new Set(ploList.map(p => p['plo_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}
+                  {
+                    /* CASCADE FILTER: Chỉ hiển thị PLO thuộc Nhóm SPDV đang được chọn (nếu có) */
+                    [...new Set(ploList
+                      .filter(p => filters.nhomSPDV === 'ALL' || p['nhomspdv_code'] === filters.nhomSPDV)
+                      .map(p => p['plo_code'])
+                      .filter(Boolean)
+                    )].map(plo => (
+                      <option key={plo} value={plo}>{plo}</option>
+                    ))
+                  }
                 </select>
               </div>
             </div>
