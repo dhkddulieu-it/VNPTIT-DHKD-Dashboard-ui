@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <title>Executive Dashboard - VNPT</title>
-  
   <script src="https://unpkg.com/react@17.0.2/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone@7.23.6/babel.min.js"></script>
@@ -12,15 +11,12 @@
   <script src="https://unpkg.com/recharts@2.1.12/umd/Recharts.js"></script>
 
   <script>
-    tailwind.config = {
-      theme: { extend: { colors: { vnpt: '#0094D9', navy: '#003B7A', good: '#22c55e', risk: '#ef4444' } } }
-    }
+    tailwind.config = { theme: { extend: { colors: { vnpt: '#0094D9', navy: '#003B7A', good: '#22c55e', risk: '#ef4444' } } } }
   </script>
 </head>
 <body class="bg-gray-100 text-gray-800 min-h-screen flex items-center justify-center font-sans">
-  
   <div id="root" class="w-full h-full max-w-[1920px] aspect-video bg-white shadow-2xl overflow-hidden flex flex-col">
-    <div class="p-10 text-center text-risk font-bold mt-20">Đang khởi tạo hệ thống... Vui lòng chờ vài giây.</div>
+    <div class="p-10 text-center text-risk font-bold mt-20">Đang khởi tạo hệ thống...</div>
   </div>
 
   <script type="text/babel">
@@ -28,20 +24,23 @@
       const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = window.Recharts || {};
       const API_URL = 'ĐIỀN_URL_WEBAPP_GAS_CỦA_BẠN_VÀO_ĐÂY'; 
 
-      const mockChartData = Array.from({length: 10}, (_, i) => ({ thang: `T${i + 1}`, thucHien: Math.floor(Math.random() * 400 + 600), keHoach: 1000 }));
-      const mockProjects = Array.from({length: 10}, (_, i) => ({ id: i + 1, ten: `Dự án CĐS Khối Chính quyền/Y tế ${i+1}`, giaTri: Math.floor(Math.random() * 50 + 10) + ' Tỷ', trangThai: i % 3 === 0 ? 'Rủi ro' : 'Đang bám sát' }));
+      // Tạo danh sách 12 tháng tự động cho năm hiện tại
+      const currentYear = new Date().getFullYear();
+      const monthOptions = Array.from({length: 12}, (_, i) => `${i + 1}/${currentYear}`);
 
-      const getUserFromStorage = () => {
-        try { return JSON.parse(localStorage.getItem('vnpt_user')); } 
-        catch (e) { localStorage.removeItem('vnpt_user'); return null; }
-      };
+      const mockChartData = Array.from({length: 10}, (_, i) => ({ thang: `T${i + 1}`, thucHien: Math.floor(Math.random() * 400 + 600), keHoach: 1000 }));
+      const mockProjects = Array.from({length: 10}, (_, i) => ({ id: i + 1, ten: `Dự án CĐS Khối Y tế/GD ${i+1}`, giaTri: Math.floor(Math.random() * 50 + 10) + ' Tỷ', trangThai: i % 3 === 0 ? 'Rủi ro' : 'Đang bám sát' }));
 
       function App() {
-        const [user, setUser] = React.useState(getUserFromStorage());
+        const [user, setUser] = React.useState(() => {
+          try { return JSON.parse(localStorage.getItem('vnpt_user')); } catch { return null; }
+        });
         const [email, setEmail] = React.useState('');
         const [loading, setLoading] = React.useState(false);
         const [rawData, setRawData] = React.useState([]);
         const [ploList, setPloList] = React.useState([]);
+        
+        // State bộ lọc chuẩn
         const [filters, setFilters] = React.useState({ thoiGian: '', maTinh: 'ALL', luongSPDV: 'ALL', nhomSPDV: 'ALL', plo: 'ALL' });
 
         React.useEffect(() => { if (user) fetchDashboardData(); }, [user]);
@@ -54,12 +53,10 @@
             if (res.status === 'success') {
               localStorage.setItem('vnpt_user', JSON.stringify(res.user));
               setUser(res.user);
-            } else {
-              alert('Sai thông tin đăng nhập hoặc không có quyền truy cập!');
-            }
+            } else { alert('Sai thông tin đăng nhập!'); }
           } catch (err) {
-            alert('Lỗi kết nối máy chủ Backend GAS. Đang chạy chế độ Giả lập (Test UI)');
-            setUser({ email, level: 1, tenClo: 'CLO_L1_MB', provinces: ['HN', 'HP'] });
+            alert('Mất kết nối API. Chạy chế độ giả lập giao diện.');
+            setUser({ email, level: 1, tenClo: 'CLO_L1_MB', provinces: ['HN', 'HP', 'QN'] });
           }
           setLoading(false);
         };
@@ -71,11 +68,8 @@
             if (res.status === 'success') {
               setRawData(res.data || []);
               setPloList(res.ploData || []);
-              if(res.data && res.data.length > 0) setFilters(f => ({ ...f, thoiGian: res.data[0]['thang'] || '' }));
             }
-          } catch (err) {
-            console.warn("Lỗi kéo dữ liệu:", err);
-          }
+          } catch (err) { console.warn("Lỗi đồng bộ dữ liệu"); }
           setLoading(false);
         };
 
@@ -84,46 +78,45 @@
 
         if (!user) {
           return (
-            <div className="flex flex-col items-center justify-center h-full bg-gray-200 w-full">
+            <div className="flex h-full items-center justify-center bg-gray-200">
               <form onSubmit={handleLogin} className="bg-white p-10 border-t-4 border-vnpt shadow-xl w-96 rounded">
-                <h2 className="text-2xl font-bold text-navy mb-2 text-center">BI EXECUTIVE LOGIN</h2>
-                <input className="w-full mb-6 p-3 border rounded focus:outline-vnpt text-sm" placeholder="Nhập Email: dhkddulieu@gmail.com" value={email} onChange={e => setEmail(e.target.value)} required />
+                <h2 className="text-2xl font-bold text-navy mb-6 text-center">BI EXECUTIVE LOGIN</h2>
+                <input className="w-full mb-6 p-3 border rounded focus:outline-vnpt text-sm" placeholder="Email: dhkddulieu@gmail.com" value={email} onChange={e => setEmail(e.target.value)} required />
                 <button disabled={loading} className="w-full bg-vnpt text-white py-3 font-bold rounded hover:bg-navy transition">{loading ? 'ĐANG KẾT NỐI...' : 'VÀO HỆ THỐNG'}</button>
               </form>
             </div>
           );
         }
 
-        // Lọc dữ liệu chuẩn xác theo State
-        const filteredData = rawData.filter(d => 
-          (filters.thoiGian === '' || d['thang'] == filters.thoiGian) &&
-          (filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh) &&
-          (filters.luongSPDV === 'ALL' || d['luong_spdv'] == filters.luongSPDV) &&
-          (filters.nhomSPDV === 'ALL' || d['nhomspdv_code'] == filters.nhomSPDV) &&
-          (filters.plo === 'ALL' || d['plo_code'] == filters.plo)
-        );
+        // LOGIC LỌC DỮ LIỆU ĐỘNG (Xử lý chặt chẽ trường hợp ALL)
+        const filteredData = rawData.filter(d => {
+          const matchTime = filters.thoiGian === '' || d['thang'] == filters.thoiGian;
+          const matchTinh = filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh;
+          const matchLuong = filters.luongSPDV === 'ALL' || d['luong_spdv'] == filters.luongSPDV;
+          const matchNhom = filters.nhomSPDV === 'ALL' || d['nhomspdv_code'] == filters.nhomSPDV;
+          const matchPlo = filters.plo === 'ALL' || d['plo_code'] == filters.plo;
+          return matchTime && matchTinh && matchLuong && matchNhom && matchPlo;
+        });
 
-        // Core Tính toán KPI
+        // TỔNG HỢP KPI
         const kpi = filteredData.reduce((acc, curr) => {
-          acc.dtThucHien += Number(curr['dt_thuc_hien'] || 0); 
-          acc.dtKeHoach += Number(curr['dt_ke_hoach'] || 0);
-          acc.dtThangTruoc += Number(curr['dt_thang_truoc'] || 0); 
-          acc.pipeTongGt += Number(curr['pipe_tong_gt'] || 0);
-          acc.pipeTongSl += Number(curr['pipe_tong_sl'] || 0); 
-          acc.pipeMoGt += Number(curr['pipe_mo_gt'] || 0);
-          acc.pipeMoSl += Number(curr['pipe_mo_sl'] || 0); 
-          acc.pipeDongGt += Number(curr['pipe_dong_gt'] || 0);
-          acc.pipeDongSl += Number(curr['pipe_dong_sl'] || 0); 
-          acc.duBaoDt += Number(curr['du_bao_dt'] || 0);
+          acc.dtThucHien += Number(curr['dt_thuc_hien']) || 0;
+          acc.dtKeHoach += Number(curr['dt_ke_hoach']) || 0;
+          acc.dtThangTruoc += Number(curr['dt_thang_truoc']) || 0;
+          acc.pipeTongGt += Number(curr['pipe_tong_gt']) || 0;
+          acc.pipeTongSl += Number(curr['pipe_tong_sl']) || 0;
+          acc.pipeMoGt += Number(curr['pipe_mo_gt']) || 0;
+          acc.pipeMoSl += Number(curr['pipe_mo_sl']) || 0;
+          acc.pipeDongGt += Number(curr['pipe_dong_gt']) || 0;
+          acc.pipeDongSl += Number(curr['pipe_dong_sl']) || 0;
+          acc.duBaoDt += Number(curr['du_bao_dt']) || 0;
           return acc;
         }, { dtThucHien: 0, dtKeHoach: 0, dtThangTruoc: 0, pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeMoSl: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0 });
 
         const tyLeHT = kpi.dtKeHoach ? kpi.dtThucHien / kpi.dtKeHoach : 0;
         const tangGiam = kpi.dtThangTruoc ? (kpi.dtThucHien - kpi.dtThangTruoc) / kpi.dtThangTruoc : 0;
-        const uocHT = kpi.dtKeHoach ? kpi.duBaoDt / kpi.dtKeHoach : 0;
-        const thieuHut = Math.max(kpi.dtKeHoach - kpi.dtThucHien, 0);
-        const tyLeThieu = kpi.dtKeHoach ? thieuHut / kpi.dtKeHoach : 0;
         const winRate = kpi.pipeTongSl ? kpi.pipeDongSl / kpi.pipeTongSl : 0;
+        const thieuHut = Math.max(kpi.dtKeHoach - kpi.dtThucHien, 0);
 
         const KpiCard = ({ title, v1, l1, v2, l2, st }) => (
           <div className="bg-white border rounded flex-1 p-3 shadow-sm flex flex-col justify-between hover:border-vnpt transition min-w-[140px]">
@@ -137,24 +130,25 @@
           </div>
         );
 
+        // Render cấu trúc giao diện
         return (
           <React.Fragment>
             <header className="bg-navy text-white px-6 py-3 flex justify-between items-center shrink-0">
-              <h1 className="text-lg font-bold uppercase">Dashboard Điều hành: Kết quả SXKD</h1>
+              <h1 className="text-lg font-bold uppercase">Dashboard Điều hành: SXKD</h1>
               <div className="flex items-center gap-4 text-sm">
                 <span className="bg-vnpt px-3 py-1 rounded-full font-semibold">{user.tenClo}</span>
                 <span className="opacity-90">{user.email}</span>
-                <button onClick={() => { setUser(null); localStorage.removeItem('vnpt_user'); }} className="bg-risk px-3 py-1 rounded font-bold hover:bg-red-600">Đăng xuất</button>
+                <button onClick={() => { setUser(null); localStorage.removeItem('vnpt_user'); }} className="bg-risk px-3 py-1 rounded font-bold">Đăng xuất</button>
               </div>
             </header>
 
-            {/* VÙNG ĐIỀU HƯỚNG (RENDER ĐỘNG 100%) */}
+            {/* VÙNG ĐIỀU HƯỚNG */}
             <div className="bg-white px-6 py-2 flex flex-wrap gap-4 shrink-0 border-b items-end">
               <div className="flex flex-col">
-                <label className="text-[11px] font-bold text-navy">Thời gian (Tháng)</label>
+                <label className="text-[11px] font-bold text-navy">Thời gian</label>
                 <select className="border p-1.5 rounded text-sm w-32 focus:outline-vnpt" value={filters.thoiGian} onChange={e => setFilters({...filters, thoiGian: e.target.value})}>
                   <option value="">-- Tất cả --</option>
-                  {[...new Set(rawData.map(d => d['thang']).filter(Boolean))].map(t => <option key={t} value={t}>{t}</option>)}
+                  {monthOptions.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div className="flex flex-col">
@@ -164,12 +158,13 @@
                   {user.provinces && user.provinces.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
+              
+              {/* Load Động Trực Tiếp Từ Dữ Liệu Data Sheet */}
               <div className="flex flex-col">
                 <label className="text-[11px] font-bold text-navy">Luồng SPDV</label>
                 <select className="border p-1.5 rounded text-sm w-36 focus:outline-vnpt" value={filters.luongSPDV} onChange={e => setFilters({...filters, luongSPDV: e.target.value})}>
                   <option value="ALL">Tất cả Luồng</option>
-                  <option value="Nhóm A">Nhóm A</option>
-                  <option value="Nhóm B-C">Nhóm B-C</option>
+                  {[...new Set(rawData.map(d => d['luong_spdv']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
               <div className="flex flex-col">
@@ -188,7 +183,7 @@
               </div>
             </div>
 
-            {loading && <div className="text-center text-vnpt text-xs py-1 font-bold animate-pulse bg-gray-50">Đang đồng bộ dữ liệu hệ thống từ GAS...</div>}
+            {loading && <div className="text-center text-vnpt text-xs py-1 font-bold animate-pulse bg-gray-50">Đang đồng bộ dữ liệu...</div>}
 
             <div className="flex gap-3 px-6 py-4 bg-gray-50 shrink-0 overflow-x-auto">
               <KpiCard title="1. DOANH THU" v1={fmtNum(kpi.dtThucHien)} l1="Thực hiện (VNĐ)" v2={fmtNum(kpi.dtKeHoach)} l2="Kế hoạch (VNĐ)" st="neutral" />
@@ -197,8 +192,8 @@
               <KpiCard title="4. PIPELINE MỞ" v1={fmtNum(kpi.pipeMoGt)} l1="Đang xử lý (VNĐ)" v2={fmtNum(kpi.pipeMoSl)} l2="Số lượng" st="neutral" />
               <KpiCard title="5. DEAL THÀNH CÔNG" v1={fmtNum(kpi.pipeDongGt)} l1="Giá trị chốt (VNĐ)" v2={fmtNum(kpi.pipeDongSl)} l2="Số lượng chốt" st="good" />
               <KpiCard title="6. CHUYỂN ĐỔI" v1={fmtPct(winRate)} l1="Winrate (Số lượng)" v2={fmtNum(kpi.pipeDongSl)} l2="Deal thành công" st={winRate >= 0.3 ? 'good' : 'risk'} />
-              <KpiCard title="7. DỰ BÁO" v1={fmtNum(kpi.duBaoDt)} l1="Dự báo cuối kỳ" v2={fmtPct(uocHT)} l2="Tỷ lệ Ước tính" st={uocHT >= 1 ? 'good' : 'risk'} />
-              <KpiCard title="8. KHOẢNG TRỐNG" v1={fmtNum(thieuHut)} l1="Cần bù đắp (VNĐ)" v2={fmtPct(tyLeThieu)} l2="Tỷ lệ thiếu hụt" st={thieuHut > 0 ? 'risk' : 'good'} />
+              <KpiCard title="7. DỰ BÁO" v1={fmtNum(kpi.duBaoDt)} l1="Dự báo cuối kỳ" v2={fmtPct(kpi.dtKeHoach ? kpi.duBaoDt/kpi.dtKeHoach : 0)} l2="Tỷ lệ Ước tính" st={(kpi.dtKeHoach ? kpi.duBaoDt/kpi.dtKeHoach : 0) >= 1 ? 'good' : 'risk'} />
+              <KpiCard title="8. KHOẢNG TRỐNG" v1={fmtNum(thieuHut)} l1="Cần bù đắp (VNĐ)" v2={fmtPct(kpi.dtKeHoach ? thieuHut/kpi.dtKeHoach : 0)} l2="Tỷ lệ thiếu hụt" st={thieuHut > 0 ? 'risk' : 'good'} />
             </div>
 
             <main className="flex-1 px-6 pb-6 bg-gray-50 flex gap-6 overflow-hidden">
@@ -245,11 +240,9 @@
           </React.Fragment>
         );
       }
-      
       ReactDOM.render(<App />, document.getElementById('root'));
-
     } catch (err) {
-      document.getElementById('root').innerHTML = `<div class="p-10 text-center"><h2 class="text-risk font-bold text-2xl mb-4">Lỗi Render Giao diện</h2><p class="text-gray-600 bg-gray-100 p-4 rounded border font-mono text-left">${err.message}</p></div>`;
+      document.getElementById('root').innerHTML = `<div class="p-10 text-center text-risk font-bold text-xl">Lỗi hệ thống: ${err.message}</div>`;
     }
   </script>
 </body>
