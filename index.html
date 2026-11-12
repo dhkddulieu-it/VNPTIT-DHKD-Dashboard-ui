@@ -4,58 +4,36 @@
   <meta charset="UTF-8">
   <title>Executive Dashboard - VNPT</title>
   
-  <!-- Chốt cứng version React & DOM (v17) -->
   <script src="https://unpkg.com/react@17.0.2/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone@7.23.6/babel.min.js"></script>
-  
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- Chốt cứng version Recharts (v2.1.12) & Dependencies -->
   <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
   <script src="https://unpkg.com/recharts@2.1.12/umd/Recharts.js"></script>
 
   <script>
     tailwind.config = {
-      theme: {
-        extend: { colors: { vnpt: '#0094D9', navy: '#003B7A', good: '#22c55e', risk: '#ef4444' } }
-      }
+      theme: { extend: { colors: { vnpt: '#0094D9', navy: '#003B7A', good: '#22c55e', risk: '#ef4444' } } }
     }
   </script>
 </head>
 <body class="bg-gray-100 text-gray-800 min-h-screen flex items-center justify-center font-sans">
   
   <div id="root" class="w-full h-full max-w-[1920px] aspect-video bg-white shadow-2xl overflow-hidden flex flex-col">
-    <!-- Fallback nếu React crash -->
-    <div class="p-10 text-center text-risk font-bold mt-20">Đang tải hệ thống... Nếu màn hình dừng ở đây quá 5s, vui lòng kiểm tra kết nối mạng.</div>
+    <div class="p-10 text-center text-risk font-bold mt-20">Đang khởi tạo hệ thống... Vui lòng chờ vài giây.</div>
   </div>
 
   <script type="text/babel">
     try {
-      // 1. Lấy Component Biểu đồ an toàn sau khi load xong CDN
       const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = window.Recharts || {};
-      
-      const API_URL = 'ĐIỀN_URL_WEBAPP_GAS_CỦA_BẠN'; 
+      const API_URL = 'ĐIỀN_URL_WEBAPP_GAS_CỦA_BẠN_VÀO_ĐÂY'; 
 
-      // 2. Dữ liệu giả lập
-      const mockChartData = Array.from({length: 10}, (_, i) => ({
-        thang: `T${i + 1}`, thucHien: Math.floor(Math.random() * 400 + 600), keHoach: 1000
-      }));
-      const mockProjects = Array.from({length: 10}, (_, i) => ({
-        id: i + 1, ten: `Dự án CĐS Khối Chính quyền/Y tế ${i+1}`,
-        giaTri: Math.floor(Math.random() * 50 + 10) + ' Tỷ', trangThai: i % 3 === 0 ? 'Rủi ro' : 'Đang bám sát'
-      }));
+      const mockChartData = Array.from({length: 10}, (_, i) => ({ thang: `T${i + 1}`, thucHien: Math.floor(Math.random() * 400 + 600), keHoach: 1000 }));
+      const mockProjects = Array.from({length: 10}, (_, i) => ({ id: i + 1, ten: `Dự án CĐS Khối Chính quyền/Y tế ${i+1}`, giaTri: Math.floor(Math.random() * 50 + 10) + ' Tỷ', trangThai: i % 3 === 0 ? 'Rủi ro' : 'Đang bám sát' }));
 
-      // 3. Xử lý LocalStorage chống lỗi cache rác
       const getUserFromStorage = () => {
-        try {
-          const data = localStorage.getItem('vnpt_user');
-          return data ? JSON.parse(data) : null;
-        } catch (e) {
-          localStorage.removeItem('vnpt_user');
-          return null;
-        }
+        try { return JSON.parse(localStorage.getItem('vnpt_user')); } 
+        catch (e) { localStorage.removeItem('vnpt_user'); return null; }
       };
 
       function App() {
@@ -64,9 +42,7 @@
         const [loading, setLoading] = React.useState(false);
         const [rawData, setRawData] = React.useState([]);
         const [ploList, setPloList] = React.useState([]);
-        const [filters, setFilters] = React.useState({
-          thoiGian: '', maTinh: 'ALL', luongSPDV: 'ALL', nhomSPDV: 'ALL', plo: 'ALL'
-        });
+        const [filters, setFilters] = React.useState({ thoiGian: '', maTinh: 'ALL', luongSPDV: 'ALL', nhomSPDV: 'ALL', plo: 'ALL' });
 
         React.useEffect(() => { if (user) fetchDashboardData(); }, [user]);
 
@@ -79,11 +55,10 @@
               localStorage.setItem('vnpt_user', JSON.stringify(res.user));
               setUser(res.user);
             } else {
-              alert('Không có quyền truy cập hoặc sai email!');
+              alert('Sai thông tin đăng nhập hoặc không có quyền truy cập!');
             }
           } catch (err) {
             alert('Lỗi kết nối máy chủ Backend GAS. Đang chạy chế độ Giả lập (Test UI)');
-            // Kích hoạt giả lập để Test UI nếu GAS bị lỗi
             setUser({ email, level: 1, tenClo: 'CLO_L1_MB', provinces: ['HN', 'HP'] });
           }
           setLoading(false);
@@ -99,7 +74,7 @@
               if(res.data && res.data.length > 0) setFilters(f => ({ ...f, thoiGian: res.data[0]['thang'] || '' }));
             }
           } catch (err) {
-            console.warn("GAS Error, using empty data.");
+            console.warn("Lỗi kéo dữ liệu:", err);
           }
           setLoading(false);
         };
@@ -107,37 +82,39 @@
         const fmtNum = (num) => new Intl.NumberFormat('vi-VN').format(num || 0);
         const fmtPct = (num) => `${(num * 100).toFixed(1)}%`;
 
-        // UI ĐĂNG NHẬP
         if (!user) {
           return (
             <div className="flex flex-col items-center justify-center h-full bg-gray-200 w-full">
               <form onSubmit={handleLogin} className="bg-white p-10 border-t-4 border-vnpt shadow-xl w-96 rounded">
                 <h2 className="text-2xl font-bold text-navy mb-2 text-center">BI EXECUTIVE LOGIN</h2>
-                <input className="w-full mb-6 p-3 border rounded focus:outline-vnpt" 
-                       placeholder="Ví dụ: phanyen1520@gmail.com" value={email} onChange={e => setEmail(e.target.value)} required />
-                <button disabled={loading} className="w-full bg-vnpt text-white py-3 font-bold rounded hover:bg-navy transition">
-                  {loading ? 'ĐANG XÁC THỰC...' : 'VÀO HỆ THỐNG'}
-                </button>
+                <input className="w-full mb-6 p-3 border rounded focus:outline-vnpt text-sm" placeholder="Nhập Email: dhkddulieu@gmail.com" value={email} onChange={e => setEmail(e.target.value)} required />
+                <button disabled={loading} className="w-full bg-vnpt text-white py-3 font-bold rounded hover:bg-navy transition">{loading ? 'ĐANG KẾT NỐI...' : 'VÀO HỆ THỐNG'}</button>
               </form>
             </div>
           );
         }
 
-        // TÍNH TOÁN KPI
+        // Lọc dữ liệu chuẩn xác theo State
         const filteredData = rawData.filter(d => 
-          (filters.thoiGian === '' || d['thang'] === filters.thoiGian) &&
-          (filters.maTinh === 'ALL' || d['ma_tinh'] === filters.maTinh) &&
-          (filters.luongSPDV === 'ALL' || d['luong_spdv'] === filters.luongSPDV) &&
-          (filters.nhomSPDV === 'ALL' || d['nhomspdv_code'] === filters.nhomSPDV) &&
-          (filters.plo === 'ALL' || d['plo_code'] === filters.plo)
+          (filters.thoiGian === '' || d['thang'] == filters.thoiGian) &&
+          (filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh) &&
+          (filters.luongSPDV === 'ALL' || d['luong_spdv'] == filters.luongSPDV) &&
+          (filters.nhomSPDV === 'ALL' || d['nhomspdv_code'] == filters.nhomSPDV) &&
+          (filters.plo === 'ALL' || d['plo_code'] == filters.plo)
         );
 
+        // Core Tính toán KPI
         const kpi = filteredData.reduce((acc, curr) => {
-          acc.dtThucHien += Number(curr['dt_thuc_hien'] || 0); acc.dtKeHoach += Number(curr['dt_ke_hoach'] || 0);
-          acc.dtThangTruoc += Number(curr['dt_thang_truoc'] || 0); acc.pipeTongGt += Number(curr['pipe_tong_gt'] || 0);
-          acc.pipeTongSl += Number(curr['pipe_tong_sl'] || 0); acc.pipeMoGt += Number(curr['pipe_mo_gt'] || 0);
-          acc.pipeMoSl += Number(curr['pipe_mo_sl'] || 0); acc.pipeDongGt += Number(curr['pipe_dong_gt'] || 0);
-          acc.pipeDongSl += Number(curr['pipe_dong_sl'] || 0); acc.duBaoDt += Number(curr['du_bao_dt'] || 0);
+          acc.dtThucHien += Number(curr['dt_thuc_hien'] || 0); 
+          acc.dtKeHoach += Number(curr['dt_ke_hoach'] || 0);
+          acc.dtThangTruoc += Number(curr['dt_thang_truoc'] || 0); 
+          acc.pipeTongGt += Number(curr['pipe_tong_gt'] || 0);
+          acc.pipeTongSl += Number(curr['pipe_tong_sl'] || 0); 
+          acc.pipeMoGt += Number(curr['pipe_mo_gt'] || 0);
+          acc.pipeMoSl += Number(curr['pipe_mo_sl'] || 0); 
+          acc.pipeDongGt += Number(curr['pipe_dong_gt'] || 0);
+          acc.pipeDongSl += Number(curr['pipe_dong_sl'] || 0); 
+          acc.duBaoDt += Number(curr['du_bao_dt'] || 0);
           return acc;
         }, { dtThucHien: 0, dtKeHoach: 0, dtThangTruoc: 0, pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeMoSl: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0 });
 
@@ -160,11 +137,10 @@
           </div>
         );
 
-        // UI DASHBOARD
         return (
           <React.Fragment>
             <header className="bg-navy text-white px-6 py-3 flex justify-between items-center shrink-0">
-              <h1 className="text-lg font-bold">EXECUTIVE DASHBOARD: KẾT QUẢ SẢN XUẤT KINH DOANH</h1>
+              <h1 className="text-lg font-bold uppercase">Dashboard Điều hành: Kết quả SXKD</h1>
               <div className="flex items-center gap-4 text-sm">
                 <span className="bg-vnpt px-3 py-1 rounded-full font-semibold">{user.tenClo}</span>
                 <span className="opacity-90">{user.email}</span>
@@ -172,23 +148,57 @@
               </div>
             </header>
 
+            {/* VÙNG ĐIỀU HƯỚNG (RENDER ĐỘNG 100%) */}
             <div className="bg-white px-6 py-2 flex flex-wrap gap-4 shrink-0 border-b items-end">
-              <div className="flex flex-col"><label className="text-[11px] font-bold text-navy">Tháng</label><select className="border p-1 rounded text-sm w-28"><option>ALL</option></select></div>
-              <div className="flex flex-col"><label className="text-[11px] font-bold text-navy">CLO địa bàn</label><select className="border p-1 rounded text-sm w-36"><option>Toàn địa bàn</option></select></div>
-              <div className="flex flex-col"><label className="text-[11px] font-bold text-navy">Luồng SPDV</label><select className="border p-1 rounded text-sm w-32"><option>Tất cả</option></select></div>
-              <div className="flex flex-col"><label className="text-[11px] font-bold text-navy">Nhóm SPDV</label><select className="border p-1 rounded text-sm w-40"><option>Tất cả</option></select></div>
-              <div className="flex flex-col flex-1"><label className="text-[11px] font-bold text-navy">Dịch vụ (PLO)</label><select className="border p-1 rounded text-sm w-full"><option>Tất cả</option></select></div>
+              <div className="flex flex-col">
+                <label className="text-[11px] font-bold text-navy">Thời gian (Tháng)</label>
+                <select className="border p-1.5 rounded text-sm w-32 focus:outline-vnpt" value={filters.thoiGian} onChange={e => setFilters({...filters, thoiGian: e.target.value})}>
+                  <option value="">-- Tất cả --</option>
+                  {[...new Set(rawData.map(d => d['thang']).filter(Boolean))].map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="flex flex-col">
+                <label className="text-[11px] font-bold text-navy">CLO Địa bàn</label>
+                <select className="border p-1.5 rounded text-sm w-36 focus:outline-vnpt" value={filters.maTinh} onChange={e => setFilters({...filters, maTinh: e.target.value})}>
+                  <option value="ALL">Toàn địa bàn</option>
+                  {user.provinces && user.provinces.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <div className="flex flex-col">
+                <label className="text-[11px] font-bold text-navy">Luồng SPDV</label>
+                <select className="border p-1.5 rounded text-sm w-36 focus:outline-vnpt" value={filters.luongSPDV} onChange={e => setFilters({...filters, luongSPDV: e.target.value})}>
+                  <option value="ALL">Tất cả Luồng</option>
+                  <option value="Nhóm A">Nhóm A</option>
+                  <option value="Nhóm B-C">Nhóm B-C</option>
+                </select>
+              </div>
+              <div className="flex flex-col">
+                <label className="text-[11px] font-bold text-navy">Nhóm SPDV</label>
+                <select className="border p-1.5 rounded text-sm w-44 focus:outline-vnpt" value={filters.nhomSPDV} onChange={e => setFilters({...filters, nhomSPDV: e.target.value})}>
+                  <option value="ALL">Tất cả Nhóm</option>
+                  {[...new Set(ploList.map(p => p['nhomspdv_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </div>
+              <div className="flex flex-col flex-1">
+                <label className="text-[11px] font-bold text-navy">Dịch vụ (PLO)</label>
+                <select className="border p-1.5 rounded text-sm w-full focus:outline-vnpt" value={filters.plo} onChange={e => setFilters({...filters, plo: e.target.value})}>
+                  <option value="ALL">Tất cả PLO</option>
+                  {[...new Set(ploList.map(p => p['plo_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </div>
             </div>
 
+            {loading && <div className="text-center text-vnpt text-xs py-1 font-bold animate-pulse bg-gray-50">Đang đồng bộ dữ liệu hệ thống từ GAS...</div>}
+
             <div className="flex gap-3 px-6 py-4 bg-gray-50 shrink-0 overflow-x-auto">
-              <KpiCard title="1. DOANH THU" v1={fmtNum(kpi.dtThucHien)} l1="Thực hiện (VNĐ)" v2={fmtNum(kpi.dtKeHoach)} l2="Kế hoạch" st="neutral" />
+              <KpiCard title="1. DOANH THU" v1={fmtNum(kpi.dtThucHien)} l1="Thực hiện (VNĐ)" v2={fmtNum(kpi.dtKeHoach)} l2="Kế hoạch (VNĐ)" st="neutral" />
               <KpiCard title="2. HIỆU SUẤT" v1={fmtPct(tyLeHT)} l1="Tỷ lệ HT Kế hoạch" v2={fmtPct(tangGiam)} l2="Tăng/Giảm (MoM)" st={tyLeHT >= 1 ? 'good' : 'risk'} />
-              <KpiCard title="3. PIPELINE (TỔNG)" v1={fmtNum(kpi.pipeTongGt)} l1="Giá trị (VNĐ)" v2={fmtNum(kpi.pipeTongSl)} l2="Số lượng" st="neutral" />
-              <KpiCard title="4. PIPELINE (ĐANG MỞ)" v1={fmtNum(kpi.pipeMoGt)} l1="Giá trị xử lý" v2={fmtNum(kpi.pipeMoSl)} l2="Số lượng" st="neutral" />
-              <KpiCard title="5. PIPELINE (CHỐT)" v1={fmtNum(kpi.pipeDongGt)} l1="Giá trị chốt" v2={fmtNum(kpi.pipeDongSl)} l2="Số lượng chốt" st="good" />
-              <KpiCard title="6. CHUYỂN ĐỔI" v1={fmtPct(winRate)} l1="Winrate" v2={fmtNum(kpi.pipeDongSl)} l2="Deal thành công" st={winRate >= 0.3 ? 'good' : 'risk'} />
+              <KpiCard title="3. PIPELINE TỔNG" v1={fmtNum(kpi.pipeTongGt)} l1="Giá trị (VNĐ)" v2={fmtNum(kpi.pipeTongSl)} l2="Số lượng Cơ hội" st="neutral" />
+              <KpiCard title="4. PIPELINE MỞ" v1={fmtNum(kpi.pipeMoGt)} l1="Đang xử lý (VNĐ)" v2={fmtNum(kpi.pipeMoSl)} l2="Số lượng" st="neutral" />
+              <KpiCard title="5. DEAL THÀNH CÔNG" v1={fmtNum(kpi.pipeDongGt)} l1="Giá trị chốt (VNĐ)" v2={fmtNum(kpi.pipeDongSl)} l2="Số lượng chốt" st="good" />
+              <KpiCard title="6. CHUYỂN ĐỔI" v1={fmtPct(winRate)} l1="Winrate (Số lượng)" v2={fmtNum(kpi.pipeDongSl)} l2="Deal thành công" st={winRate >= 0.3 ? 'good' : 'risk'} />
               <KpiCard title="7. DỰ BÁO" v1={fmtNum(kpi.duBaoDt)} l1="Dự báo cuối kỳ" v2={fmtPct(uocHT)} l2="Tỷ lệ Ước tính" st={uocHT >= 1 ? 'good' : 'risk'} />
-              <KpiCard title="8. KHOẢNG TRỐNG" v1={fmtNum(thieuHut)} l1="Cần bù đắp" v2={fmtPct(tyLeThieu)} l2="Tỷ lệ thiếu hụt" st={thieuHut > 0 ? 'risk' : 'good'} />
+              <KpiCard title="8. KHOẢNG TRỐNG" v1={fmtNum(thieuHut)} l1="Cần bù đắp (VNĐ)" v2={fmtPct(tyLeThieu)} l2="Tỷ lệ thiếu hụt" st={thieuHut > 0 ? 'risk' : 'good'} />
             </div>
 
             <main className="flex-1 px-6 pb-6 bg-gray-50 flex gap-6 overflow-hidden">
@@ -211,7 +221,7 @@
                 </div>
               </div>
               <div className="flex-[1] bg-white border rounded shadow-sm p-4 flex flex-col overflow-hidden">
-                <h2 className="text-navy font-bold text-sm mb-4">DỰ ÁN CẦN THÚC ĐẨY</h2>
+                <h2 className="text-navy font-bold text-sm mb-4">DỰ ÁN TRỌNG ĐIỂM (CẦN THÚC ĐẨY)</h2>
                 <div className="overflow-auto flex-1">
                   <table className="w-full text-left text-sm">
                     <thead className="bg-gray-100 text-navy sticky top-0">
@@ -239,11 +249,7 @@
       ReactDOM.render(<App />, document.getElementById('root'));
 
     } catch (err) {
-      document.getElementById('root').innerHTML = `
-        <div class="p-10 text-center">
-          <h2 class="text-risk font-bold text-2xl mb-4">Lỗi Render React Component</h2>
-          <p class="text-gray-600 bg-gray-100 p-4 rounded border border-gray-300 font-mono text-left">${err.message}</p>
-        </div>`;
+      document.getElementById('root').innerHTML = `<div class="p-10 text-center"><h2 class="text-risk font-bold text-2xl mb-4">Lỗi Render Giao diện</h2><p class="text-gray-600 bg-gray-100 p-4 rounded border font-mono text-left">${err.message}</p></div>`;
     }
   </script>
 </body>
