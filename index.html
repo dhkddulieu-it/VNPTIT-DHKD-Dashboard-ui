@@ -42,13 +42,20 @@
       const mockProjects = Array.from({length: 10}, (_, i) => ({ id: i + 1, ten: `Dự án CĐS Khối Y tế/GD ${i+1}`, giaTri: Math.floor(Math.random() * 50 + 10) + ' Tỷ', trangThai: i % 3 === 0 ? 'Rủi ro' : 'Đang bám sát' }));
 
       const MENU_ITEMS = [
-        { id: 'dashboard', label: 'Dashboard'},
-        { id: 'dean', label: 'Đề án, Kế hoạch'},
+        { id: 'dashboard', label: 'Dashboard' },
+        { id: 'dean', label: 'Đề án, Kế hoạch' },
         { id: 'cohoi', label: 'Cơ hội KD'},
-        { id: 'hopdong', label: 'Hợp đồng'},
-        { id: 'khachhang', label: 'Khách hàng'},
-        { id: 'danhmuc', label: 'Danh mục'}
+        { id: 'hopdong', label: 'Hợp đồng' },
+        { id: 'khachhang', label: 'Khách hàng' },
+        { id: 'danhmuc', label: 'Danh mục' }
       ];
+
+      // Hàm chuẩn hóa dữ liệu số (Loại bỏ dấu phẩy, xử lý rỗng)
+      const parseNum = (val) => {
+        if (val === null || val === undefined || val === '') return 0;
+        if (typeof val === 'number') return val;
+        return parseFloat(val.toString().replace(/,/g, '')) || 0;
+      };
 
       function App() {
         // HOOKS (Luôn đặt ở trên cùng)
@@ -58,7 +65,6 @@
         const [email, setEmail] = React.useState('');
         const [loading, setLoading] = React.useState(false);
         const [rawData, setRawData] = React.useState([]);
-        const [chartData, setChartData] = React.useState([]); 
         const [ploList, setPloList] = React.useState([]);
         const [activeTab, setActiveTab] = React.useState('dashboard');
         const [filters, setFilters] = React.useState({ thoiGian: '', maTinh: 'ALL', luongSPDV: 'ALL', nhomSPDV: 'ALL', plo: 'ALL' });
@@ -76,7 +82,7 @@
             } else { alert('Sai thông tin đăng nhập!'); }
           } catch (err) {
             alert('Mất kết nối API. Chạy giả lập UI.');
-            setUser({ email, level: 1, tenClo: 'CLO_L0_CEO', provinces: ['HNI', 'HPG', 'QNH', 'HCM', 'DNG', 'CTO'] });
+            setUser({ email, level: 1, tenClo: 'CLO_L0_CEO', provinces: ['HNI', 'HPG', 'QNH'] });
           }
           setLoading(false);
         };
@@ -87,7 +93,6 @@
             const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'getData', provinces: user.provinces }) }).then(r => r.json());
             if (res.status === 'success') {
               setRawData(res.data || []);
-              // setChartData(res.chartData || []);
               setPloList(res.ploData || []);
             }
           } catch (err) { console.warn("Lỗi đồng bộ dữ liệu"); }
@@ -97,6 +102,7 @@
         const fmtNum = (num) => new Intl.NumberFormat('vi-VN').format(num || 0);
         const fmtPct = (num) => `${(num * 100).toFixed(1)}%`;
 
+        // UI CHƯA ĐĂNG NHẬP
         if (!user) {
           return (
             <div className="flex h-screen w-full items-center justify-center bg-gray-200">
@@ -175,7 +181,7 @@
         // Component KpiCard
         const KpiCard = ({ title, v1, l1, v2, l2, st }) => (
           <div className="bg-white border rounded flex-1 p-4 shadow-sm flex flex-col justify-between hover:border-vnpt transition min-w-[160px]">
-            <h3 className="text-navy font-bold text-base mb-3 uppercase truncate">{title}</h3>
+            <h3 className="text-navy font-bold text-xs mb-3 uppercase truncate">{title}</h3>
             <div>
               <div className={`text-3xl font-bold mb-1 ${st === 'good' ? 'text-good' : st === 'risk' ? 'text-risk' : 'text-vnpt'}`}>{v1}</div>
               <div className="text-xs text-gray-500 mb-3 truncate">{l1}</div>
@@ -191,7 +197,7 @@
             {/* SIDEBAR */}
             <aside className="w-[200px] bg-navy text-white flex flex-col shadow-2xl z-20 shrink-0">
               <div className="p-5 border-b border-white/20 flex flex-col items-center">
-                <div className="text-2xl font-extrabold tracking-widest text-vnpt bg-white px-3 py-1 rounded shadow mb-2">VNPT-IT</div>
+                <div className="text-2xl font-extrabold tracking-widest text-vnpt bg-white px-3 py-1 rounded shadow mb-2">VNPT</div>
                 <div className="text-[10px] text-center font-semibold text-gray-300 tracking-wider">HỆ THỐNG ĐIỀU HÀNH</div>
               </div>
               <nav className="flex-1 py-4 px-3 space-y-2 overflow-y-auto">
