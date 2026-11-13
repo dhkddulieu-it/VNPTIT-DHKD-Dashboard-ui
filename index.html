@@ -187,28 +187,48 @@
            }
         });
 
-        // 3. TÍNH KPI PIPELINE & DỰ BÁO (Snapshot Rule)
-        // Pipeline KHÔNG được phép cộng dồn. Chỉ lấy chốt tại "Tháng đang chọn" hoặc "Tháng mới nhất có dữ liệu".
+        // Bổ sung State nhận Pipeline (Đặt trên cùng cùng các hooks khác)
+        // const [pipelineRaw, setPipelineRaw] = React.useState([]); 
+        // Trong hàm fetchDashboardData: setPipelineRaw(res.pipelineData || []);
+
+        // 3. TÍNH KPI PIPELINE & DỰ BÁO (Từ Sheet 03_PIPELINE_DUAN)
+        // Lọc Pipeline theo các phễu (Tỉnh, Nhóm, PLO) giống hệt BaseData
+        const basePipeline = pipelineRaw.filter(d => 
+          (filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh) &&
+          (filters.nhomSPDV === 'ALL' || d['nhomspdv_code'] == filters.nhomSPDV) &&
+          (filters.plo === 'ALL' || d['plo_code'] == filters.plo)
+        );
+
         let snapshotMonthVal = 0;
         if (!isAllTime) {
             snapshotMonthVal = filterMonthVal;
         } else {
-            // Khi chọn "Tất cả", tìm Max Month (Tháng gần nhất có biến động)
-            const validMonths = baseData
-                .filter(d => parseNum(d['dt_th_thang']) > 0 || parseNum(d['pipe_tong_sl']) > 0)
-                .map(d => getMonthVal(d['thang']));
-            snapshotMonthVal = validMonths.length > 0 ? Math.max(...validMonths) : 0;
+            const validPipeMonths = basePipeline.map(d => getMonthVal(d['thang']));
+            snapshotMonthVal = validPipeMonths.length > 0 ? Math.max(...validPipeMonths) : 0;
         }
 
-        baseData.forEach(curr => {
+        // Reset bộ chỉ số Pipeline
+        kpi.pipeTongGt = 0; kpi.pipeTongSl = 0; 
+        kpi.pipeMoGt = 0; kpi.pipeMoSl = 0; 
+        kpi.pipeDongGt = 0; kpi.pipeDongSl = 0; kpi.duBaoDt = 0;
+
+        basePipeline.forEach(curr => {
            if (getMonthVal(curr['thang']) === snapshotMonthVal) {
-              kpi.pipeTongGt += parseNum(curr['pipe_tong_gt']);
-              kpi.pipeTongSl += parseNum(curr['pipe_tong_sl']);
-              kpi.pipeMoGt += parseNum(curr['pipe_mo_gt']);
-              kpi.pipeMoSl += parseNum(curr['pipe_mo_sl']);
-              kpi.pipeDongGt += parseNum(curr['pipe_dong_gt']);
-              kpi.pipeDongSl += parseNum(curr['pipe_dong_sl']);
-              kpi.duBaoDt += parseNum(curr['du_bao_dt']);
+              const dtDuBao = parseNum(curr['doanhthu_dubao']);
+              const status = (curr['trang_thai'] || '').toString().toUpperCase();
+              const isClosed = status.includes('CLOSED') || status.includes('THẮNG') || status.includes('ĐÓNG');
+
+              kpi.pipeTongSl += 1;
+              kpi.pipeTongGt += dtDuBao;
+              kpi.duBaoDt += dtDuBao; // Tổng dự báo chốt kỳ
+
+              if (isClosed) {
+                  kpi.pipeDongSl += 1;
+                  kpi.pipeDongGt += dtDuBao;
+              } else {
+                  kpi.pipeMoSl += 1;
+                  kpi.pipeMoGt += dtDuBao;
+              }
            }
         });
 
