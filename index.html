@@ -42,7 +42,6 @@
       const currentYear = new Date().getFullYear();
       const monthOptions = Array.from({length: 12}, (_, i) => `${i + 1}/${currentYear}`);
       
-      // Mock data hiển thị tạm cho Dự án
       const mockProjects = Array.from({length: 10}, (_, i) => ({ 
         id: i + 1, ten: `Dự án CĐS Khối Y tế/GD ${i+1}`, 
         giaTri: Math.floor(Math.random() * 50 + 10) + ' Tỷ', 
@@ -50,29 +49,37 @@
       }));
 
       const MENU_ITEMS = [
-        { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-        { id: 'dean', label: 'Đề án, Kế hoạch', icon: '📋' },
-        { id: 'cohoi', label: 'Cơ hội KD', icon: '🎯' },
-        { id: 'hopdong', label: 'Hợp đồng', icon: '📝' },
-        { id: 'khachhang', label: 'Khách hàng', icon: '🏢' },
-        { id: 'danhmuc', label: 'Danh mục', icon: '⚙️' }
+        { id: 'dashboard', label: 'Dashboard' },
+        { id: 'dean', label: 'Đề án, Kế hoạch' },
+        { id: 'cohoi', label: 'Cơ hội KD' },
+        { id: 'hopdong', label: 'Hợp đồng' },
+        { id: 'khachhang', label: 'Khách hàng' },
+        { id: 'danhmuc', label: 'Danh mục' }
       ];
 
-      // Hàm chuẩn hóa dữ liệu số (Loại bỏ dấu phẩy)
+      // Khử dấu phẩy định dạng từ Sheet
       const parseNum = (val) => {
         if (val === null || val === undefined || val === '') return 0;
         if (typeof val === 'number') return val;
         return parseFloat(val.toString().replace(/,/g, '')) || 0;
       };
 
-      // Hàm so sánh tháng
-      const isSameMonth = (m1, m2) => {
-        if (!m1 || !m2) return false;
-        return m1.toString().replace(/^0+/, '') === m2.toString().replace(/^0+/, '');
+      // Chuẩn hóa mọi dị bản ngày tháng (YYYY-MM-DD hoặc MM/YYYY) về đúng M/YYYY
+      const normalizeThang = (val) => {
+        if (!val) return '';
+        const str = val.toString().trim();
+        if (str.match(/^\d{4}-\d{2}-\d{2}/)) {
+          const parts = str.split('T')[0].split('-');
+          return `${parseInt(parts[1], 10)}/${parts[0]}`;
+        }
+        if (str.includes('/')) {
+            const parts = str.split('/');
+            return `${parseInt(parts[0], 10)}/${parts[1]}`;
+        }
+        return str; 
       };
 
       function App() {
-        // TẤT CẢ HOOKS Ở ĐÂY
         const [user, setUser] = React.useState(() => {
           try { return JSON.parse(localStorage.getItem('vnpt_user')); } catch { return null; }
         });
@@ -108,7 +115,12 @@
           try {
             const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'getData', provinces: user.provinces }) }).then(r => r.json());
             if (res.status === 'success') {
-              setRawData(res.data || []);
+              // Tiền xử lý dữ liệu ngay lập tức
+              const normalizedData = (res.data || []).map(d => ({
+                ...d,
+                thang: normalizeThang(d['thang'] || d['sxkd_thang'] || d['kỳ'] || '')
+              }));
+              setRawData(normalizedData);
               setPloList(res.ploData || []);
             }
           } catch (err) { console.warn("Lỗi đồng bộ dữ liệu"); }
@@ -124,7 +136,6 @@
         const fmtNum = (num) => new Intl.NumberFormat('vi-VN').format(num || 0);
         const fmtPct = (num) => `${(num * 100).toFixed(1)}%`;
 
-        // UI ĐĂNG NHẬP
         if (!user) {
           return (
             <div className="flex h-screen w-full items-center justify-center bg-gray-200">
@@ -140,8 +151,10 @@
         }
 
         // ==========================================
-        // ENGINE TÍNH TOÁN
+        // ENGINE TÍNH TOÁN DATA CORE
         // ==========================================
+        
+        // 1. Lọc theo bộ lọc chiều (Trừ thời gian)
         const baseData = rawData.filter(d => 
           (filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh) &&
           (filters.luongSPDV === 'ALL' || d['luong_spdv'] == filters.luongSPDV) &&
@@ -149,24 +162,25 @@
           (filters.plo === 'ALL' || d['plo_code'] == filters.plo)
         );
 
-        // Xác định tháng hiệu lực
+        // 2. Xác định tháng hiệu lực cho thẻ KPI
         let activeMonth = filters.thoiGian;
         if (!activeMonth && baseData.length > 0) {
           const validActuals = baseData.filter(d => {
             const val = d['dt_th_luyke'];
             return val !== '' && val != null && parseNum(val) > 0;
           });
-          const dataPool = validActuals.length > 0 ? validActuals : baseData;
-          const uniqueMonths = [...new Set(dataPool.map(d => d['thang']).filter(Boolean))];
-          uniqueMonths.sort((a, b) => {
-            const [mA, yA] = a.split('/'); const [mB, yB] = b.split('/');
-            return new Date(yB, mB - 1) - new Date(yA, mA - 1);
-          });
-          activeMonth = uniqueMonths[0]; 
+          // Quét lùi từ tháng 12 về tháng 1 để lấy mốc thực tế mới nhất
+          for (let i = monthOptions.length - 1; i >= 0; i--) {
+            if (validActuals.some(d => d['thang'] === monthOptions[i])) {
+               activeMonth = monthOptions[i];
+               break;
+            }
+          }
+          if (!activeMonth) activeMonth = monthOptions[0]; 
         }
 
-        // Tính KPI Lũy kế
-        const kpiData = baseData.filter(d => isSameMonth(d['thang'], activeMonth));
+        // 3. Tính Lũy kế cho mảng KPI
+        const kpiData = baseData.filter(d => d['thang'] === activeMonth);
         const kpi = kpiData.reduce((acc, curr) => {
           acc.dtThucHien += parseNum(curr['dt_th_luyke']); 
           acc.dtKeHoach += parseNum(curr['dt_kh_luyke']);
@@ -184,27 +198,25 @@
         const winRate = kpi.pipeTongSl ? kpi.pipeDongSl / kpi.pipeTongSl : 0;
         const thieuHut = Math.max(kpi.dtKeHoach - kpi.dtThucHien, 0);
 
-        // Tính Biểu đồ phát sinh
-        const chartGroup = baseData.reduce((acc, curr) => {
-          const t = curr['thang'];
-          if (!t) return acc;
-          const cleanT = t.toString().replace(/^0+/, ''); 
-          if (!acc[cleanT]) acc[cleanT] = { thang: cleanT, thucHien: null, keHoach: 0 };
-          
-          acc[cleanT].keHoach += parseNum(curr['dt_kh_thang']);
-          const valTH = parseNum(curr['dt_th_thang']);
-          if (curr['dt_th_thang'] !== '' && curr['dt_th_thang'] != null) {
-             acc[cleanT].thucHien = (acc[cleanT].thucHien === null) ? valTH : acc[cleanT].thucHien + valTH;
-          }
-          return acc;
-        }, {});
+        // 4. Áp khung tĩnh (12 Tháng) Tính Biểu đồ phát sinh
+        const chartGroup = {};
+        monthOptions.forEach(m => chartGroup[m] = { thang: m, thucHien: null, keHoach: 0 });
 
-        const finalChartData = Object.values(chartGroup).sort((a, b) => {
-          const [mA, yA] = a.thang.split('/'); const [mB, yB] = b.thang.split('/');
-          return new Date(yA, mA - 1) - new Date(yB, mB - 1);
+        baseData.forEach(curr => {
+          const t = curr['thang'];
+          if (!chartGroup[t]) return;
+          
+          chartGroup[t].keHoach += parseNum(curr['dt_kh_thang']);
+          const rawTH = curr['dt_th_thang'];
+          if (rawTH !== '' && rawTH != null) {
+             const valTH = parseNum(rawTH);
+             chartGroup[t].thucHien = (chartGroup[t].thucHien === null) ? valTH : chartGroup[t].thucHien + valTH;
+          }
         });
 
-        // Component KpiCard
+        // Bốc Array chuẩn theo 1->12 (Không bao giờ lệch thứ tự)
+        const finalChartData = monthOptions.map(m => chartGroup[m]);
+
         const KpiCard = ({ title, v1, l1, v2, l2, st }) => (
           <div className="bg-white border rounded flex-1 p-4 shadow-sm flex flex-col justify-between hover:border-vnpt transition min-w-[160px]">
             <h3 className="text-navy font-bold text-xs mb-3 uppercase truncate">{title}</h3>
@@ -217,7 +229,9 @@
           </div>
         );
 
+        // ==========================================
         // RENDER GIAO DIỆN CHÍNH
+        // ==========================================
         return (
           <div className="flex h-screen w-full">
             {/* SIDEBAR */}
@@ -237,7 +251,6 @@
 
             {/* MAIN CONTENT */}
             <main className="flex-1 flex flex-col overflow-hidden bg-gray-50">
-              {/* HEADER */}
               <header className="bg-white px-8 py-4 flex justify-between items-center shrink-0 border-b">
                 <h1 className="text-2xl font-bold uppercase tracking-wide text-navy">{MENU_ITEMS.find(m => m.id === activeTab)?.label}</h1>
                 <div className="flex items-center gap-4 text-sm">
@@ -249,7 +262,6 @@
 
               {activeTab === 'dashboard' ? (
                 <div className="flex-1 flex flex-col overflow-hidden">
-                  {/* THANH ĐIỀU HƯỚNG */}
                   <div className="bg-white px-8 py-4 flex gap-4 shrink-0 border-b shadow-sm items-end z-10">
                     <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Thời gian</label><select className="border border-gray-300 p-2 rounded text-base w-full focus:outline-vnpt" value={filters.thoiGian} onChange={e => setFilters({...filters, thoiGian: e.target.value})}><option value="">-- Tất cả --</option>{monthOptions.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
                     <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">CLO Địa bàn</label><select className="border border-gray-300 p-2 rounded text-base w-full focus:outline-vnpt" value={filters.maTinh} onChange={e => setFilters({...filters, maTinh: e.target.value})}><option value="ALL">Toàn địa bàn</option>{user.provinces && user.provinces.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
@@ -278,7 +290,7 @@
                         <div className="flex-1 w-full min-h-[300px]">
                           {window.Recharts && (
                             <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={finalChartData.length > 0 ? finalChartData : [{thang: 'Chưa có', thucHien: 0, keHoach: 0}]} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                              <BarChart data={finalChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                 <XAxis dataKey="thang" tick={{fontSize: 14}} />
                                 <YAxis tick={{fontSize: 14}} />
