@@ -51,14 +51,13 @@
       ];
 
       function App() {
-        // TẤT CẢ HOOKS BẮT BUỘC PHẢI Ở TRÊN CÙNG
         const [user, setUser] = React.useState(() => {
           try { return JSON.parse(localStorage.getItem('vnpt_user')); } catch { return null; }
         });
         const [email, setEmail] = React.useState('');
         const [loading, setLoading] = React.useState(false);
         const [rawData, setRawData] = React.useState([]);
-        const [chartData, setChartData] = React.useState([]); // Hook biểu đồ
+        const [chartData, setChartData] = React.useState([]); 
         const [ploList, setPloList] = React.useState([]);
         const [activeTab, setActiveTab] = React.useState('dashboard');
         const [filters, setFilters] = React.useState({ thoiGian: '', maTinh: 'ALL', luongSPDV: 'ALL', nhomSPDV: 'ALL', plo: 'ALL' });
@@ -87,7 +86,7 @@
             const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'getData', provinces: user.provinces }) }).then(r => r.json());
             if (res.status === 'success') {
               setRawData(res.data || []);
-              setChartData(res.chartData || []); // Nhận dữ liệu phát sinh theo tháng từ GAS
+              setChartData(res.chartData || []);
               setPloList(res.ploData || []);
             }
           } catch (err) { console.warn("Lỗi đồng bộ dữ liệu"); }
@@ -97,12 +96,11 @@
         const fmtNum = (num) => new Intl.NumberFormat('vi-VN').format(num || 0);
         const fmtPct = (num) => `${(num * 100).toFixed(1)}%`;
 
-        // CHẶN RENDER NẾU CHƯA ĐĂNG NHẬP (Sau khi đã nạp hết Hooks)
         if (!user) {
           return (
             <div className="flex h-screen w-full items-center justify-center bg-gray-200">
               <form onSubmit={handleLogin} className="bg-white p-10 border-t-4 border-vnpt shadow-xl w-96 rounded">
-                <h2 className="text-2xl font-bold text-navy mb-6 text-center">BI EXECUTIVE LOGIN</h2>
+                <h2 className="text-2xl font-bold text-navy mb-6 text-center">ĐĂNG NHẬP</h2>
                 <input className="w-full mb-6 p-3 border rounded focus:outline-vnpt text-sm" placeholder="Email: dhkddulieu@gmail.com" value={email} onChange={e => setEmail(e.target.value)} required />
                 <button disabled={loading} className="w-full bg-vnpt text-white py-3 font-bold rounded hover:bg-navy transition">{loading ? 'ĐANG KẾT NỐI...' : 'VÀO HỆ THỐNG'}</button>
               </form>
@@ -110,9 +108,6 @@
           );
         }
 
-        // =====================================================================
-        // ENGINE TÍNH TOÁN KPI (LUỸ KẾ YTD)
-        // =====================================================================
         const validMonths = rawData.filter(d => d['dt_th_luyke'] != null && d['dt_th_luyke'] !== '');
         const maxMonth = validMonths.length > 0 ? validMonths[validMonths.length - 1]['thang'] : '';
         const activeMonthForKPI = filters.thoiGian !== '' ? filters.thoiGian : maxMonth;
@@ -144,7 +139,7 @@
 
         const KpiCard = ({ title, v1, l1, v2, l2, st }) => (
           <div className="bg-white border rounded flex-1 p-4 shadow-sm flex flex-col justify-between hover:border-vnpt transition min-w-[160px]">
-            <h3 className="text-navy font-bold text-xs mb-3 uppercase truncate">{title}</h3>
+            <h3 className="text-navy font-bold text-xl mb-3 uppercase truncate">{title}</h3>
             <div>
               <div className={`text-3xl font-bold mb-1 ${st === 'good' ? 'text-good' : st === 'risk' ? 'text-risk' : 'text-vnpt'}`}>{v1}</div>
               <div className="text-xs text-gray-500 mb-3 truncate">{l1}</div>
@@ -169,36 +164,32 @@
                   </button>
                 ))}
               </nav>
-              <div className="p-6 border-t border-white/20">
-                <div className="text-xs text-gray-400 mb-1">Đăng nhập bởi:</div>
-                <div className="text-sm font-bold truncate mb-4">{user.email}</div>
-                <button onClick={() => { setUser(null); localStorage.removeItem('vnpt_user'); }} className="w-full bg-risk/90 hover:bg-risk py-2 rounded text-sm font-bold transition">Đăng xuất</button>
-              </div>
             </aside>
 
             {/* MAIN CONTENT */}
             <main className="flex-1 flex flex-col overflow-hidden bg-gray-50">
+              {/* HEADER - Đã gom User Email, Quyền và nút Đăng xuất */}
               <header className="bg-white px-8 py-4 flex justify-between items-center shrink-0 border-b">
                 <h1 className="text-2xl font-bold uppercase tracking-wide text-navy">{MENU_ITEMS.find(m => m.id === activeTab)?.label}</h1>
                 <div className="flex items-center gap-4 text-sm">
-                  <span className="bg-vnpt/10 text-vnpt border border-vnpt px-4 py-1 rounded-full font-bold">Quyền: {user.tenClo}</span>
+                  <span className="font-semibold text-gray-600">{user.email}</span>
+                  <span className="bg-vnpt/10 text-vnpt border border-vnpt px-4 py-1.5 rounded-full font-bold">Quyền: {user.tenClo}</span>
+                  <button onClick={() => { setUser(null); localStorage.removeItem('vnpt_user'); }} className="bg-risk text-white px-4 py-1.5 rounded font-bold hover:bg-red-700 transition">Đăng xuất</button>
                 </div>
               </header>
 
               {activeTab === 'dashboard' ? (
                 <div className="flex-1 flex flex-col overflow-hidden">
-                  {/* ĐIỀU HƯỚNG */}
                   <div className="bg-white px-8 py-4 flex gap-4 shrink-0 border-b shadow-sm items-end z-10">
-                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Thời gian</label><select className="border border-gray-300 p-2 rounded text-base w-full" value={filters.thoiGian} onChange={e => setFilters({...filters, thoiGian: e.target.value})}><option value="">-- Tất cả --</option>{monthOptions.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
-                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">CLO Địa bàn</label><select className="border border-gray-300 p-2 rounded text-base w-full" value={filters.maTinh} onChange={e => setFilters({...filters, maTinh: e.target.value})}><option value="ALL">Toàn địa bàn</option>{user.provinces && user.provinces.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
-                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Luồng SPDV</label><select className="border border-gray-300 p-2 rounded text-base w-full" value={filters.luongSPDV} onChange={e => setFilters({...filters, luongSPDV: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(rawData.map(d => d['luong_spdv']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
-                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Nhóm SPDV</label><select className="border border-gray-300 p-2 rounded text-base w-full" value={filters.nhomSPDV} onChange={e => setFilters({...filters, nhomSPDV: e.target.value, plo: 'ALL'})}><option value="ALL">Tất cả</option>{[...new Set(ploList.map(p => p['nhomspdv_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
-                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Dịch vụ (PLO)</label><select className="border border-gray-300 p-2 rounded text-base w-full" value={filters.plo} onChange={e => setFilters({...filters, plo: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(ploList.filter(p => filters.nhomSPDV === 'ALL' || p['nhomspdv_code'] === filters.nhomSPDV).map(p => p['plo_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
+                    <div className="flex flex-col flex-1"><label className="text-base font-bold text-navy mb-1">Thời gian</label><select className="border border-gray-300 p-2 rounded text-base w-full" value={filters.thoiGian} onChange={e => setFilters({...filters, thoiGian: e.target.value})}><option value="">-- Tất cả --</option>{monthOptions.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
+                    <div className="flex flex-col flex-1"><label className="text-base font-bold text-navy mb-1">CLO Địa bàn</label><select className="border border-gray-300 p-2 rounded text-base w-full" value={filters.maTinh} onChange={e => setFilters({...filters, maTinh: e.target.value})}><option value="ALL">Toàn địa bàn</option>{user.provinces && user.provinces.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
+                    <div className="flex flex-col flex-1"><label className="text-base font-bold text-navy mb-1">Luồng SPDV</label><select className="border border-gray-300 p-2 rounded text-base w-full" value={filters.luongSPDV} onChange={e => setFilters({...filters, luongSPDV: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(rawData.map(d => d['luong_spdv']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
+                    <div className="flex flex-col flex-1"><label className="text-base font-bold text-navy mb-1">Nhóm SPDV</label><select className="border border-gray-300 p-2 rounded text-base w-full" value={filters.nhomSPDV} onChange={e => setFilters({...filters, nhomSPDV: e.target.value, plo: 'ALL'})}><option value="ALL">Tất cả</option>{[...new Set(ploList.map(p => p['nhomspdv_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
+                    <div className="flex flex-col flex-1"><label className="text-base font-bold text-navy mb-1">Dịch vụ (PLO)</label><select className="border border-gray-300 p-2 rounded text-base w-full" value={filters.plo} onChange={e => setFilters({...filters, plo: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(ploList.filter(p => filters.nhomSPDV === 'ALL' || p['nhomspdv_code'] === filters.nhomSPDV).map(p => p['plo_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
                   </div>
 
                   {loading && <div className="text-center text-vnpt text-sm py-1 font-bold animate-pulse">Đồng bộ dữ liệu...</div>}
 
-                  {/* NỘI DUNG CHÍNH */}
                   <div className="flex-1 overflow-auto flex flex-col">
                     <div className="flex gap-4 px-8 py-6 shrink-0">
                       <KpiCard title="1. DOANH THU LŨY KẾ" v1={fmtNum(kpi.dtThucHien)} l1="Thực hiện (VNĐ)" v2={fmtNum(kpi.dtKeHoach)} l2="Kế hoạch (VNĐ)" st="neutral" />
