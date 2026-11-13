@@ -39,7 +39,8 @@
 
       const currentYear = new Date().getFullYear();
       const monthOptions = Array.from({length: 12}, (_, i) => `${i + 1}/${currentYear}`);
-      const mockChartData = Array.from({length: 10}, (_, i) => ({ thang: `T${i + 1}`, thucHien: Math.floor(Math.random() * 400 + 600), keHoach: 1000 }));
+      const [chartData, setChartData] = React.useState([]);
+      
       const mockProjects = Array.from({length: 10}, (_, i) => ({ id: i + 1, ten: `Dự án CĐS Khối Y tế/GD ${i+1}`, giaTri: Math.floor(Math.random() * 50 + 10) + ' Tỷ', trangThai: i % 3 === 0 ? 'Rủi ro' : 'Đang bám sát' }));
 
       // Cấu trúc Menu Sidebar
@@ -87,7 +88,9 @@
             const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'getData', provinces: user.provinces }) }).then(r => r.json());
             if (res.status === 'success') {
               setRawData(res.data || []);
+              setChartData(res.chartData || []); // Gán dữ liệu biểu đồ từ GAS
               setPloList(res.ploData || []);
+              // ...
             }
           } catch (err) { console.warn("Lỗi đồng bộ dữ liệu"); }
           setLoading(false);
@@ -108,30 +111,52 @@
           );
         }
 
-        // Logic Lọc & Tính KPI
-        const filteredData = rawData.filter(d => {
-          const matchTime = filters.thoiGian === '' || d['thang'] == filters.thoiGian;
-          const matchTinh = filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh;
-          const matchLuong = filters.luongSPDV === 'ALL' || d['luong_spdv'] == filters.luongSPDV;
-          const matchNhom = filters.nhomSPDV === 'ALL' || d['nhomspdv_code'] == filters.nhomSPDV;
-          const matchPlo = filters.plo === 'ALL' || d['plo_code'] == filters.plo;
-          return matchTime && matchTinh && matchLuong && matchNhom && matchPlo;
-        });
+        // =====================================================================
+        // ENGINE TÍNH TOÁN KPI (XỬ LÝ TÁCH BẠCH LUỸ KẾ & PHÁT SINH)
+        // =====================================================================
 
-        const kpi = filteredData.reduce((acc, curr) => {
-          acc.dtThucHien += Number(curr['dt_thuc_hien']) || 0; acc.dtKeHoach += Number(curr['dt_ke_hoach']) || 0;
-          acc.dtThangTruoc += Number(curr['dt_thang_truoc']) || 0; acc.pipeTongGt += Number(curr['pipe_tong_gt']) || 0;
-          acc.pipeTongSl += Number(curr['pipe_tong_sl']) || 0; acc.pipeMoGt += Number(curr['pipe_mo_gt']) || 0;
-          acc.pipeMoSl += Number(curr['pipe_mo_sl']) || 0; acc.pipeDongGt += Number(curr['pipe_dong_gt']) || 0;
-          acc.pipeDongSl += Number(curr['pipe_dong_sl']) || 0; acc.duBaoDt += Number(curr['du_bao_dt']) || 0;
+        // 1. Xác định "Tháng hiệu lực" cho KPI
+        // Nếu chọn "Tất cả" -> Lấy tháng có dữ liệu thực hiện mới nhất
+        const validMonths = rawData.filter(d => d['dt_th_luyke'] != null && d['dt_th_luyke'] !== '');
+        const maxMonth = validMonths.length > 0 ? validMonths[validMonths.length - 1]['thang'] : '';
+        const activeMonthForKPI = filters.thoiGian !== '' ? filters.thoiGian : maxMonth;
+
+        // 2. Lọc mảng dữ liệu CHỈ DÀNH CHO THẺ KPI (Dựa trên tháng hiệu lực)
+        const kpiData = rawData.filter(d => 
+          (d['thang'] == activeMonthForKPI) &&
+          (filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh) &&
+          (filters.luongSPDV === 'ALL' || d['luong_spdv'] == filters.luongSPDV) &&
+          (filters.nhomSPDV === 'ALL' || d['nhomspdv_code'] == filters.nhomSPDV) &&
+          (filters.plo === 'ALL' || d['plo_code'] == filters.plo)
+        );
+
+        // 3. Tổng hợp số LUỸ KẾ (Đẩy lên thẻ KPI trên cùng)
+        const kpi = kpiData.reduce((acc, curr) => {
+          // Doanh thu tính theo Cột Luỹ kế
+          acc.dtThucHien += Number(curr['dt_th_luyke']) || 0; 
+          acc.dtKeHoach += Number(curr['dt_kh_luyke']) || 0;
+          
+          // Pipeline & Dự báo (Luôn là trạng thái hiện tại/lũy kế)
+          acc.pipeTongGt += Number(curr['pipe_tong_gt']) || 0;
+          acc.pipeTongSl += Number(curr['pipe_tong_sl']) || 0;
+          acc.pipeMoGt += Number(curr['pipe_mo_gt']) || 0;
+          acc.pipeMoSl += Number(curr['pipe_mo_sl']) || 0;
+          acc.pipeDongGt += Number(curr['pipe_dong_gt']) || 0;
+          acc.pipeDongSl += Number(curr['pipe_dong_sl']) || 0;
+          acc.duBaoDt += Number(curr['du_bao_dt']) || 0;
+          
           return acc;
-        }, { dtThucHien: 0, dtKeHoach: 0, dtThangTruoc: 0, pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeMoSl: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0 });
+        }, { dtThucHien: 0, dtKeHoach: 0, pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeMoSl: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0 });
 
+        // 4. Các chỉ số phái sinh
         const tyLeHT = kpi.dtKeHoach ? kpi.dtThucHien / kpi.dtKeHoach : 0;
-        const tangGiam = kpi.dtThangTruoc ? (kpi.dtThucHien - kpi.dtThangTruoc) / kpi.dtThangTruoc : 0;
         const winRate = kpi.pipeTongSl ? kpi.pipeDongSl / kpi.pipeTongSl : 0;
         const thieuHut = Math.max(kpi.dtKeHoach - kpi.dtThucHien, 0);
 
+        // (Tuỳ chọn) Tính Tăng/Giảm MoM dựa trên dữ liệu phát sinh hoặc lấy thẳng từ Sheet
+        // const tangGiam = ... 
+        const tangGiam = kpi.dtThangTruoc ? (kpi.dtThucHien - kpi.dtThangTruoc) / kpi.dtThangTruoc : 0;
+        
         const KpiCard = ({ title, v1, l1, v2, l2, st }) => (
           <div className="bg-white border rounded flex-1 p-4 shadow-sm flex flex-col justify-between hover:border-vnpt transition min-w-[160px]">
             <h3 className="text-navy font-bold text-xl mb-3 uppercase truncate">{title}</h3>
@@ -248,7 +273,7 @@
                         <div className="flex-1 w-full min-h-[300px]">
                           {window.Recharts && (
                             <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={mockChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                              <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                 <XAxis dataKey="thang" tick={{fontSize: 14}} />
                                 <YAxis tick={{fontSize: 14}} />
