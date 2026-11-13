@@ -35,30 +35,44 @@
   <script type="text/babel">
     try {
       const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = window.Recharts || {};
+      
+      // ĐIỀN URL WEB APP GAS TẠI ĐÂY
       const API_URL = 'https://script.google.com/macros/s/AKfycby6E6r6KhZ54J6by2s1PF8MqtOSJu74GcyqO4GsFnSwWd-GmDScZFrS5Brq0IwXlO1N/exec'; 
 
       const currentYear = new Date().getFullYear();
       const monthOptions = Array.from({length: 12}, (_, i) => `${i + 1}/${currentYear}`);
-      const mockProjects = Array.from({length: 10}, (_, i) => ({ id: i + 1, ten: `Dự án CĐS Khối Y tế/GD ${i+1}`, giaTri: Math.floor(Math.random() * 50 + 10) + ' Tỷ', trangThai: i % 3 === 0 ? 'Rủi ro' : 'Đang bám sát' }));
+      
+      // Mock data hiển thị tạm cho Dự án
+      const mockProjects = Array.from({length: 10}, (_, i) => ({ 
+        id: i + 1, ten: `Dự án CĐS Khối Y tế/GD ${i+1}`, 
+        giaTri: Math.floor(Math.random() * 50 + 10) + ' Tỷ', 
+        trangThai: i % 3 === 0 ? 'Rủi ro' : 'Đang bám sát' 
+      }));
 
       const MENU_ITEMS = [
-        { id: 'dashboard', label: 'Dashboard' },
-        { id: 'dean', label: 'Đề án, Kế hoạch' },
-        { id: 'cohoi', label: 'Cơ hội KD'},
-        { id: 'hopdong', label: 'Hợp đồng' },
-        { id: 'khachhang', label: 'Khách hàng' },
-        { id: 'danhmuc', label: 'Danh mục' }
+        { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+        { id: 'dean', label: 'Đề án, Kế hoạch', icon: '📋' },
+        { id: 'cohoi', label: 'Cơ hội KD', icon: '🎯' },
+        { id: 'hopdong', label: 'Hợp đồng', icon: '📝' },
+        { id: 'khachhang', label: 'Khách hàng', icon: '🏢' },
+        { id: 'danhmuc', label: 'Danh mục', icon: '⚙️' }
       ];
 
-      // Hàm chuẩn hóa dữ liệu số (Loại bỏ dấu phẩy, xử lý rỗng)
+      // Hàm chuẩn hóa dữ liệu số (Loại bỏ dấu phẩy)
       const parseNum = (val) => {
         if (val === null || val === undefined || val === '') return 0;
         if (typeof val === 'number') return val;
         return parseFloat(val.toString().replace(/,/g, '')) || 0;
       };
 
+      // Hàm so sánh tháng
+      const isSameMonth = (m1, m2) => {
+        if (!m1 || !m2) return false;
+        return m1.toString().replace(/^0+/, '') === m2.toString().replace(/^0+/, '');
+      };
+
       function App() {
-        // HOOKS (Luôn đặt ở trên cùng)
+        // TẤT CẢ HOOKS Ở ĐÂY
         const [user, setUser] = React.useState(() => {
           try { return JSON.parse(localStorage.getItem('vnpt_user')); } catch { return null; }
         });
@@ -67,7 +81,9 @@
         const [rawData, setRawData] = React.useState([]);
         const [ploList, setPloList] = React.useState([]);
         const [activeTab, setActiveTab] = React.useState('dashboard');
-        const [filters, setFilters] = React.useState({ thoiGian: '', maTinh: 'ALL', luongSPDV: 'ALL', nhomSPDV: 'ALL', plo: 'ALL' });
+        const [filters, setFilters] = React.useState({ 
+          thoiGian: '', maTinh: 'ALL', luongSPDV: 'ALL', nhomSPDV: 'ALL', plo: 'ALL' 
+        });
 
         React.useEffect(() => { if (user) fetchDashboardData(); }, [user]);
 
@@ -82,7 +98,7 @@
             } else { alert('Sai thông tin đăng nhập!'); }
           } catch (err) {
             alert('Mất kết nối API. Chạy giả lập UI.');
-            setUser({ email, level: 1, tenClo: 'CLO_L0_CEO', provinces: ['HNI', 'HPG', 'QNH'] });
+            setUser({ email, level: 1, tenClo: 'CLO_L1_MB', provinces: ['HN', 'HP', 'QN'] });
           }
           setLoading(false);
         };
@@ -99,33 +115,33 @@
           setLoading(false);
         };
 
+        const handleLogout = () => {
+          setUser(null);
+          localStorage.removeItem('vnpt_user');
+          setRawData([]);
+        };
+
         const fmtNum = (num) => new Intl.NumberFormat('vi-VN').format(num || 0);
         const fmtPct = (num) => `${(num * 100).toFixed(1)}%`;
 
-        // UI CHƯA ĐĂNG NHẬP
+        // UI ĐĂNG NHẬP
         if (!user) {
           return (
             <div className="flex h-screen w-full items-center justify-center bg-gray-200">
               <form onSubmit={handleLogin} className="bg-white p-10 border-t-4 border-vnpt shadow-xl w-96 rounded">
                 <h2 className="text-2xl font-bold text-navy mb-6 text-center">ĐĂNG NHẬP</h2>
-                <input className="w-full mb-6 p-3 border rounded focus:outline-vnpt text-sm" placeholder="Email: dhkddulieu@gmail.com" value={email} onChange={e => setEmail(e.target.value)} required />
-                <button disabled={loading} className="w-full bg-vnpt text-white py-3 font-bold rounded hover:bg-navy transition">{loading ? 'ĐANG KẾT NỐI...' : 'VÀO HỆ THỐNG'}</button>
+                <input className="w-full mb-6 p-3 border rounded focus:outline-vnpt text-sm" placeholder="Email đăng nhập" value={email} onChange={e => setEmail(e.target.value)} required />
+                <button disabled={loading} className="w-full bg-vnpt text-white py-3 font-bold rounded hover:bg-navy transition">
+                  {loading ? 'ĐANG KẾT NỐI...' : 'VÀO HỆ THỐNG'}
+                </button>
               </form>
             </div>
           );
         }
 
-        // =====================================================================
-        // ENGINE XỬ LÝ SỐ LIỆU (LUỸ KẾ & PHÁT SINH)
-        // =====================================================================
-
-        // Hàm so sánh Tháng tuyệt đối an toàn (Khử số 0 ở đầu: 09/2026 === 9/2026)
-        const isSameMonth = (m1, m2) => {
-          if (!m1 || !m2) return false;
-          return m1.toString().replace(/^0+/, '') === m2.toString().replace(/^0+/, '');
-        };
-
-        // 1. Base Data: Lọc theo các chiều KHÁC thời gian
+        // ==========================================
+        // ENGINE TÍNH TOÁN
+        // ==========================================
         const baseData = rawData.filter(d => 
           (filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh) &&
           (filters.luongSPDV === 'ALL' || d['luong_spdv'] == filters.luongSPDV) &&
@@ -133,28 +149,23 @@
           (filters.plo === 'ALL' || d['plo_code'] == filters.plo)
         );
 
-        // 2. Tìm tháng hiệu lực cho KPI
+        // Xác định tháng hiệu lực
         let activeMonth = filters.thoiGian;
         if (!activeMonth && baseData.length > 0) {
-          // CHỈ lấy danh sách các tháng ĐÃ CÓ số liệu Thực hiện Lũy kế
           const validActuals = baseData.filter(d => {
             const val = d['dt_th_luyke'];
-            return val !== '' && val !== null && val !== undefined && parseNum(val) > 0;
+            return val !== '' && val != null && parseNum(val) > 0;
           });
-          
           const dataPool = validActuals.length > 0 ? validActuals : baseData;
           const uniqueMonths = [...new Set(dataPool.map(d => d['thang']).filter(Boolean))];
-          
           uniqueMonths.sort((a, b) => {
             const [mA, yA] = a.split('/'); const [mB, yB] = b.split('/');
             return new Date(yB, mB - 1) - new Date(yA, mA - 1);
           });
-          
-          // Trả về tháng gần nhất có thực hiện (Ví dụ: 10/2026 thay vì 12/2026)
           activeMonth = uniqueMonths[0]; 
         }
 
-        // 3. Tính KPI (CHỈ TÍNH THÁNG HIỆU LỰC - CỘT LŨY KẾ)
+        // Tính KPI Lũy kế
         const kpiData = baseData.filter(d => isSameMonth(d['thang'], activeMonth));
         const kpi = kpiData.reduce((acc, curr) => {
           acc.dtThucHien += parseNum(curr['dt_th_luyke']); 
@@ -173,59 +184,17 @@
         const winRate = kpi.pipeTongSl ? kpi.pipeDongSl / kpi.pipeTongSl : 0;
         const thieuHut = Math.max(kpi.dtKeHoach - kpi.dtThucHien, 0);
 
-        // 4. Tính dữ liệu biểu đồ (TẤT CẢ CÁC THÁNG - CỘT PHÁT SINH)
+        // Tính Biểu đồ phát sinh
         const chartGroup = baseData.reduce((acc, curr) => {
           const t = curr['thang'];
           if (!t) return acc;
-          // Chuẩn hóa tên tháng cho trục X
           const cleanT = t.toString().replace(/^0+/, ''); 
           if (!acc[cleanT]) acc[cleanT] = { thang: cleanT, thucHien: null, keHoach: 0 };
           
           acc[cleanT].keHoach += parseNum(curr['dt_kh_thang']);
-          
           const valTH = parseNum(curr['dt_th_thang']);
           if (curr['dt_th_thang'] !== '' && curr['dt_th_thang'] != null) {
              acc[cleanT].thucHien = (acc[cleanT].thucHien === null) ? valTH : acc[cleanT].thucHien + valTH;
-          }
-          return acc;
-        }, {});
-
-        const finalChartData = Object.values(chartGroup).sort((a, b) => {
-          const [mA, yA] = a.thang.split('/'); const [mB, yB] = b.thang.split('/');
-          return new Date(yA, mA - 1) - new Date(yB, mB - 1);
-        });
-
-        // 3. Tính KPI (CHỈ TÍNH THÁNG HIỆU LỰC - CỘT LŨY KẾ)
-        const kpiData = baseData.filter(d => d['thang'] == activeMonth);
-        const kpi = kpiData.reduce((acc, curr) => {
-          acc.dtThucHien += parseNum(curr['dt_th_luyke']); 
-          acc.dtKeHoach += parseNum(curr['dt_kh_luyke']);
-          acc.pipeTongGt += parseNum(curr['pipe_tong_gt']);
-          acc.pipeTongSl += parseNum(curr['pipe_tong_sl']);
-          acc.pipeMoGt += parseNum(curr['pipe_mo_gt']);
-          acc.pipeMoSl += parseNum(curr['pipe_mo_sl']);
-          acc.pipeDongGt += parseNum(curr['pipe_dong_gt']);
-          acc.pipeDongSl += parseNum(curr['pipe_dong_sl']);
-          acc.duBaoDt += parseNum(curr['du_bao_dt']);
-          return acc;
-        }, { dtThucHien: 0, dtKeHoach: 0, pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeMoSl: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0 });
-
-        const tyLeHT = kpi.dtKeHoach ? kpi.dtThucHien / kpi.dtKeHoach : 0;
-        const winRate = kpi.pipeTongSl ? kpi.pipeDongSl / kpi.pipeTongSl : 0;
-        const thieuHut = Math.max(kpi.dtKeHoach - kpi.dtThucHien, 0);
-
-        // 4. Tính dữ liệu biểu đồ (TẤT CẢ CÁC THÁNG - CỘT PHÁT SINH)
-        const chartGroup = baseData.reduce((acc, curr) => {
-          const t = curr['thang'];
-          if (!t) return acc;
-          if (!acc[t]) acc[t] = { thang: t, thucHien: null, keHoach: 0 };
-          
-          acc[t].keHoach += parseNum(curr['dt_kh_thang']);
-          
-          const valTH = parseNum(curr['dt_th_thang']);
-          // Chỉ cộng dồn thực hiện nếu có dữ liệu khác rỗng
-          if (curr['dt_th_thang'] !== '' && curr['dt_th_thang'] != null) {
-             acc[t].thucHien = (acc[t].thucHien === null) ? valTH : acc[t].thucHien + valTH;
           }
           return acc;
         }, {});
@@ -248,7 +217,7 @@
           </div>
         );
 
-        // RENDER UI CHÍNH
+        // RENDER GIAO DIỆN CHÍNH
         return (
           <div className="flex h-screen w-full">
             {/* SIDEBAR */}
@@ -274,13 +243,13 @@
                 <div className="flex items-center gap-4 text-sm">
                   <span className="font-semibold text-gray-600">{user.email}</span>
                   <span className="bg-vnpt/10 text-vnpt border border-vnpt px-4 py-1.5 rounded-full font-bold">Quyền: {user.tenClo}</span>
-                  <button onClick={() => { setUser(null); localStorage.removeItem('vnpt_user'); }} className="bg-risk text-white px-4 py-1.5 rounded font-bold hover:bg-red-700 transition">Đăng xuất</button>
+                  <button onClick={handleLogout} className="bg-risk text-white px-4 py-1.5 rounded font-bold hover:bg-red-700 transition">Đăng xuất</button>
                 </div>
               </header>
 
               {activeTab === 'dashboard' ? (
                 <div className="flex-1 flex flex-col overflow-hidden">
-                  {/* BAR ĐIỀU HƯỚNG */}
+                  {/* THANH ĐIỀU HƯỚNG */}
                   <div className="bg-white px-8 py-4 flex gap-4 shrink-0 border-b shadow-sm items-end z-10">
                     <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Thời gian</label><select className="border border-gray-300 p-2 rounded text-base w-full focus:outline-vnpt" value={filters.thoiGian} onChange={e => setFilters({...filters, thoiGian: e.target.value})}><option value="">-- Tất cả --</option>{monthOptions.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
                     <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">CLO Địa bàn</label><select className="border border-gray-300 p-2 rounded text-base w-full focus:outline-vnpt" value={filters.maTinh} onChange={e => setFilters({...filters, maTinh: e.target.value})}><option value="ALL">Toàn địa bàn</option>{user.provinces && user.provinces.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
