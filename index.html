@@ -119,7 +119,13 @@
         // ENGINE XỬ LÝ SỐ LIỆU (LUỸ KẾ & PHÁT SINH)
         // =====================================================================
 
-        // 1. Base Data: Lọc theo các chiều dữ liệu KHÁC thời gian
+        // Hàm so sánh Tháng tuyệt đối an toàn (Khử số 0 ở đầu: 09/2026 === 9/2026)
+        const isSameMonth = (m1, m2) => {
+          if (!m1 || !m2) return false;
+          return m1.toString().replace(/^0+/, '') === m2.toString().replace(/^0+/, '');
+        };
+
+        // 1. Base Data: Lọc theo các chiều KHÁC thời gian
         const baseData = rawData.filter(d => 
           (filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh) &&
           (filters.luongSPDV === 'ALL' || d['luong_spdv'] == filters.luongSPDV) &&
@@ -127,16 +133,67 @@
           (filters.plo === 'ALL' || d['plo_code'] == filters.plo)
         );
 
-        // 2. Tìm tháng hiệu lực cho KPI (ưu tiên Dropdown, nếu trống lấy Max Month)
+        // 2. Tìm tháng hiệu lực cho KPI
         let activeMonth = filters.thoiGian;
         if (!activeMonth && baseData.length > 0) {
-          const uniqueMonths = [...new Set(baseData.map(d => d['thang']).filter(Boolean))];
+          // CHỈ lấy danh sách các tháng ĐÃ CÓ số liệu Thực hiện Lũy kế
+          const validActuals = baseData.filter(d => {
+            const val = d['dt_th_luyke'];
+            return val !== '' && val !== null && val !== undefined && parseNum(val) > 0;
+          });
+          
+          const dataPool = validActuals.length > 0 ? validActuals : baseData;
+          const uniqueMonths = [...new Set(dataPool.map(d => d['thang']).filter(Boolean))];
+          
           uniqueMonths.sort((a, b) => {
             const [mA, yA] = a.split('/'); const [mB, yB] = b.split('/');
             return new Date(yB, mB - 1) - new Date(yA, mA - 1);
           });
-          activeMonth = uniqueMonths[0]; // Tháng gần nhất có dữ liệu
+          
+          // Trả về tháng gần nhất có thực hiện (Ví dụ: 10/2026 thay vì 12/2026)
+          activeMonth = uniqueMonths[0]; 
         }
+
+        // 3. Tính KPI (CHỈ TÍNH THÁNG HIỆU LỰC - CỘT LŨY KẾ)
+        const kpiData = baseData.filter(d => isSameMonth(d['thang'], activeMonth));
+        const kpi = kpiData.reduce((acc, curr) => {
+          acc.dtThucHien += parseNum(curr['dt_th_luyke']); 
+          acc.dtKeHoach += parseNum(curr['dt_kh_luyke']);
+          acc.pipeTongGt += parseNum(curr['pipe_tong_gt']);
+          acc.pipeTongSl += parseNum(curr['pipe_tong_sl']);
+          acc.pipeMoGt += parseNum(curr['pipe_mo_gt']);
+          acc.pipeMoSl += parseNum(curr['pipe_mo_sl']);
+          acc.pipeDongGt += parseNum(curr['pipe_dong_gt']);
+          acc.pipeDongSl += parseNum(curr['pipe_dong_sl']);
+          acc.duBaoDt += parseNum(curr['du_bao_dt']);
+          return acc;
+        }, { dtThucHien: 0, dtKeHoach: 0, pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeMoSl: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0 });
+
+        const tyLeHT = kpi.dtKeHoach ? kpi.dtThucHien / kpi.dtKeHoach : 0;
+        const winRate = kpi.pipeTongSl ? kpi.pipeDongSl / kpi.pipeTongSl : 0;
+        const thieuHut = Math.max(kpi.dtKeHoach - kpi.dtThucHien, 0);
+
+        // 4. Tính dữ liệu biểu đồ (TẤT CẢ CÁC THÁNG - CỘT PHÁT SINH)
+        const chartGroup = baseData.reduce((acc, curr) => {
+          const t = curr['thang'];
+          if (!t) return acc;
+          // Chuẩn hóa tên tháng cho trục X
+          const cleanT = t.toString().replace(/^0+/, ''); 
+          if (!acc[cleanT]) acc[cleanT] = { thang: cleanT, thucHien: null, keHoach: 0 };
+          
+          acc[cleanT].keHoach += parseNum(curr['dt_kh_thang']);
+          
+          const valTH = parseNum(curr['dt_th_thang']);
+          if (curr['dt_th_thang'] !== '' && curr['dt_th_thang'] != null) {
+             acc[cleanT].thucHien = (acc[cleanT].thucHien === null) ? valTH : acc[cleanT].thucHien + valTH;
+          }
+          return acc;
+        }, {});
+
+        const finalChartData = Object.values(chartGroup).sort((a, b) => {
+          const [mA, yA] = a.thang.split('/'); const [mB, yB] = b.thang.split('/');
+          return new Date(yA, mA - 1) - new Date(yB, mB - 1);
+        });
 
         // 3. Tính KPI (CHỈ TÍNH THÁNG HIỆU LỰC - CỘT LŨY KẾ)
         const kpiData = baseData.filter(d => d['thang'] == activeMonth);
