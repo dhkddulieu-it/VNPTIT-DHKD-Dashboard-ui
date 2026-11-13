@@ -3,6 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <title>Executive Dashboard - VNPT</title>
+  <!-- Nhúng font Nunito từ Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
   <script src="https://unpkg.com/react@17.0.2/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone@7.23.6/babel.min.js"></script>
@@ -11,7 +16,16 @@
   <script src="https://unpkg.com/recharts@2.1.12/umd/Recharts.js"></script>
 
   <script>
-    tailwind.config = { theme: { extend: { colors: { vnpt: '#0094D9', navy: '#003B7A', good: '#22c55e', risk: '#ef4444' } } } }
+    tailwind.config = { 
+      theme: { 
+        extend: { 
+          fontFamily: {
+            sans: ['Nunito', 'sans-serif'], 
+          },
+          colors: {vnpt: '#0094D9', navy: '#003B7A', good: '#22c55e', risk: '#ef4444'} 
+        } 
+      } 
+    }
   </script>
 </head>
 <body class="bg-gray-100 text-gray-800 min-h-screen flex items-center justify-center font-sans">
@@ -118,14 +132,15 @@
         const winRate = kpi.pipeTongSl ? kpi.pipeDongSl / kpi.pipeTongSl : 0;
         const thieuHut = Math.max(kpi.dtKeHoach - kpi.dtThucHien, 0);
 
+        // Nâng Font size KPI: text-[11px]->text-xs, text-xl->text-3xl, text-sm->text-base
         const KpiCard = ({ title, v1, l1, v2, l2, st }) => (
-          <div className="bg-white border rounded flex-1 p-3 shadow-sm flex flex-col justify-between hover:border-vnpt transition min-w-[140px]">
-            <h3 className="text-navy font-bold text-[11px] mb-2 uppercase truncate">{title}</h3>
+          <div className="bg-white border rounded flex-1 p-4 shadow-sm flex flex-col justify-between hover:border-vnpt transition min-w-[160px]">
+            <h3 className="text-navy font-bold text-xs mb-3 uppercase truncate">{title}</h3>
             <div>
-              <div className={`text-xl font-bold mb-1 ${st === 'good' ? 'text-good' : st === 'risk' ? 'text-risk' : 'text-vnpt'}`}>{v1}</div>
-              <div className="text-[10px] text-gray-500 mb-2 truncate">{l1}</div>
-              <div className="text-sm font-bold text-gray-700 border-t pt-1">{v2}</div>
-              <div className="text-[10px] text-gray-500 truncate">{l2}</div>
+              <div className={`text-3xl font-bold mb-1 ${st === 'good' ? 'text-good' : st === 'risk' ? 'text-risk' : 'text-vnpt'}`}>{v1}</div>
+              <div className="text-xs text-gray-500 mb-3 truncate">{l1}</div>
+              <div className="text-base font-bold text-gray-700 border-t pt-2">{v2}</div>
+              <div className="text-xs text-gray-500 truncate">{l2}</div>
             </div>
           </div>
         );
