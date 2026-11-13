@@ -35,7 +35,7 @@
   <script type="text/babel">
     try {
       const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = window.Recharts || {};
-      const API_URL = 'ĐIỀN_URL_WEBAPP_GAS_CỦA_BẠN_VÀO_ĐÂY'; 
+       const API_URL = 'https://script.google.com/macros/s/AKfycby6E6r6KhZ54J6by2s1PF8MqtOSJu74GcyqO4GsFnSwWd-GmDScZFrS5Brq0IwXlO1N/exec'; 
 
       const currentYear = new Date().getFullYear();
       const monthOptions = Array.from({length: 12}, (_, i) => `${i + 1}/${currentYear}`);
@@ -76,7 +76,7 @@
             } else { alert('Sai thông tin đăng nhập!'); }
           } catch (err) {
             alert('Mất kết nối API. Chạy giả lập UI.');
-            setUser({ email, level: 1, tenClo: 'CLO_L1_MB', provinces: ['HN', 'HP', 'QN'] });
+            setUser({ email, level: 1, tenClo: 'CLO_L0_CEO', provinces: ['HNI', 'HPG', 'QNH','DNG','HUE','HCM', 'CTO','DNI','BNH'] });
           }
           setLoading(false);
         };
@@ -100,7 +100,7 @@
           return (
             <div className="flex h-screen w-full items-center justify-center bg-gray-200">
               <form onSubmit={handleLogin} className="bg-white p-10 border-t-4 border-vnpt shadow-xl w-96 rounded">
-                <h2 className="text-2xl font-bold text-navy mb-6 text-center">BI EXECUTIVE LOGIN</h2>
+                <h2 className="text-2xl font-bold text-navy mb-6 text-center">ĐĂNG NHẬP</h2>
                 <input className="w-full mb-6 p-3 border rounded focus:outline-vnpt text-sm" placeholder="Email: dhkddulieu@gmail.com" value={email} onChange={e => setEmail(e.target.value)} required />
                 <button disabled={loading} className="w-full bg-vnpt text-white py-3 font-bold rounded hover:bg-navy transition">{loading ? 'ĐANG KẾT NỐI...' : 'VÀO HỆ THỐNG'}</button>
               </form>
@@ -134,7 +134,7 @@
 
         const KpiCard = ({ title, v1, l1, v2, l2, st }) => (
           <div className="bg-white border rounded flex-1 p-4 shadow-sm flex flex-col justify-between hover:border-vnpt transition min-w-[160px]">
-            <h3 className="text-navy font-bold text-xs mb-3 uppercase truncate">{title}</h3>
+            <h3 className="text-navy font-bold text-xl mb-3 uppercase truncate">{title}</h3>
             <div>
               <div className={`text-3xl font-bold mb-1 ${st === 'good' ? 'text-good' : st === 'risk' ? 'text-risk' : 'text-vnpt'}`}>{v1}</div>
               <div className="text-xs text-gray-500 mb-3 truncate">{l1}</div>
@@ -191,35 +191,35 @@
                   {/* VÙNG ĐIỀU HƯỚNG */}
                   <div className="bg-white px-8 py-4 flex gap-4 shrink-0 border-b shadow-sm items-end z-10">
                     <div className="flex flex-col flex-1">
-                      <label className="text-xs font-bold text-navy mb-1">Thời gian</label>
+                      <label className="text-base font-bold text-navy mb-1">Thời gian (tháng)</label>
                       <select className="border border-gray-300 p-2 rounded text-base w-full focus:outline-vnpt" value={filters.thoiGian} onChange={e => setFilters({...filters, thoiGian: e.target.value})}>
                         <option value="">-- Tất cả --</option>
                         {monthOptions.map(t => <option key={t} value={t}>{t}</option>)}
                       </select>
                     </div>
                     <div className="flex flex-col flex-1">
-                      <label className="text-xs font-bold text-navy mb-1">CLO Địa bàn</label>
+                      <label className="text-base font-bold text-navy mb-1">CLO Địa bàn</label>
                       <select className="border border-gray-300 p-2 rounded text-base w-full focus:outline-vnpt" value={filters.maTinh} onChange={e => setFilters({...filters, maTinh: e.target.value})}>
                         <option value="ALL">Toàn địa bàn</option>
                         {user.provinces && user.provinces.map(p => <option key={p} value={p}>{p}</option>)}
                       </select>
                     </div>
                     <div className="flex flex-col flex-1">
-                      <label className="text-xs font-bold text-navy mb-1">Luồng SPDV</label>
+                      <label className="text-base font-bold text-navy mb-1">Luồng SPDV</label>
                       <select className="border border-gray-300 p-2 rounded text-base w-full focus:outline-vnpt" value={filters.luongSPDV} onChange={e => setFilters({...filters, luongSPDV: e.target.value})}>
                         <option value="ALL">Tất cả Luồng</option>
                         {[...new Set(rawData.map(d => d['luong_spdv']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}
                       </select>
                     </div>
                     <div className="flex flex-col flex-1">
-                      <label className="text-xs font-bold text-navy mb-1">Nhóm SPDV</label>
+                      <label className="text-base font-bold text-navy mb-1">Nhóm SPDV</label>
                       <select className="border border-gray-300 p-2 rounded text-base w-full focus:outline-vnpt" value={filters.nhomSPDV} onChange={e => setFilters({...filters, nhomSPDV: e.target.value, plo: 'ALL'})}>
                         <option value="ALL">Tất cả Nhóm</option>
                         {[...new Set(ploList.map(p => p['nhomspdv_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}
                       </select>
                     </div>
                     <div className="flex flex-col flex-1">
-                      <label className="text-xs font-bold text-navy mb-1">Dịch vụ (PLO)</label>
+                      <label className="text-base font-bold text-navy mb-1">Dịch vụ (PLO)</label>
                       <select className="border border-gray-300 p-2 rounded text-base w-full focus:outline-vnpt" value={filters.plo} onChange={e => setFilters({...filters, plo: e.target.value})}>
                         <option value="ALL">Tất cả PLO</option>
                         {[...new Set(ploList.filter(p => filters.nhomSPDV === 'ALL' || p['nhomspdv_code'] === filters.nhomSPDV).map(p => p['plo_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}
