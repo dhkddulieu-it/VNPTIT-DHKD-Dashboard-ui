@@ -151,10 +151,10 @@
         }
 
         // ==========================================
-        // ENGINE TÍNH TOÁN DATA CORE
+        // ENGINE TÍNH TOÁN DATA CORE (CẬP NHẬT CHUẨN BI)
         // ==========================================
         
-        // 1. Lọc theo bộ lọc chiều (Trừ thời gian)
+        // 1. BASE DATA (Lọc theo Tỉnh, Luồng, Nhóm, PLO - BỎ QUA Tháng)
         const baseData = rawData.filter(d => 
           (filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh) &&
           (filters.luongSPDV === 'ALL' || d['luong_spdv'] == filters.luongSPDV) &&
@@ -162,59 +162,76 @@
           (filters.plo === 'ALL' || d['plo_code'] == filters.plo)
         );
 
-        // 2. Xác định tháng hiệu lực cho thẻ KPI
-        let activeMonth = filters.thoiGian;
-        if (!activeMonth && baseData.length > 0) {
-          const validActuals = baseData.filter(d => {
-            const val = d['dt_th_luyke'];
-            return val !== '' && val != null && parseNum(val) > 0;
-          });
-          // Quét lùi từ tháng 12 về tháng 1 để lấy mốc thực tế mới nhất
-          for (let i = monthOptions.length - 1; i >= 0; i--) {
-            if (validActuals.some(d => d['thang'] === monthOptions[i])) {
-               activeMonth = monthOptions[i];
-               break;
-            }
-          }
-          if (!activeMonth) activeMonth = monthOptions[0]; 
-        }
+        // Helper: Convert "MM/YYYY" -> YYYYMM (Định dạng số nguyên để so sánh Lớn/Nhỏ an toàn tuyệt đối)
+        const getMonthVal = (mStr) => {
+          if (!mStr) return null;
+          const parts = mStr.toString().trim().split('/');
+          if (parts.length === 2) return parseInt(parts[1]) * 100 + parseInt(parts[0]);
+          return 0;
+        };
 
-        // 3. Tính Lũy kế cho mảng KPI
-        const kpiData = baseData.filter(d => d['thang'] === activeMonth);
-        const kpi = kpiData.reduce((acc, curr) => {
-          acc.dtThucHien += parseNum(curr['dt_th_luyke']); 
-          acc.dtKeHoach += parseNum(curr['dt_kh_luyke']);
-          acc.pipeTongGt += parseNum(curr['pipe_tong_gt']);
-          acc.pipeTongSl += parseNum(curr['pipe_tong_sl']);
-          acc.pipeMoGt += parseNum(curr['pipe_mo_gt']);
-          acc.pipeMoSl += parseNum(curr['pipe_mo_sl']);
-          acc.pipeDongGt += parseNum(curr['pipe_dong_gt']);
-          acc.pipeDongSl += parseNum(curr['pipe_dong_sl']);
-          acc.duBaoDt += parseNum(curr['du_bao_dt']);
+        const filterMonthVal = getMonthVal(filters.thoiGian) || 999912; // Nếu "Tất cả", ép biến so sánh về Vô cực (Năm 9999)
+
+        // 2. TÍNH KPI DOANH THU LUỸ KẾ (Dynamically Cumulative)
+        // -> Lấy tổng CÁC THÁNG <= THÁNG ĐƯỢC CHỌN
+        const revenueKpiData = baseData.filter(d => {
+          const mVal = getMonthVal(d['thang']);
+          return mVal !== null && mVal > 0 && mVal <= filterMonthVal;
+        });
+
+        const kpi = revenueKpiData.reduce((acc, curr) => {
+          // Tính TỔNG CỘNG DỒN tự động dựa trên cột PHÁT SINH THÁNG (Không dùng cột Lũy kế bị sai lệch)
+          acc.dtThucHien += parseNum(curr['dt_th_thang']); 
+          acc.dtKeHoach += parseNum(curr['dt_kh_thang']);
           return acc;
         }, { dtThucHien: 0, dtKeHoach: 0, pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeMoSl: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0 });
 
+        // 3. TÍNH KPI PIPELINE & DỰ BÁO (Snapshot Rule)
+        // Pipeline KHÔNG được phép cộng dồn. Chỉ lấy chốt tại "Tháng đang chọn" hoặc "Tháng mới nhất có dữ liệu".
+        let snapshotMonthVal = 0;
+        if (filters.thoiGian) {
+            snapshotMonthVal = getMonthVal(filters.thoiGian);
+        } else {
+            // Tìm Max Month trong BaseData
+            const validMonths = baseData.filter(d => parseNum(d['dt_kh_thang']) > 0 || parseNum(d['dt_th_thang']) > 0).map(d => getMonthVal(d['thang']));
+            snapshotMonthVal = validMonths.length > 0 ? Math.max(...validMonths) : 0;
+        }
+
+        const snapshotData = baseData.filter(d => getMonthVal(d['thang']) === snapshotMonthVal);
+        snapshotData.forEach(curr => {
+          kpi.pipeTongGt += parseNum(curr['pipe_tong_gt']);
+          kpi.pipeTongSl += parseNum(curr['pipe_tong_sl']);
+          kpi.pipeMoGt += parseNum(curr['pipe_mo_gt']);
+          kpi.pipeMoSl += parseNum(curr['pipe_mo_sl']);
+          kpi.pipeDongGt += parseNum(curr['pipe_dong_gt']);
+          kpi.pipeDongSl += parseNum(curr['pipe_dong_sl']);
+          kpi.duBaoDt += parseNum(curr['du_bao_dt']);
+        });
+
+        // Chỉ số phái sinh
         const tyLeHT = kpi.dtKeHoach ? kpi.dtThucHien / kpi.dtKeHoach : 0;
         const winRate = kpi.pipeTongSl ? kpi.pipeDongSl / kpi.pipeTongSl : 0;
         const thieuHut = Math.max(kpi.dtKeHoach - kpi.dtThucHien, 0);
 
-        // 4. Áp khung tĩnh (12 Tháng) Tính Biểu đồ phát sinh
+        // 4. ÁP KHUNG TĨNH 12 THÁNG CHO BIỂU ĐỒ (Force Sort)
         const chartGroup = {};
+        // Ép tạo sẵn 12 ô mảng chuẩn từ T1 -> T12 để chống lỗi Javascript Sort
         monthOptions.forEach(m => chartGroup[m] = { thang: m, thucHien: null, keHoach: 0 });
 
         baseData.forEach(curr => {
           const t = curr['thang'];
-          if (!chartGroup[t]) return;
-          
-          chartGroup[t].keHoach += parseNum(curr['dt_kh_thang']);
-          const rawTH = curr['dt_th_thang'];
-          if (rawTH !== '' && rawTH != null) {
-             const valTH = parseNum(rawTH);
-             chartGroup[t].thucHien = (chartGroup[t].thucHien === null) ? valTH : chartGroup[t].thucHien + valTH;
+          if (chartGroup[t]) {
+            chartGroup[t].keHoach += parseNum(curr['dt_kh_thang']);
+            
+            const rawTH = curr['dt_th_thang'];
+            if (rawTH !== '' && rawTH != null) {
+               const valTH = parseNum(rawTH);
+               chartGroup[t].thucHien = (chartGroup[t].thucHien === null) ? valTH : chartGroup[t].thucHien + valTH;
+            }
           }
         });
 
-        // Bốc Array chuẩn theo 1->12 (Không bao giờ lệch thứ tự)
+        // Bốc Array đích danh từ Khung tĩnh => Đảm bảo biểu đồ tuyệt đối đi từ T1 tới T12
         const finalChartData = monthOptions.map(m => chartGroup[m]);
 
         const KpiCard = ({ title, v1, l1, v2, l2, st }) => (
@@ -228,10 +245,8 @@
             </div>
           </div>
         );
-
         // ==========================================
         // RENDER GIAO DIỆN CHÍNH
-        // ==========================================
         return (
           <div className="flex h-screen w-full">
             {/* SIDEBAR */}
