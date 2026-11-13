@@ -177,14 +177,16 @@
               <div className="flex flex-col flex-1">
                 <label className="text-xs font-bold text-navy mb-1">Luồng SPDV</label>
                 <select className="border p-2 rounded text-base w-full focus:outline-vnpt" value={filters.luongSPDV} onChange={e => setFilters({...filters, luongSPDV: e.target.value})}>
-                  <option value="ALL">Tất cả Luồng</option>
-                  {[...new Set(rawData.map(d => d['luong_spdv']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}
+                  <option value="ALL">Tất cả</option>
+                                <option value="A">Nhóm A</option>
+                                <option value="B,C">Nhóm B,C</option>
+                  //{[...new Set(rawData.map(d => d['luong_spdv']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}*/
                 </select>
               </div>
               <div className="flex flex-col flex-1">
                 <label className="text-xs font-bold text-navy mb-1">Nhóm SPDV</label>
                 <select className="border p-2 rounded text-base w-full focus:outline-vnpt" value={filters.nhomSPDV} onChange={e => setFilters({...filters, nhomSPDV: e.target.value, plo: 'ALL'})}>
-                  <option value="ALL">Tất cả Nhóm</option>
+                  <option value="ALL">Tất cả</option>
                   {[...new Set(ploList.map(p => p['nhomspdv_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
