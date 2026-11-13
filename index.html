@@ -135,7 +135,7 @@
         // Nâng Font size KPI: text-[11px]->text-xs, text-xl->text-3xl, text-sm->text-base
         const KpiCard = ({ title, v1, l1, v2, l2, st }) => (
           <div className="bg-white border rounded flex-1 p-4 shadow-sm flex flex-col justify-between hover:border-vnpt transition min-w-[160px]">
-            <h3 className="text-navy font-bold text-3xl mb-3 uppercase truncate">{title}</h3>
+            <h3 className="text-navy font-bold text-2xl mb-3 uppercase truncate">{title}</h3>
             <div>
               <div className={`text-3xl font-bold mb-1 ${st === 'good' ? 'text-good' : st === 'risk' ? 'text-risk' : 'text-vnpt'}`}>{v1}</div>
               <div className="text-xs text-gray-500 mb-3 truncate">{l1}</div>
@@ -160,14 +160,14 @@
             {/* Điều hướng: Sử dụng flex-1 để chia đều 5 vùng không gian */}
             <div className="bg-white px-8 py-4 flex gap-4 shrink-0 border-b items-end">
               <div className="flex flex-col flex-1">
-                <label className="text-xs font-bold text-navy mb-1">Thời gian (tháng)</label>
+                <label className="text-base font-bold text-navy mb-1">Thời gian (tháng)</label>
                 <select className="border p-2 rounded text-base w-full focus:outline-vnpt" value={filters.thoiGian} onChange={e => setFilters({...filters, thoiGian: e.target.value})}>
                   <option value="">-- Tất cả --</option>
                   {monthOptions.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div className="flex flex-col flex-1">
-                <label className="text-xs font-bold text-navy mb-1">CLO Địa bàn</label>
+                <label className="text-base font-bold text-navy mb-1">CLO Địa bàn</label>
                 <select className="border p-2 rounded text-base w-full focus:outline-vnpt" value={filters.maTinh} onChange={e => setFilters({...filters, maTinh: e.target.value})}>
                   <option value="ALL">Toàn địa bàn</option>
                   {user.provinces && user.provinces.map(p => <option key={p} value={p}>{p}</option>)}
@@ -175,23 +175,21 @@
               </div>
               
               <div className="flex flex-col flex-1">
-                <label className="text-xs font-bold text-navy mb-1">Luồng SPDV</label>
+                <label className="text-base font-bold text-navy mb-1">Luồng SPDV</label>
                 <select className="border p-2 rounded text-base w-full focus:outline-vnpt" value={filters.luongSPDV} onChange={e => setFilters({...filters, luongSPDV: e.target.value})}>
-                  <option value="ALL">Tất cả</option>
-                                <option value="A">Nhóm A</option>
-                                <option value="B,C">Nhóm B,C</option>
-                  //{[...new Set(rawData.map(d => d['luong_spdv']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}*/
+                  <option value="ALL">Tất cả</option>           
+                  {[...new Set(rawData.map(d => d['luong_spdv']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
               <div className="flex flex-col flex-1">
-                <label className="text-xs font-bold text-navy mb-1">Nhóm SPDV</label>
+                <label className="text-base font-bold text-navy mb-1">Nhóm SPDV</label>
                 <select className="border p-2 rounded text-base w-full focus:outline-vnpt" value={filters.nhomSPDV} onChange={e => setFilters({...filters, nhomSPDV: e.target.value, plo: 'ALL'})}>
                   <option value="ALL">Tất cả</option>
                   {[...new Set(ploList.map(p => p['nhomspdv_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
               <div className="flex flex-col flex-1">
-                <label className="text-xs font-bold text-navy mb-1">Dịch vụ (PLO)</label>
+                <label className="text-base font-bold text-navy mb-1">Dịch vụ (PLO)</label>
                 <select className="border p-2 rounded text-base w-full focus:outline-vnpt" value={filters.plo} onChange={e => setFilters({...filters, plo: e.target.value})}>
                   <option value="ALL">Tất cả PLO</option>
                   {[...new Set(ploList.filter(p => filters.nhomSPDV === 'ALL' || p['nhomspdv_code'] === filters.nhomSPDV).map(p => p['plo_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}
