@@ -151,18 +151,10 @@
         }
 
         // ==========================================
-        // ENGINE TÍNH TOÁN DATA CORE (CẬP NHẬT CHUẨN BI)
+        // ENGINE TÍNH TOÁN DATA CORE (CỘNG DỒN ĐỘNG & KHUNG TĨNH 12 THÁNG)
         // ==========================================
         
-        // 1. BASE DATA (Lọc theo Tỉnh, Luồng, Nhóm, PLO - BỎ QUA Tháng)
-        const baseData = rawData.filter(d => 
-          (filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh) &&
-          (filters.luongSPDV === 'ALL' || d['luong_spdv'] == filters.luongSPDV) &&
-          (filters.nhomSPDV === 'ALL' || d['nhomspdv_code'] == filters.nhomSPDV) &&
-          (filters.plo === 'ALL' || d['plo_code'] == filters.plo)
-        );
-
-        // Helper: Convert "MM/YYYY" -> YYYYMM (Định dạng số nguyên để so sánh Lớn/Nhỏ an toàn tuyệt đối)
+        // Hàm phụ trợ: Chuyển đổi "10/2026" thành số 202610 để so sánh Lớn/Nhỏ tuyệt đối chính xác
         const getMonthVal = (mStr) => {
           if (!mStr) return null;
           const parts = mStr.toString().trim().split('/');
@@ -170,42 +162,54 @@
           return 0;
         };
 
-        const filterMonthVal = getMonthVal(filters.thoiGian) || 999912; // Nếu "Tất cả", ép biến so sánh về Vô cực (Năm 9999)
+        // 1. LỌC BASE DATA (Chỉ lọc Tỉnh, Luồng, Nhóm, PLO - BỎ QUA Tháng)
+        const baseData = rawData.filter(d => 
+          (filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh) &&
+          (filters.luongSPDV === 'ALL' || d['luong_spdv'] == filters.luongSPDV) &&
+          (filters.nhomSPDV === 'ALL' || d['nhomspdv_code'] == filters.nhomSPDV) &&
+          (filters.plo === 'ALL' || d['plo_code'] == filters.plo)
+        );
 
-        // 2. TÍNH KPI DOANH THU LUỸ KẾ (Dynamically Cumulative)
-        // -> Lấy tổng CÁC THÁNG <= THÁNG ĐƯỢC CHỌN
-        const revenueKpiData = baseData.filter(d => {
-          const mVal = getMonthVal(d['thang']);
-          return mVal !== null && mVal > 0 && mVal <= filterMonthVal;
+        const isAllTime = !filters.thoiGian || filters.thoiGian === 'ALL' || filters.thoiGian === '';
+        // Nếu "Tất cả", đặt mốc thời gian là Vô cực (Năm 9999). Nếu chọn tháng, lấy giá trị tháng đó (VD: 202610).
+        const filterMonthVal = isAllTime ? 999912 : getMonthVal(filters.thoiGian);
+
+        // 2. TÍNH KPI DOANH THU LUỸ KẾ TỰ ĐỘNG
+        const kpi = { dtThucHien: 0, dtKeHoach: 0, pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeMoSl: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0 };
+
+        baseData.forEach(curr => {
+           const mVal = getMonthVal(curr['thang']);
+           // LOGIC CỘNG DỒN: Chỉ cộng những tháng <= Tháng được chọn (Hoặc cộng cả 12 tháng nếu là "Tất cả")
+           if (mVal !== null && mVal > 0 && mVal <= filterMonthVal) {
+               // Bắt buộc dùng CỘT PHÁT SINH, không dùng cột Lũy kế
+               kpi.dtThucHien += parseNum(curr['dt_th_thang']);
+               kpi.dtKeHoach += parseNum(curr['dt_kh_thang']);
+           }
         });
-
-        const kpi = revenueKpiData.reduce((acc, curr) => {
-          // Tính TỔNG CỘNG DỒN tự động dựa trên cột PHÁT SINH THÁNG (Không dùng cột Lũy kế bị sai lệch)
-          acc.dtThucHien += parseNum(curr['dt_th_thang']); 
-          acc.dtKeHoach += parseNum(curr['dt_kh_thang']);
-          return acc;
-        }, { dtThucHien: 0, dtKeHoach: 0, pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeMoSl: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0 });
 
         // 3. TÍNH KPI PIPELINE & DỰ BÁO (Snapshot Rule)
         // Pipeline KHÔNG được phép cộng dồn. Chỉ lấy chốt tại "Tháng đang chọn" hoặc "Tháng mới nhất có dữ liệu".
         let snapshotMonthVal = 0;
-        if (filters.thoiGian) {
-            snapshotMonthVal = getMonthVal(filters.thoiGian);
+        if (!isAllTime) {
+            snapshotMonthVal = filterMonthVal;
         } else {
-            // Tìm Max Month trong BaseData
-            const validMonths = baseData.filter(d => parseNum(d['dt_kh_thang']) > 0 || parseNum(d['dt_th_thang']) > 0).map(d => getMonthVal(d['thang']));
+            // Khi chọn "Tất cả", tìm Max Month (Tháng gần nhất có biến động)
+            const validMonths = baseData
+                .filter(d => parseNum(d['dt_th_thang']) > 0 || parseNum(d['pipe_tong_sl']) > 0)
+                .map(d => getMonthVal(d['thang']));
             snapshotMonthVal = validMonths.length > 0 ? Math.max(...validMonths) : 0;
         }
 
-        const snapshotData = baseData.filter(d => getMonthVal(d['thang']) === snapshotMonthVal);
-        snapshotData.forEach(curr => {
-          kpi.pipeTongGt += parseNum(curr['pipe_tong_gt']);
-          kpi.pipeTongSl += parseNum(curr['pipe_tong_sl']);
-          kpi.pipeMoGt += parseNum(curr['pipe_mo_gt']);
-          kpi.pipeMoSl += parseNum(curr['pipe_mo_sl']);
-          kpi.pipeDongGt += parseNum(curr['pipe_dong_gt']);
-          kpi.pipeDongSl += parseNum(curr['pipe_dong_sl']);
-          kpi.duBaoDt += parseNum(curr['du_bao_dt']);
+        baseData.forEach(curr => {
+           if (getMonthVal(curr['thang']) === snapshotMonthVal) {
+              kpi.pipeTongGt += parseNum(curr['pipe_tong_gt']);
+              kpi.pipeTongSl += parseNum(curr['pipe_tong_sl']);
+              kpi.pipeMoGt += parseNum(curr['pipe_mo_gt']);
+              kpi.pipeMoSl += parseNum(curr['pipe_mo_sl']);
+              kpi.pipeDongGt += parseNum(curr['pipe_dong_gt']);
+              kpi.pipeDongSl += parseNum(curr['pipe_dong_sl']);
+              kpi.duBaoDt += parseNum(curr['du_bao_dt']);
+           }
         });
 
         // Chỉ số phái sinh
@@ -215,7 +219,7 @@
 
         // 4. ÁP KHUNG TĨNH 12 THÁNG CHO BIỂU ĐỒ (Force Sort)
         const chartGroup = {};
-        // Ép tạo sẵn 12 ô mảng chuẩn từ T1 -> T12 để chống lỗi Javascript Sort
+        // Ép tạo sẵn 12 ô array chuẩn từ Tháng 1 -> Tháng 12 để chống lỗi thuật toán Sort 
         monthOptions.forEach(m => chartGroup[m] = { thang: m, thucHien: null, keHoach: 0 });
 
         baseData.forEach(curr => {
@@ -233,6 +237,7 @@
 
         // Bốc Array đích danh từ Khung tĩnh => Đảm bảo biểu đồ tuyệt đối đi từ T1 tới T12
         const finalChartData = monthOptions.map(m => chartGroup[m]);
+        // ==========================================
 
         const KpiCard = ({ title, v1, l1, v2, l2, st }) => (
           <div className="bg-white border rounded flex-1 p-4 shadow-sm flex flex-col justify-between hover:border-vnpt transition min-w-[160px]">
