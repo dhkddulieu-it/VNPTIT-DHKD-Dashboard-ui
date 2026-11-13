@@ -15,7 +15,7 @@
   </script>
 </head>
 <body class="bg-gray-100 text-gray-800 min-h-screen flex items-center justify-center font-sans">
-  <div id="root" class="w-full h-full max-w-[1920px] aspect-video bg-white shadow-2xl overflow-hidden flex flex-col">
+  <div id="root" class="w-full h-screen bg-white overflow-hidden flex flex-col">
     <div class="p-10 text-center text-risk font-bold mt-20">Đang khởi tạo hệ thống...</div>
   </div>
 
@@ -56,7 +56,7 @@
             } else { alert('Sai thông tin đăng nhập!'); }
           } catch (err) {
             alert('Mất kết nối API. Chạy chế độ giả lập giao diện.');
-            setUser({ email, level: 1, tenClo: 'CLO_L1_MB', provinces: ['HN', 'HP', 'QN'] });
+            setUser({ email, level: 1, tenClo: 'CLO_L0_CEO', provinces: ['HNI', 'HPG', 'QNH','DNG','HUE','HCM', 'CTO','DNI','BNH'] });
           }
           setLoading(false);
         };
@@ -80,7 +80,7 @@
           return (
             <div className="flex h-full items-center justify-center bg-gray-200">
               <form onSubmit={handleLogin} className="bg-white p-10 border-t-4 border-vnpt shadow-xl w-96 rounded">
-                <h2 className="text-2xl font-bold text-navy mb-6 text-center">BI EXECUTIVE LOGIN</h2>
+                <h2 className="text-2xl font-bold text-navy mb-6 text-center">ĐĂNG NHẬP</h2>
                 <input className="w-full mb-6 p-3 border rounded focus:outline-vnpt text-sm" placeholder="Email: dhkddulieu@gmail.com" value={email} onChange={e => setEmail(e.target.value)} required />
                 <button disabled={loading} className="w-full bg-vnpt text-white py-3 font-bold rounded hover:bg-navy transition">{loading ? 'ĐANG KẾT NỐI...' : 'VÀO HỆ THỐNG'}</button>
               </form>
@@ -220,18 +220,18 @@
               <KpiCard title="8. KHOẢNG TRỐNG" v1={fmtNum(thieuHut)} l1="Cần bù đắp (VNĐ)" v2={fmtPct(kpi.dtKeHoach ? thieuHut/kpi.dtKeHoach : 0)} l2="Tỷ lệ thiếu hụt" st={thieuHut > 0 ? 'risk' : 'good'} />
             </div>
 
-            <main className="flex-1 px-6 pb-6 bg-gray-50 flex gap-6 overflow-hidden">
-              <div className="flex-[2] bg-white border rounded shadow-sm p-4 flex flex-col">
-                <h2 className="text-navy font-bold text-sm mb-4">DOANH THU THỰC HIỆN VS KẾ HOẠCH (10 THÁNG)</h2>
+            <main className="flex-1 px-8 pb-8 bg-gray-50 flex gap-8 overflow-hidden">
+              <div className="flex-[2] bg-white border rounded shadow-sm p-6 flex flex-col">
+                <h2 className="text-navy font-bold text-base mb-6 uppercase">Doanh thu Thực hiện vs Kế hoạch (10 Tháng)</h2>
                 <div className="flex-1 w-full min-h-[300px]">
                   {window.Recharts && (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={mockChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="thang" tick={{fontSize: 12}} />
-                        <YAxis tick={{fontSize: 12}} />
+                        <XAxis dataKey="thang" tick={{fontSize: 14}} />
+                        <YAxis tick={{fontSize: 14}} />
                         <Tooltip cursor={{fill: '#f3f4f6'}} />
-                        <Legend wrapperStyle={{fontSize: '12px'}}/>
+                        <Legend wrapperStyle={{fontSize: '14px', paddingTop: '10px'}}/>
                         <Bar dataKey="thucHien" name="Thực hiện" fill="#0094D9" radius={[4,4,0,0]} />
                         <Bar dataKey="keHoach" name="Kế hoạch" fill="#cbd5e1" radius={[4,4,0,0]} />
                       </BarChart>
@@ -239,20 +239,20 @@
                   )}
                 </div>
               </div>
-              <div className="flex-[1] bg-white border rounded shadow-sm p-4 flex flex-col overflow-hidden">
-                <h2 className="text-navy font-bold text-sm mb-4">DỰ ÁN TRỌNG ĐIỂM (CẦN THÚC ĐẨY)</h2>
+              <div className="flex-[1] bg-white border rounded shadow-sm p-6 flex flex-col overflow-hidden">
+                <h2 className="text-navy font-bold text-base mb-6 uppercase">Dự án Trọng điểm (Cần thúc đẩy)</h2>
                 <div className="overflow-auto flex-1">
-                  <table className="w-full text-left text-sm">
+                  <table className="w-full text-left text-base">
                     <thead className="bg-gray-100 text-navy sticky top-0">
-                      <tr><th className="p-2">Dự án</th><th className="p-2 text-right">Quy mô</th><th className="p-2 text-center">Trạng thái</th></tr>
+                      <tr><th className="p-3">Dự án</th><th className="p-3 text-right">Quy mô</th><th className="p-3 text-center">Trạng thái</th></tr>
                     </thead>
                     <tbody>
                       {mockProjects.map(p => (
                         <tr key={p.id} className="border-b">
-                          <td className="p-2 truncate max-w-[120px]">{p.ten}</td>
-                          <td className="p-2 text-right font-bold text-vnpt">{p.giaTri}</td>
-                          <td className="p-2 text-center">
-                            <span className={`text-[10px] px-2 py-1 rounded-full font-bold ${p.trangThai === 'Rủi ro' ? 'bg-red-100 text-risk' : 'bg-green-100 text-good'}`}>{p.trangThai}</span>
+                          <td className="p-3 truncate max-w-[140px] font-medium text-gray-700">{p.ten}</td>
+                          <td className="p-3 text-right font-bold text-vnpt">{p.giaTri}</td>
+                          <td className="p-3 text-center">
+                            <span className={`text-xs px-3 py-1.5 rounded-full font-bold ${p.trangThai === 'Rủi ro' ? 'bg-red-100 text-risk' : 'bg-green-100 text-good'}`}>{p.trangThai}</span>
                           </td>
                         </tr>
                       ))}
