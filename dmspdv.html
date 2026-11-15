@@ -30,22 +30,31 @@
     <div class="m-auto text-center text-risk font-bold text-xl">Đang khởi tạo hệ thống...</div>
   </div>
 
+  <!-- SCRIPT BẮT LỖI TOÀN CỤC CHỐNG KẸT MÀN HÌNH -->
+  <script>
+    window.onerror = function(message, source, lineno, colno, error) {
+      document.getElementById('root').innerHTML = '<div style="padding: 40px; text-align: center;"><h2 style="color: #ef4444; font-size: 24px; font-weight: bold;">HỆ THỐNG GẶP SỰ CỐ</h2><p style="color: #333; margin-top: 10px;">Chi tiết lỗi: ' + message + '</p></div>';
+      return false;
+    };
+  </script>
+
   <script type="text/babel">
     try {
       // ĐIỀN URL WEB APP GAS
       const API_URL = 'https://script.google.com/macros/s/AKfycby6E6r6KhZ54J6by2s1PF8MqtOSJu74GcyqO4GsFnSwWd-GmDScZFrS5Brq0IwXlO1N/exec'; 
 
+      // Cấu trúc Menu tinh gọn (Không Icon)
       const MENU_ITEMS = [
-        { id: 'dashboard', label: 'Dashboard', icon: '📊', href: 'index.html' },
-        { id: 'dean', label: 'Đề án, Kế hoạch', icon: '📋', href: '#' },
-        { id: 'cohoi', label: 'Cơ hội KD', icon: '🎯', href: '#' },
-        { id: 'hopdong', label: 'Hợp đồng', icon: '📝', href: '#' },
-        { id: 'khachhang', label: 'Khách hàng', icon: '🏢', href: '#' },
+        { id: 'dashboard', label: 'DASHBOARD', href: 'index.html' },
+        { id: 'dean', label: 'ĐỀ ÁN, KẾ HOẠCH', href: '#' },
+        { id: 'cohoi', label: 'CƠ HỘI KINH DOANH', href: '#' },
+        { id: 'hopdong', label: 'HỢP ĐỒNG', href: '#' },
+        { id: 'khachhang', label: 'KHÁCH HÀNG', href: '#' },
         { 
-          id: 'danhmuc', label: 'Danh mục', icon: '⚙️',
+          id: 'danhmuc', label: 'DANH MỤC',
           subItems: [
-            { id: 'dm_spdv', label: 'DM SPDV', href: 'dmspdv.html' },
-            { id: 'dm_plo', label: 'DM PLO, Nhóm SPDV', href: '#' }
+            { id: 'dm_spdv', label: 'Danh mục SPDV', href: 'dmspdv.html' },
+            { id: 'dm_plo', label: 'Danh mục PLO', href: '#' }
           ]
         }
       ];
@@ -60,7 +69,7 @@
         
         // State cho bộ lọc
         const [filters, setFilters] = React.useState({ nhomSPDV: 'ALL', luongSPDV: 'ALL', plo: 'ALL' });
-        const [expandedMenu, setExpandedMenu] = React.useState('danhmuc');
+        const [expandedMenu, setExpandedMenu] = React.useState('danhmuc'); // Mở sẵn menu Danh mục
 
         React.useEffect(() => { if (user) fetchData(); }, [user]);
 
@@ -69,7 +78,6 @@
           try {
             const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'getData', provinces: user.provinces }) }).then(r => r.json());
             if (res.status === 'success') {
-              // Yêu cầu Backend trả về res.spdvData (Đọc từ sheet DMSPDV)
               setSpdvRaw(res.spdvData || []);
             }
           } catch (err) { console.warn("Lỗi đồng bộ dữ liệu"); }
@@ -97,18 +105,15 @@
         // ==========================================
         // ENGINE XỬ LÝ DỮ LIỆU BỘ LỌC
         // ==========================================
-        // 1. Khai thác danh sách lọc động từ dữ liệu gốc
         const nhomList = [...new Set(spdvRaw.map(d => d['nhomspdv_code']).filter(Boolean))].sort();
         const luongList = [...new Set(spdvRaw.map(d => d['luong_spdv']).filter(Boolean))].sort();
         
-        // PLO lọc phụ thuộc theo Nhóm SPDV đã chọn
         const ploList = [...new Set(spdvRaw
             .filter(d => filters.nhomSPDV === 'ALL' || d['nhomspdv_code'] === filters.nhomSPDV)
             .map(d => d['plo_code'])
             .filter(Boolean))
         ].sort();
 
-        // 2. Lọc Data Table
         const filteredData = spdvRaw.filter(d => 
           (filters.nhomSPDV === 'ALL' || d['nhomspdv_code'] === filters.nhomSPDV) &&
           (filters.luongSPDV === 'ALL' || d['luong_spdv'] === filters.luongSPDV) &&
@@ -120,7 +125,7 @@
         // ==========================================
         return (
           <div className="flex h-screen w-full">
-            {/* SIDEBAR ĐIỀU HƯỚNG */}
+            {/* SIDEBAR TỐI GIẢN - KHÔNG ICON */}
             <aside className="w-[200px] bg-navy text-white flex flex-col shadow-2xl z-20 shrink-0">
               <div className="p-5 border-b border-white/20 flex flex-col items-center">
                 <div className="text-2xl font-extrabold tracking-widest text-vnpt bg-white px-3 py-1 rounded shadow mb-2">VNPT</div>
@@ -134,16 +139,14 @@
                       onClick={(e) => {
                         if (item.subItems) { e.preventDefault(); setExpandedMenu(expandedMenu === item.id ? '' : item.id); }
                       }} 
-                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded text-left transition font-semibold ${item.id === 'danhmuc' ? 'bg-vnpt text-white shadow' : 'text-gray-300 hover:bg-hoverbg hover:text-white'}`}
+                      className={`w-full flex items-center justify-between px-3 py-3 rounded text-left transition font-semibold ${item.id === 'danhmuc' ? 'bg-vnpt text-white shadow' : 'text-gray-300 hover:bg-hoverbg hover:text-white'}`}
                     >
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg">{item.icon}</span><span className="text-sm">{item.label}</span>
-                      </div>
+                      <span className="text-sm font-bold tracking-wide">{item.label}</span>
                       {item.subItems && <span className="text-xs">{expandedMenu === item.id ? '▼' : '▶'}</span>}
                     </a>
                     
                     {item.subItems && expandedMenu === item.id && (
-                      <div className="ml-8 mt-1 space-y-1 border-l border-white/20 pl-2">
+                      <div className="ml-4 mt-1 space-y-1 border-l border-white/20 pl-2">
                         {item.subItems.map(sub => (
                           <a
                             key={sub.id}
@@ -242,7 +245,7 @@
       }
       ReactDOM.render(<App />, document.getElementById('root'));
     } catch (err) {
-      document.getElementById('root').innerHTML = `<div class="p-10 text-center text-risk font-bold text-xl">Lỗi hệ thống: ${err.message}</div>`;
+      document.getElementById('root').innerHTML = `<div style="padding: 40px; text-align: center;"><h2 style="color: #ef4444; font-size: 24px; font-weight: bold;">LỖI BIÊN DỊCH REACT</h2><p style="color: #333; margin-top: 10px;">${err.message}</p></div>`;
     }
   </script>
 </body>
