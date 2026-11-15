@@ -147,9 +147,9 @@
           setRawData([]);
         };
 
-        const fmtNum = (num) => new Intl.NumberFormat('vi-VN').format(num || 0);
+        const fmtNum = (num) => new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num || 0);
         const fmtPct = (num) => `${(num * 100).toFixed(1)}%`;
-
+        
         if (!user) {
           return (
             <div className="flex h-screen w-full items-center justify-center bg-gray-200">
@@ -197,6 +197,7 @@
         });
 
         // --- XỬ LÝ PIPELINE & DỰ BÁO ---
+        // --- XỬ LÝ PIPELINE & DỰ BÁO ---
         const basePipeline = (pipelineRaw || []).filter(d => 
           (filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh) &&
           (filters.nhomSPDV === 'ALL' || d['nhomspdv_code'] == filters.nhomSPDV) &&
@@ -206,28 +207,30 @@
         basePipeline.forEach(curr => {
            const mVal = getMonthVal(curr['thang']);
            
-           // LOGIC BỘ LỌC THỜI GIAN: 
-           // - isAllTime = true: Lấy toàn bộ danh mục dự án.
-           // - isAllTime = false: Chỉ lấy dự án có "tháng dự kiến chốt" khớp với filterMonthVal.
+           // Lấy toàn bộ nếu là "Tất cả", ngược lại lấy theo tháng được chọn
            const isMatchTime = isAllTime ? true : (mVal === filterMonthVal);
 
            if (isMatchTime) {
-              const dtDuBao = parseNum(curr['doanhthu_dubao']); 
+              const nganSach = parseNum(curr['ngansach_duan']); // Base value cho Pipeline
+              const dtDuBao = parseNum(curr['doanhthu_dubao']); // Base value cho Dự báo
               const status = (curr['trang_thai'] || '').toString().trim().toUpperCase();
 
+              // 1. TỔNG PIPELINE (Cộng Ngân sách)
               kpi.pipeTongSl += 1;
-              kpi.pipeTongGt += dtDuBao;
+              kpi.pipeTongGt += nganSach; 
 
               if (status === 'CLOSED' || status.includes('THẮNG') || status.includes('ĐÓNG') || status.includes('THÀNH CÔNG')) {
+                  // 2. DEAL THÀNH CÔNG
                   kpi.pipeDongSl += 1;
-                  kpi.pipeDongGt += dtDuBao;
-                  kpi.duBaoDt += dtDuBao; 
-              } else if (status === 'OPEN' || status.includes('MỞ') || status.includes('ĐANG')) {
+                  kpi.pipeDongGt += nganSach; // Pipeline lấy Ngân sách
+                  kpi.duBaoDt += dtDuBao;     // Dự báo lấy Doanh thu dự báo
+                  
+              } else if (status === 'OPEN' || status.includes('MỞ')) {
+                  // 3. PIPELINE ĐANG MỞ
                   kpi.pipeMoSl += 1;
-                  kpi.pipeMoGt += dtDuBao;
-                  kpi.duBaoDt += dtDuBao; 
+                  kpi.pipeMoGt += nganSach;   // Pipeline lấy Ngân sách
+                  kpi.duBaoDt += dtDuBao;     // Dự báo lấy Doanh thu dự báo
               }
-              // Trạng thái LOST tự động bị loại khỏi Dự báo & Mở
            }
         });
 
