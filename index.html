@@ -252,7 +252,54 @@
           }
         });
         const finalChartData = monthOptions.map(m => chartGroup[m]);
+        
+        // 5. TỔNG HỢP KPI CHI TIẾT THEO ĐỊA BÀN
+        const provStats = {};
+        const initProv = (p) => {
+          if (!provStats[p]) provStats[p] = { maTinh: p, dtThucHien: 0, dtKeHoach: 0, pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0 };
+        };
 
+        baseData.forEach(curr => {
+          const p = curr['ma_tinh'] || 'N/A';
+          initProv(p);
+          const mVal = getMonthVal(curr['thang']);
+          if (mVal !== null && mVal > 0 && mVal <= filterMonthVal) {
+              provStats[p].dtThucHien += parseNum(curr['dt_th_thang']);
+              provStats[p].dtKeHoach += parseNum(curr['dt_kh_thang']);
+          }
+        });
+
+        basePipeline.forEach(curr => {
+          const p = curr['ma_tinh'] || 'N/A';
+          initProv(p);
+          const mVal = getMonthVal(curr['thang']);
+          if (isAllTime || mVal === filterMonthVal) {
+              const nganSach = parseNum(curr['ngansach_duan']);
+              const dtDuBao = parseNum(curr['doanhthu_dubao']); 
+              const statusStr = (curr['trang_thai'] || '').toString().trim().toUpperCase();
+
+              provStats[p].pipeTongSl += 1;
+              provStats[p].pipeTongGt += nganSach;
+
+              if (statusStr === 'CLOSED' || statusStr.includes('THẮNG') || statusStr.includes('ĐÓNG') || statusStr.includes('THÀNH CÔNG')) {
+                  provStats[p].pipeDongSl += 1;
+                  provStats[p].pipeDongGt += nganSach;
+                  provStats[p].duBaoDt += dtDuBao; 
+              } else if (statusStr === 'OPEN' || statusStr.includes('MỞ') || statusStr.includes('ĐANG')) {
+                  provStats[p].pipeMoGt += nganSach;
+                  provStats[p].duBaoDt += dtDuBao; 
+              }
+          }
+        });
+
+        // Ánh xạ thành Array & Tính các chỉ số phái sinh, Xếp hạng Thực hiện YTD giảm dần
+        const provStatsArray = Object.values(provStats).map(p => ({
+           ...p,
+           tyLeHT: p.dtKeHoach ? p.dtThucHien / p.dtKeHoach : 0,
+           winRate: p.pipeTongSl ? p.pipeDongSl / p.pipeTongSl : 0,
+           thieuHut: Math.max(p.dtKeHoach - p.dtThucHien - p.duBaoDt, 0)
+        })).sort((a, b) => b.dtThucHien - a.dtThucHien);
+        
         // Trích xuất tiêu đề an toàn
         const activeMenuItem = MENU_ITEMS.find(m => m.id === activeTab);
         const headerTitle = activeMenuItem ? activeMenuItem.label : 'DASHBOARD';
@@ -382,6 +429,50 @@
                           </table>
                         </div>
                       </div>
+
+                      {/* BẢNG ĐÁNH GIÁ KPI ĐỊA BÀN */}
+                    <div className="px-8 pb-8 flex shrink-0">
+                      <div className="w-full bg-white border rounded shadow-sm p-6 flex flex-col overflow-hidden">
+                        <h2 className="text-navy font-bold text-base mb-4 uppercase">Bảng Đánh Giá KPI Chi Tiết Từng Địa Bàn</h2>
+                        <div className="overflow-auto max-h-[500px]">
+                          <table className="w-full text-left text-sm border-collapse">
+                            <thead className="bg-navy text-white sticky top-0 z-10 shadow">
+                              <tr>
+                                <th className="p-3 border-b font-semibold text-center w-12">STT</th>
+                                <th className="p-3 border-b font-semibold">Địa bàn</th>
+                                <th className="p-3 border-b font-semibold text-right">Kế hoạch YTD</th>
+                                <th className="p-3 border-b font-semibold text-right">Thực hiện YTD</th>
+                                <th className="p-3 border-b font-semibold text-right w-24">Tỷ lệ HT</th>
+                                <th className="p-3 border-b font-semibold text-right">Pipeline Tổng</th>
+                                <th className="p-3 border-b font-semibold text-right">Pipeline Mở</th>
+                                <th className="p-3 border-b font-semibold text-right">Dự báo DT</th>
+                                <th className="p-3 border-b font-semibold text-right">Khoảng trống</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {provStatsArray.map((p, i) => (
+                                <tr key={i} className="border-b hover:bg-blue-50 transition">
+                                  <td className="p-3 text-center text-gray-500">{i + 1}</td>
+                                  <td className="p-3 font-bold text-navy">{p.maTinh}</td>
+                                  <td className="p-3 text-right text-gray-700 font-medium">{fmtNum(p.dtKeHoach)}</td>
+                                  <td className="p-3 text-right text-vnpt font-bold">{fmtNum(p.dtThucHien)}</td>
+                                  <td className={`p-3 text-right font-bold ${p.tyLeHT >= 1 ? 'text-good' : 'text-risk'}`}>
+                                    <span className={`px-2 py-1 rounded-full text-xs ${p.tyLeHT >= 1 ? 'bg-green-100' : 'bg-red-100'}`}>{fmtPct(p.tyLeHT)}</span>
+                                  </td>
+                                  <td className="p-3 text-right text-gray-700">{fmtNum(p.pipeTongGt)}</td>
+                                  <td className="p-3 text-right text-gray-700">{fmtNum(p.pipeMoGt)}</td>
+                                  <td className="p-3 text-right text-vnpt font-semibold">{fmtNum(p.duBaoDt)}</td>
+                                  <td className={`p-3 text-right font-bold ${p.thieuHut > 0 ? 'text-risk' : 'text-good'}`}>{fmtNum(p.thieuHut)}</td>
+                                </tr>
+                              ))}
+                              {provStatsArray.length === 0 && (
+                                <tr><td colSpan="9" className="p-6 text-center text-gray-400">Không có dữ liệu</td></tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
                     </div>
                   </div>
                 </div>
