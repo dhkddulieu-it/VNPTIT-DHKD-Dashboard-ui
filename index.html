@@ -203,25 +203,22 @@
           (filters.plo === 'ALL' || d['plo_code'] == filters.plo)
         );
 
-        let snapshotMonthVal = 0;
-        if (!isAllTime) {
-            snapshotMonthVal = filterMonthVal;
-        } else {
-            const validPipeMonths = basePipeline.map(d => getMonthVal(d['thang']));
-            snapshotMonthVal = validPipeMonths.length > 0 ? Math.max(...validPipeMonths) : 0;
-        }
-
         basePipeline.forEach(curr => {
-           if (getMonthVal(curr['thang']) === snapshotMonthVal) {
-              
-              // Gọi thẳng Key chuẩn ở Dòng 5
+           const mVal = getMonthVal(curr['thang']);
+           
+           // LOGIC BỘ LỌC THỜI GIAN: 
+           // - isAllTime = true: Lấy toàn bộ danh mục dự án.
+           // - isAllTime = false: Chỉ lấy dự án có "tháng dự kiến chốt" khớp với filterMonthVal.
+           const isMatchTime = isAllTime ? true : (mVal === filterMonthVal);
+
+           if (isMatchTime) {
               const dtDuBao = parseNum(curr['doanhthu_dubao']); 
               const status = (curr['trang_thai'] || '').toString().trim().toUpperCase();
 
               kpi.pipeTongSl += 1;
               kpi.pipeTongGt += dtDuBao;
 
-              if (status === 'CLOSED' || status.includes('THẮNG') || status.includes('ĐÓNG')) {
+              if (status === 'CLOSED' || status.includes('THẮNG') || status.includes('ĐÓNG') || status.includes('THÀNH CÔNG')) {
                   kpi.pipeDongSl += 1;
                   kpi.pipeDongGt += dtDuBao;
                   kpi.duBaoDt += dtDuBao; 
@@ -230,6 +227,7 @@
                   kpi.pipeMoGt += dtDuBao;
                   kpi.duBaoDt += dtDuBao; 
               }
+              // Trạng thái LOST tự động bị loại khỏi Dự báo & Mở
            }
         });
 
