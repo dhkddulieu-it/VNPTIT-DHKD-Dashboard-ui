@@ -42,34 +42,28 @@
       const currentYear = new Date().getFullYear();
       const monthOptions = Array.from({length: 12}, (_, i) => `${i + 1}/${currentYear}`);
       
-      const mockProjects = Array.from({length: 10}, (_, i) => ({ 
-        id: i + 1, ten: `Dự án CĐS Khối Y tế/GD ${i+1}`, 
-        giaTri: Math.floor(Math.random() * 50 + 10) + ' Tỷ', 
-        trangThai: i % 3 === 0 ? 'Rủi ro' : 'Đang bám sát' 
-      }));
-
       const MENU_ITEMS = [
-        { id: 'dashboard', label: 'Dashboard' },
-        { id: 'dean', label: 'Đề án, Kế hoạch' },
-        { id: 'cohoi', label: 'Cơ hội KD' },
-        { id: 'hopdong', label: 'Hợp đồng' },
-        { id: 'khachhang', label: 'Khách hàng' },
-        { id: 'danhmuc', label: 'Danh mục',
-         subItems: [
+        { id: 'dashboard', label: 'Dashboard', href: '#' },
+        { id: 'dean', label: 'Đề án, Kế hoạch', href: '#' },
+        { id: 'cohoi', label: 'Cơ hội KD', href: '#' },
+        { id: 'hopdong', label: 'Hợp đồng', href: '#' },
+        { id: 'khachhang', label: 'Khách hàng', href: '#' },
+        { 
+          id: 'danhmuc', label: 'Danh mục', 
+          subItems: [
             { id: 'dm_spdv', label: 'DM SPDV', href: 'dmspdv.html' },
             { id: 'dm_plo', label: 'DM PLO, Nhóm SPDV', href: '#' }
           ]
         }
       ];
 
-      // Khử dấu phẩy định dạng từ Sheet
+      // Hàm tiện ích xử lý số liệu
       const parseNum = (val) => {
         if (val === null || val === undefined || val === '') return 0;
         if (typeof val === 'number') return val;
         return parseFloat(val.toString().replace(/,/g, '')) || 0;
       };
 
-      // Chuẩn hóa mọi dị bản ngày tháng (YYYY-MM-DD hoặc MM/YYYY) về đúng M/YYYY
       const normalizeThang = (val) => {
         if (!val) return '';
         const str = val.toString().trim();
@@ -84,27 +78,29 @@
         return str; 
       };
 
+      const fmtNum = (num) => new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num || 0);
+      const fmtPct = (num) => `${(num * 100).toFixed(1)}%`;
+
       function App() {
+        // --- HOOKS ---
         const [user, setUser] = React.useState(() => {
           try { return JSON.parse(localStorage.getItem('vnpt_user')); } catch { return null; }
         });
-          
+        
         const [email, setEmail] = React.useState('');
         const [loading, setLoading] = React.useState(false);
+        
         const [rawData, setRawData] = React.useState([]);
-        const [pipelineRaw, setPipelineRaw] = React.useState([]); // Khai báo state lưu dữ liệu Pipeline
+        const [pipelineRaw, setPipelineRaw] = React.useState([]);
         const [ploList, setPloList] = React.useState([]);
+        
         const [activeTab, setActiveTab] = React.useState('dashboard');
-        // ... [Các state hiện tại: user, email, rawData, pipelineRaw, ploList...]
-        const [spdvList, setSpdvList] = React.useState([]); // State lưu DM SPDV
-        const [expandedMenu, setExpandedMenu] = React.useState('danhmuc'); // Quản lý đóng/mở Menu cha
-        const [activeSubTab, setActiveSubTab] = React.useState('dm_spdv'); // Quản lý Tab con đang chọn
-        const [filters, setFilters] = React.useState({ 
-          thoiGian: '', maTinh: 'ALL', luongSPDV: 'ALL', nhomSPDV: 'ALL', plo: 'ALL' 
-        });
+        const [expandedMenu, setExpandedMenu] = React.useState(''); // Trạng thái mở menu Danh mục
+        const [filters, setFilters] = React.useState({ thoiGian: '', maTinh: 'ALL', luongSPDV: 'ALL', nhomSPDV: 'ALL', plo: 'ALL' });
 
         React.useEffect(() => { if (user) fetchDashboardData(); }, [user]);
 
+        // --- FETCH DATA ---
         const handleLogin = async (e) => {
           e.preventDefault();
           setLoading(true);
@@ -121,27 +117,15 @@
           setLoading(false);
         };
 
-        // ==========================================
-        // 1. FETCH DỮ LIỆU (Đọc trực tiếp Key từ Dòng 5)
-        // ==========================================
         const fetchDashboardData = async () => {
           setLoading(true);
           try {
             const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'getData', provinces: user.provinces }) }).then(r => r.json());
             if (res.status === 'success') {
-              
-              // Kế hoạch: Chuẩn hóa duy nhất định dạng ngày tháng, giữ nguyên các Key gốc
-              const normalizedData = (res.data || []).map(d => ({
-                ...d,
-                thang: normalizeThang(d['thang'] || '')
-              }));
+              const normalizedData = (res.data || []).map(d => ({ ...d, thang: normalizeThang(d['thang'] || '') }));
               setRawData(normalizedData);
 
-              // Pipeline: Giữ nguyên các Key gốc từ Dòng 5 (ma_tinh, doanhthu_dubao, trang_thai, v.v.)
-              const normalizedPipeline = (res.pipelineData || []).map(d => ({
-                ...d,
-                thang: normalizeThang(d['thang'] || '')
-              }));
+              const normalizedPipeline = (res.pipelineData || []).map(d => ({ ...d, thang: normalizeThang(d['thang'] || '') }));
               setPipelineRaw(normalizedPipeline);
               
               setPloList(res.ploData || []);
@@ -156,9 +140,7 @@
           setRawData([]);
         };
 
-        const fmtNum = (num) => new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num || 0);
-        const fmtPct = (num) => `${(num * 100).toFixed(1)}%`;
-        
+        // --- MÀN HÌNH LOGIN ---
         if (!user) {
           return (
             <div className="flex h-screen w-full items-center justify-center bg-gray-200">
@@ -174,7 +156,7 @@
         }
 
         // ==========================================
-        // 2. ENGINE TÍNH TOÁN DATA CORE (SẠCH & TRỰC DIỆN)
+        // --- DATA ENGINE CORE ---
         // ==========================================
         const getMonthVal = (mStr) => {
           if (!mStr) return null;
@@ -186,10 +168,9 @@
         const isAllTime = !filters.thoiGian || filters.thoiGian === 'ALL' || filters.thoiGian === '';
         const filterMonthVal = isAllTime ? 999912 : getMonthVal(filters.thoiGian);
 
-        // Khởi tạo KPI
         const kpi = { dtThucHien: 0, dtKeHoach: 0, pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeMoSl: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0 };
 
-        // --- XỬ LÝ DOANH THU (Kế hoạch SXKD) ---
+        // 1. KẾ HOẠCH DOANH THU (Cộng dồn Lũy kế)
         const baseData = (rawData || []).filter(d => 
           (filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh) &&
           (filters.luongSPDV === 'ALL' || d['luong_spdv'] == filters.luongSPDV) &&
@@ -200,12 +181,12 @@
         baseData.forEach(curr => {
            const mVal = getMonthVal(curr['thang']);
            if (mVal !== null && mVal > 0 && mVal <= filterMonthVal) {
-               kpi.dtThucHien += parseNum(curr['dt_th_thang']); // Key chuẩn từ Dòng 5
-               kpi.dtKeHoach += parseNum(curr['dt_kh_thang']);  // Key chuẩn từ Dòng 5
+               kpi.dtThucHien += parseNum(curr['dt_th_thang']);
+               kpi.dtKeHoach += parseNum(curr['dt_kh_thang']);
            }
         });
 
-        // --- XỬ LÝ PIPELINE & DỰ BÁO ---
+        // 2. PIPELINE & DỰ BÁO (Snapshot Rule)
         const basePipeline = (pipelineRaw || []).filter(d => 
           (filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh) &&
           (filters.nhomSPDV === 'ALL' || d['nhomspdv_code'] == filters.nhomSPDV) &&
@@ -214,30 +195,24 @@
 
         basePipeline.forEach(curr => {
            const mVal = getMonthVal(curr['thang']);
-           
-           // Lấy toàn bộ nếu là "Tất cả", ngược lại lấy theo tháng được chọn
            const isMatchTime = isAllTime ? true : (mVal === filterMonthVal);
 
            if (isMatchTime) {
-              const nganSach = parseNum(curr['ngansach_duan']); // Base value cho Pipeline
-              const dtDuBao = parseNum(curr['doanhthu_dubao']); // Base value cho Dự báo
+              const nganSach = parseNum(curr['ngansach_duan']);
+              const dtDuBao = parseNum(curr['doanhthu_dubao']); 
               const status = (curr['trang_thai'] || '').toString().trim().toUpperCase();
 
-              // 1. TỔNG PIPELINE (Cộng Ngân sách)
               kpi.pipeTongSl += 1;
-              kpi.pipeTongGt += nganSach; 
+              kpi.pipeTongGt += nganSach;
 
-              if (status === 'CLOSED' || status.includes('THẮNG') || status.includes('ĐÓNG') || status.includes('THÀNH CÔNG')) {
-                  // 2. DEAL THÀNH CÔNG
+              if (status === 'CLOSED' || status.includes('THÀNH CÔNG')) {
                   kpi.pipeDongSl += 1;
-                  kpi.pipeDongGt += nganSach; // Pipeline lấy Ngân sách
-                  kpi.duBaoDt += dtDuBao;     // Dự báo lấy Doanh thu dự báo
-                  
-              } else if (status === 'OPEN' || status.includes('MỞ')) {
-                  // 3. PIPELINE ĐANG MỞ
+                  kpi.pipeDongGt += nganSach;
+                  kpi.duBaoDt += dtDuBao; 
+              } else if (status === 'OPEN' || status.includes('MỞ')  {
                   kpi.pipeMoSl += 1;
-                  kpi.pipeMoGt += nganSach;   // Pipeline lấy Ngân sách
-                  kpi.duBaoDt += dtDuBao;     // Dự báo lấy Doanh thu dự báo
+                  kpi.pipeMoGt += nganSach;
+                  kpi.duBaoDt += dtDuBao; 
               }
            }
         });
@@ -245,10 +220,9 @@
         // 3. CHỈ SỐ PHÁI SINH
         const tyLeHT = kpi.dtKeHoach ? kpi.dtThucHien / kpi.dtKeHoach : 0;
         const winRate = kpi.pipeTongSl ? kpi.pipeDongSl / kpi.pipeTongSl : 0;
-        const thieuHut = Math.max(kpi.dtKeHoach - kpi.dtThucHien - kpi.duBaoDt, 0); //Kế hoạch trừ đi (Thực hiện + Dự báo từ Pipeline)
-        
+        const thieuHut = Math.max(kpi.dtKeHoach - kpi.dtThucHien - kpi.duBaoDt, 0); // Đã cấn trừ Dự báo
 
-        // --- BIỂU ĐỒ XU HƯỚNG 12 THÁNG (ÉP KHUNG TĨNH) ---
+        // 4. BIỂU ĐỒ XU HƯỚNG 12 THÁNG
         const chartGroup = {};
         monthOptions.forEach(m => chartGroup[m] = { thang: m, thucHien: null, keHoach: 0 });
 
@@ -266,8 +240,7 @@
 
         const finalChartData = monthOptions.map(m => chartGroup[m]);
 
-        // ==========================================
-        //TÍNH TOÁN CÁC KPIs
+        // --- COMPONENT KPI CARD ---
         const KpiCard = ({ title, v1, l1, v2, l2, st }) => (
           <div className="bg-white border rounded flex-1 p-4 shadow-sm flex flex-col justify-between hover:border-vnpt transition min-w-[160px]">
             <h3 className="text-navy font-bold text-xs mb-3 uppercase truncate">{title}</h3>
@@ -279,8 +252,10 @@
             </div>
           </div>
         );
+
         // ==========================================
-        // RENDER GIAO DIỆN CHÍNH
+        // RENDER UI CHÍNH
+        // ==========================================
         return (
           <div className="flex h-screen w-full">
             {/* SIDEBAR */}
@@ -292,31 +267,30 @@
               <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
                 {MENU_ITEMS.map(item => (
                   <div key={item.id}>
-                    <button 
-                      onClick={() => {
-                        setActiveTab(item.id);
-                        if (item.subItems) setExpandedMenu(expandedMenu === item.id ? '' : item.id);
+                    <a 
+                      href={item.href || '#'}
+                      onClick={(e) => {
+                        if (item.subItems) { e.preventDefault(); setExpandedMenu(expandedMenu === item.id ? '' : item.id); }
+                        else { setActiveTab(item.id); }
                       }} 
                       className={`w-full flex items-center justify-between px-3 py-2.5 rounded text-left transition font-semibold ${activeTab === item.id ? 'bg-vnpt text-white shadow' : 'text-gray-300 hover:bg-hoverbg hover:text-white'}`}
                     >
                       <div className="flex items-center gap-3">
-                        <span className="text-lg">{item.icon}</span>
-                        <span className="text-sm">{item.label}</span>
+                        <span className="text-lg">{item.icon}</span><span className="text-sm">{item.label}</span>
                       </div>
                       {item.subItems && <span className="text-xs">{expandedMenu === item.id ? '▼' : '▶'}</span>}
-                    </button>
+                    </a>
                     
-                    {/* Render Sub-menu nếu có và đang được mở */}
                     {item.subItems && expandedMenu === item.id && (
                       <div className="ml-8 mt-1 space-y-1 border-l border-white/20 pl-2">
                         {item.subItems.map(sub => (
-                          <button
+                          <a
                             key={sub.id}
-                            onClick={() => { setActiveTab(item.id); setActiveSubTab(sub.id); }}
-                            className={`w-full text-left px-3 py-2 text-sm rounded transition ${activeSubTab === sub.id && activeTab === item.id ? 'bg-white/20 text-vnpt font-bold border-l-2 border-vnpt' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
+                            href={sub.href}
+                            className="block w-full text-left px-3 py-2 text-sm rounded transition text-gray-400 hover:text-white hover:bg-white/10"
                           >
                             {sub.label}
-                          </button>
+                          </a>
                         ))}
                       </div>
                     )}
@@ -328,7 +302,7 @@
             {/* MAIN CONTENT */}
             <main className="flex-1 flex flex-col overflow-hidden bg-gray-50">
               <header className="bg-white px-8 py-4 flex justify-between items-center shrink-0 border-b">
-                <h1 className="text-2xl font-bold uppercase tracking-wide text-navy">{MENU_ITEMS.find(m => m.id === activeTab)?.label}</h1>
+                <h1 className="text-2xl font-bold uppercase tracking-wide text-navy">{MENU_ITEMS.find(m => m.id === activeTab)?.label || 'DASHBOARD'}</h1>
                 <div className="flex items-center gap-4 text-sm">
                   <span className="font-semibold text-gray-600">{user.email}</span>
                   <span className="bg-vnpt/10 text-vnpt border border-vnpt px-4 py-1.5 rounded-full font-bold">Quyền: {user.tenClo}</span>
@@ -339,25 +313,25 @@
               {activeTab === 'dashboard' ? (
                 <div className="flex-1 flex flex-col overflow-hidden">
                   <div className="bg-white px-8 py-4 flex gap-4 shrink-0 border-b shadow-sm items-end z-10">
-                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Thời gian</label><select className="border border-gray-300 p-2 rounded text-base w-full focus:outline-vnpt" value={filters.thoiGian} onChange={e => setFilters({...filters, thoiGian: e.target.value})}><option value="">-- Tất cả --</option>{monthOptions.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
-                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">CLO Địa bàn</label><select className="border border-gray-300 p-2 rounded text-base w-full focus:outline-vnpt" value={filters.maTinh} onChange={e => setFilters({...filters, maTinh: e.target.value})}><option value="ALL">Toàn địa bàn</option>{user.provinces && user.provinces.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
-                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Luồng SPDV</label><select className="border border-gray-300 p-2 rounded text-base w-full focus:outline-vnpt" value={filters.luongSPDV} onChange={e => setFilters({...filters, luongSPDV: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(rawData.map(d => d['luong_spdv']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
-                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Nhóm SPDV</label><select className="border border-gray-300 p-2 rounded text-base w-full focus:outline-vnpt" value={filters.nhomSPDV} onChange={e => setFilters({...filters, nhomSPDV: e.target.value, plo: 'ALL'})}><option value="ALL">Tất cả</option>{[...new Set(ploList.map(p => p['nhomspdv_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
-                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Dịch vụ (PLO)</label><select className="border border-gray-300 p-2 rounded text-base w-full focus:outline-vnpt" value={filters.plo} onChange={e => setFilters({...filters, plo: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(ploList.filter(p => filters.nhomSPDV === 'ALL' || p['nhomspdv_code'] === filters.nhomSPDV).map(p => p['plo_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
+                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Thời gian</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.thoiGian} onChange={e => setFilters({...filters, thoiGian: e.target.value})}><option value="">-- Tất cả --</option>{monthOptions.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
+                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">CLO Địa bàn</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.maTinh} onChange={e => setFilters({...filters, maTinh: e.target.value})}><option value="ALL">Toàn địa bàn</option>{user.provinces && user.provinces.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
+                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Luồng SPDV</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.luongSPDV} onChange={e => setFilters({...filters, luongSPDV: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(rawData.map(d => d['luong_spdv']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
+                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Nhóm SPDV</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.nhomSPDV} onChange={e => setFilters({...filters, nhomSPDV: e.target.value, plo: 'ALL'})}><option value="ALL">Tất cả</option>{[...new Set(ploList.map(p => p['nhomspdv_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
+                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Dịch vụ (PLO)</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.plo} onChange={e => setFilters({...filters, plo: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(ploList.filter(p => filters.nhomSPDV === 'ALL' || p['nhomspdv_code'] === filters.nhomSPDV).map(p => p['plo_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
                   </div>
 
-                  {loading && <div className="text-center text-vnpt text-sm py-1 font-bold animate-pulse">Đồng bộ dữ liệu...</div>}
+                  {loading && <div className="text-center text-vnpt text-sm py-1 font-bold animate-pulse bg-white">Đang đồng bộ dữ liệu...</div>}
 
                   <div className="flex-1 overflow-auto flex flex-col">
                     <div className="flex gap-4 px-8 py-6 shrink-0">
-                      <KpiCard title="1. DOANH THU LŨY KẾ" v1={fmtNum(kpi.dtThucHien)} l1="Thực hiện YTD (trđ)" v2={fmtNum(kpi.dtKeHoach)} l2="Kế hoạch YTD (VNĐ)" st="neutral" />
+                      <KpiCard title="1. DOANH THU LŨY KẾ" v1={fmtNum(kpi.dtThucHien)} l1="Thực hiện YTD (VNĐ)" v2={fmtNum(kpi.dtKeHoach)} l2="Kế hoạch YTD (VNĐ)" st="neutral" />
                       <KpiCard title="2. HIỆU SUẤT NĂM" v1={fmtPct(tyLeHT)} l1="Tỷ lệ HT Kế hoạch YTD" v2="-" l2="Tăng/Giảm (MoM)" st={tyLeHT >= 1 ? 'good' : 'risk'} />
-                      <KpiCard title="3. PIPELINE TỔNG" v1={fmtNum(kpi.pipeTongGt)} l1="Giá trị (trđ)" v2={fmtNum(kpi.pipeTongSl)} l2="Số lượng Cơ hội" st="neutral" />
-                      <KpiCard title="4. PIPELINE MỞ" v1={fmtNum(kpi.pipeMoGt)} l1="Đang xử lý (trđ)" v2={fmtNum(kpi.pipeMoSl)} l2="Số lượng" st="neutral" />
-                      <KpiCard title="5. DEAL THÀNH CÔNG" v1={fmtNum(kpi.pipeDongGt)} l1="Giá trị chốt (trđ)" v2={fmtNum(kpi.pipeDongSl)} l2="Số lượng chốt" st="good" />
+                      <KpiCard title="3. PIPELINE TỔNG" v1={fmtNum(kpi.pipeTongGt)} l1="Ngân sách (VNĐ)" v2={fmtNum(kpi.pipeTongSl)} l2="Số lượng Cơ hội" st="neutral" />
+                      <KpiCard title="4. PIPELINE MỞ" v1={fmtNum(kpi.pipeMoGt)} l1="Ngân sách (VNĐ)" v2={fmtNum(kpi.pipeMoSl)} l2="Số lượng" st="neutral" />
+                      <KpiCard title="5. DEAL THÀNH CÔNG" v1={fmtNum(kpi.pipeDongGt)} l1="Ngân sách chốt (VNĐ)" v2={fmtNum(kpi.pipeDongSl)} l2="Số lượng chốt" st="good" />
                       <KpiCard title="6. CHUYỂN ĐỔI" v1={fmtPct(winRate)} l1="Winrate (Số lượng)" v2={fmtNum(kpi.pipeDongSl)} l2="Deal thành công" st={winRate >= 0.3 ? 'good' : 'risk'} />
-                      <KpiCard title="7. DỰ BÁO" v1={fmtNum(kpi.duBaoDt)} l1="Dự báo cuối kỳ" v2={fmtPct(kpi.dtKeHoach ? kpi.duBaoDt/kpi.dtKeHoach : 0)} l2="Tỷ lệ Ước tính" st={(kpi.dtKeHoach ? kpi.duBaoDt/kpi.dtKeHoach : 0) >= 1 ? 'good' : 'risk'} />
-                      <KpiCard title="8. KHOẢNG TRỐNG" v1={fmtNum(thieuHut)} l1="Thiếu hụt sau Dự báo (trđ)" v2={fmtPct(kpi.dtKeHoach ? thieuHut / kpi.dtKeHoach : 0)} l2="Tỷ lệ thiếu hụt" st={thieuHut > 0 ? 'risk' : 'good'} />
+                      <KpiCard title="7. DỰ BÁO" v1={fmtNum(kpi.duBaoDt)} l1="Doanh thu kỳ vọng" v2={fmtPct(kpi.dtKeHoach ? kpi.duBaoDt/kpi.dtKeHoach : 0)} l2="Tỷ lệ/Kế hoạch" st={(kpi.dtKeHoach ? kpi.duBaoDt/kpi.dtKeHoach : 0) >= 1 ? 'good' : 'risk'} />
+                      <KpiCard title="8. KHOẢNG TRỐNG CẦN BÙ" v1={fmtNum(thieuHut)} l1="Thiếu hụt sau Dự báo (VNĐ)" v2={fmtPct(kpi.dtKeHoach ? thieuHut/kpi.dtKeHoach : 0)} l2="Tỷ lệ thiếu hụt" st={thieuHut > 0 ? 'risk' : 'good'} />
                     </div>
 
                     <div className="px-8 pb-8 flex gap-8 shrink-0 min-h-[400px]">
@@ -368,10 +342,10 @@
                             <ResponsiveContainer width="100%" height="100%">
                               <BarChart data={finalChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                <XAxis dataKey="thang" tick={{fontSize: 14}} />
-                                <YAxis tick={{fontSize: 14}} />
-                                <Tooltip cursor={{fill: '#f3f4f6'}} formatter={(value) => new Intl.NumberFormat('vi-VN').format(value)} />
-                                <Legend wrapperStyle={{fontSize: '14px', paddingTop: '10px'}}/>
+                                <XAxis dataKey="thang" tick={{fontSize: 12}} />
+                                <YAxis tick={{fontSize: 12}} />
+                                <Tooltip cursor={{fill: '#f3f4f6'}} formatter={(value) => new Intl.NumberFormat('vi-VN', {minimumFractionDigits: 2}).format(value)} />
+                                <Legend wrapperStyle={{fontSize: '12px', paddingTop: '10px'}}/>
                                 <Bar dataKey="thucHien" name="Thực hiện Phát sinh" fill="#0094D9" radius={[4,4,0,0]} />
                                 <Bar dataKey="keHoach" name="Kế hoạch Phát sinh" fill="#cbd5e1" radius={[4,4,0,0]} />
                               </BarChart>
@@ -380,22 +354,23 @@
                         </div>
                       </div>
                       <div className="flex-[1] bg-white border rounded shadow-sm p-6 flex flex-col overflow-hidden">
-                        <h2 className="text-navy font-bold text-base mb-6 uppercase">Dự án Trọng điểm (Cần thúc đẩy)</h2>
+                        <h2 className="text-navy font-bold text-base mb-6 uppercase">Cơ hội Trọng điểm (Cần thúc đẩy)</h2>
                         <div className="overflow-auto flex-1 pr-2">
-                          <table className="w-full text-left text-base">
+                          <table className="w-full text-left text-sm">
                             <thead className="bg-gray-100 text-navy sticky top-0">
-                              <tr><th className="p-3">Dự án</th><th className="p-3 text-right">Quy mô</th><th className="p-3 text-center">Trạng thái</th></tr>
+                              <tr><th className="p-3">Mã Deal</th><th className="p-3 text-right">Dự báo</th><th className="p-3 text-center">Trạng thái</th></tr>
                             </thead>
                             <tbody>
-                              {mockProjects.map(p => (
-                                <tr key={p.id} className="border-b">
-                                  <td className="p-3 truncate max-w-[140px] font-medium text-gray-700">{p.ten}</td>
-                                  <td className="p-3 text-right font-bold text-vnpt">{p.giaTri}</td>
+                              {basePipeline.slice(0, 10).map((p, i) => (
+                                <tr key={i} className="border-b hover:bg-gray-50">
+                                  <td className="p-3 font-medium text-gray-700 truncate max-w-[120px]" title={p['ten_duan'] || p['Mã Deal']}>{p['Mã Deal'] || `Deal-${i+1}`}</td>
+                                  <td className="p-3 text-right font-bold text-vnpt">{fmtNum(parseNum(p['doanhthu_dubao']))}</td>
                                   <td className="p-3 text-center">
-                                    <span className={`text-xs px-3 py-1.5 rounded-full font-bold ${p.trangThai === 'Rủi ro' ? 'bg-red-100 text-risk' : 'bg-green-100 text-good'}`}>{p.trangThai}</span>
+                                    <span className={`text-[10px] px-2 py-1 rounded-full font-bold ${(p['trang_thai']||'').toUpperCase() === 'CLOSED' ? 'bg-green-100 text-good' : 'bg-yellow-100 text-yellow-700'}`}>{p['trang_thai'] || 'OPEN'}</span>
                                   </td>
                                 </tr>
                               ))}
+                              {basePipeline.length === 0 && <tr><td colSpan="3" className="p-4 text-center text-gray-400">Không có Pipeline</td></tr>}
                             </tbody>
                           </table>
                         </div>
@@ -403,65 +378,11 @@
                     </div>
                   </div>
                 </div>
-              ) : : activeTab === 'danhmuc' ? (
-                <div className="flex-1 flex flex-col p-8 overflow-hidden bg-gray-50">
-                  <div className="bg-white border rounded shadow-sm flex flex-col flex-1 overflow-hidden">
-                    
-                    {/* Sub-tab Navigation (Tùy chọn thao tác nhanh) */}
-                    <div className="px-6 py-4 border-b bg-gray-100 flex gap-4 shrink-0">
-                         <button onClick={() => setActiveSubTab('dm_spdv')} className={`px-4 py-2 text-sm font-bold rounded uppercase ${activeSubTab === 'dm_spdv' ? 'bg-vnpt text-white shadow' : 'bg-white border text-navy hover:bg-gray-50'}`}>DM Sản phẩm Dịch vụ</button>
-                         <button onClick={() => setActiveSubTab('dm_plo')} className={`px-4 py-2 text-sm font-bold rounded uppercase ${activeSubTab === 'dm_plo' ? 'bg-vnpt text-white shadow' : 'bg-white border text-navy hover:bg-gray-50'}`}>DM PLO & Nhóm SPDV</button>
-                    </div>
-
-                    {/* Data Table */}
-                    <div className="flex-1 overflow-auto">
-                         {activeSubTab === 'dm_plo' ? (
-                              <table className="w-full text-left text-sm border-collapse">
-                                  <thead className="bg-navy text-white sticky top-0 shadow">
-                                      <tr>
-                                        <th className="p-4 border-b font-semibold">STT</th>
-                                        <th className="p-4 border-b font-semibold">Nhóm SPDV</th>
-                                        <th className="p-4 border-b font-semibold">Mã định danh (PLO)</th>
-                                      </tr>
-                                  </thead>
-                                  <tbody>
-                                      {ploList.length > 0 ? ploList.map((p, i) => (
-                                          <tr key={i} className="border-b hover:bg-blue-50 transition">
-                                              <td className="p-4 text-gray-500 w-16">{i + 1}</td>
-                                              <td className="p-4 font-medium text-gray-800">{p.nhomspdv_code}</td>
-                                              <td className="p-4 font-bold text-vnpt">{p.plo_code}</td>
-                                          </tr>
-                                      )) : <tr><td colSpan="3" className="p-8 text-center text-gray-400">Không có dữ liệu PLO</td></tr>}
-                                  </tbody>
-                              </table>
-                         ) : (
-                              <table className="w-full text-left text-sm border-collapse">
-                                  <thead className="bg-navy text-white sticky top-0 shadow">
-                                      <tr>
-                                        <th className="p-4 border-b font-semibold">STT</th>
-                                        <th className="p-4 border-b font-semibold">Mã SPDV</th>
-                                        <th className="p-4 border-b font-semibold">Tên Sản phẩm Dịch vụ</th>
-                                      </tr>
-                                  </thead>
-                                  <tbody>
-                                      {spdvList.length > 0 ? spdvList.map((p, i) => (
-                                          <tr key={i} className="border-b hover:bg-blue-50 transition">
-                                              <td className="p-4 text-gray-500 w-16">{i + 1}</td>
-                                              <td className="p-4 font-bold text-navy">{p.ma_spdv || 'N/A'}</td>
-                                              <td className="p-4 font-medium text-gray-800">{p.ten_spdv || 'N/A'}</td>
-                                          </tr>
-                                      )) : <tr><td colSpan="3" className="p-8 text-center text-gray-400">Đang chờ đồng bộ dữ liệu DMSPDV...</td></tr>}
-                                  </tbody>
-                              </table>
-                         )}
-                    </div>
-                  </div>
-                </div>
               ) : (
-                <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
+                <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-gray-50">
                   <div className="text-6xl mb-4">🚧</div>
                   <h2 className="text-2xl font-bold text-navy mb-2">Tính năng đang phát triển</h2>
-                  <p>Module "{MENU_ITEMS.find(m => m.id === activeTab)?.label}" sẽ sớm được tích hợp.</p>
+                  <p>Module hiện tại chưa được tích hợp trên Dashboard.</p>
                 </div>
               )}
             </main>
