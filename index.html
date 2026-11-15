@@ -54,7 +54,12 @@
         { id: 'cohoi', label: 'Cơ hội KD' },
         { id: 'hopdong', label: 'Hợp đồng' },
         { id: 'khachhang', label: 'Khách hàng' },
-        { id: 'danhmuc', label: 'Danh mục' }
+        { id: 'danhmuc', label: 'Danh mục',
+         subItems: [
+            { id: 'dm_spdv', label: 'DM SPDV' },
+            { id: 'dm_plo', label: 'DM PLO, Nhóm SPDV' }
+          ]
+        }
       ];
 
       // Khử dấu phẩy định dạng từ Sheet
@@ -83,13 +88,17 @@
         const [user, setUser] = React.useState(() => {
           try { return JSON.parse(localStorage.getItem('vnpt_user')); } catch { return null; }
         });
-        
+          
         const [email, setEmail] = React.useState('');
         const [loading, setLoading] = React.useState(false);
         const [rawData, setRawData] = React.useState([]);
         const [pipelineRaw, setPipelineRaw] = React.useState([]); // Khai báo state lưu dữ liệu Pipeline
         const [ploList, setPloList] = React.useState([]);
         const [activeTab, setActiveTab] = React.useState('dashboard');
+        // ... [Các state hiện tại: user, email, rawData, pipelineRaw, ploList...]
+        const [spdvList, setSpdvList] = React.useState([]); // State lưu DM SPDV
+        const [expandedMenu, setExpandedMenu] = React.useState('danhmuc'); // Quản lý đóng/mở Menu cha
+        const [activeSubTab, setActiveSubTab] = React.useState('dm_spdv'); // Quản lý Tab con đang chọn
         const [filters, setFilters] = React.useState({ 
           thoiGian: '', maTinh: 'ALL', luongSPDV: 'ALL', nhomSPDV: 'ALL', plo: 'ALL' 
         });
@@ -280,11 +289,38 @@
                 <div className="text-2xl font-extrabold tracking-widest text-vnpt bg-white px-3 py-1 rounded shadow mb-2">VNPT</div>
                 <div className="text-[10px] text-center font-semibold text-gray-300 tracking-wider">HỆ THỐNG ĐIỀU HÀNH</div>
               </div>
-              <nav className="flex-1 py-4 px-3 space-y-2 overflow-y-auto">
+              <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
                 {MENU_ITEMS.map(item => (
-                  <button key={item.id} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded text-left transition font-semibold ${activeTab === item.id ? 'bg-vnpt text-white shadow' : 'text-gray-300 hover:bg-hoverbg hover:text-white'}`}>
-                    <span className="text-lg">{item.icon}</span><span className="text-sm">{item.label}</span>
-                  </button>
+                  <div key={item.id}>
+                    <button 
+                      onClick={() => {
+                        setActiveTab(item.id);
+                        if (item.subItems) setExpandedMenu(expandedMenu === item.id ? '' : item.id);
+                      }} 
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded text-left transition font-semibold ${activeTab === item.id ? 'bg-vnpt text-white shadow' : 'text-gray-300 hover:bg-hoverbg hover:text-white'}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">{item.icon}</span>
+                        <span className="text-sm">{item.label}</span>
+                      </div>
+                      {item.subItems && <span className="text-xs">{expandedMenu === item.id ? '▼' : '▶'}</span>}
+                    </button>
+                    
+                    {/* Render Sub-menu nếu có và đang được mở */}
+                    {item.subItems && expandedMenu === item.id && (
+                      <div className="ml-8 mt-1 space-y-1 border-l border-white/20 pl-2">
+                        {item.subItems.map(sub => (
+                          <button
+                            key={sub.id}
+                            onClick={() => { setActiveTab(item.id); setActiveSubTab(sub.id); }}
+                            className={`w-full text-left px-3 py-2 text-sm rounded transition ${activeSubTab === sub.id && activeTab === item.id ? 'bg-white/20 text-vnpt font-bold border-l-2 border-vnpt' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
+                          >
+                            {sub.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 ))}
               </nav>
             </aside>
@@ -364,6 +400,60 @@
                           </table>
                         </div>
                       </div>
+                    </div>
+                  </div>
+                </div>
+              ) : : activeTab === 'danhmuc' ? (
+                <div className="flex-1 flex flex-col p-8 overflow-hidden bg-gray-50">
+                  <div className="bg-white border rounded shadow-sm flex flex-col flex-1 overflow-hidden">
+                    
+                    {/* Sub-tab Navigation (Tùy chọn thao tác nhanh) */}
+                    <div className="px-6 py-4 border-b bg-gray-100 flex gap-4 shrink-0">
+                         <button onClick={() => setActiveSubTab('dm_spdv')} className={`px-4 py-2 text-sm font-bold rounded uppercase ${activeSubTab === 'dm_spdv' ? 'bg-vnpt text-white shadow' : 'bg-white border text-navy hover:bg-gray-50'}`}>DM Sản phẩm Dịch vụ</button>
+                         <button onClick={() => setActiveSubTab('dm_plo')} className={`px-4 py-2 text-sm font-bold rounded uppercase ${activeSubTab === 'dm_plo' ? 'bg-vnpt text-white shadow' : 'bg-white border text-navy hover:bg-gray-50'}`}>DM PLO & Nhóm SPDV</button>
+                    </div>
+
+                    {/* Data Table */}
+                    <div className="flex-1 overflow-auto">
+                         {activeSubTab === 'dm_plo' ? (
+                              <table className="w-full text-left text-sm border-collapse">
+                                  <thead className="bg-navy text-white sticky top-0 shadow">
+                                      <tr>
+                                        <th className="p-4 border-b font-semibold">STT</th>
+                                        <th className="p-4 border-b font-semibold">Nhóm SPDV</th>
+                                        <th className="p-4 border-b font-semibold">Mã định danh (PLO)</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody>
+                                      {ploList.length > 0 ? ploList.map((p, i) => (
+                                          <tr key={i} className="border-b hover:bg-blue-50 transition">
+                                              <td className="p-4 text-gray-500 w-16">{i + 1}</td>
+                                              <td className="p-4 font-medium text-gray-800">{p.nhomspdv_code}</td>
+                                              <td className="p-4 font-bold text-vnpt">{p.plo_code}</td>
+                                          </tr>
+                                      )) : <tr><td colSpan="3" className="p-8 text-center text-gray-400">Không có dữ liệu PLO</td></tr>}
+                                  </tbody>
+                              </table>
+                         ) : (
+                              <table className="w-full text-left text-sm border-collapse">
+                                  <thead className="bg-navy text-white sticky top-0 shadow">
+                                      <tr>
+                                        <th className="p-4 border-b font-semibold">STT</th>
+                                        <th className="p-4 border-b font-semibold">Mã SPDV</th>
+                                        <th className="p-4 border-b font-semibold">Tên Sản phẩm Dịch vụ</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody>
+                                      {spdvList.length > 0 ? spdvList.map((p, i) => (
+                                          <tr key={i} className="border-b hover:bg-blue-50 transition">
+                                              <td className="p-4 text-gray-500 w-16">{i + 1}</td>
+                                              <td className="p-4 font-bold text-navy">{p.ma_spdv || 'N/A'}</td>
+                                              <td className="p-4 font-medium text-gray-800">{p.ten_spdv || 'N/A'}</td>
+                                          </tr>
+                                      )) : <tr><td colSpan="3" className="p-8 text-center text-gray-400">Đang chờ đồng bộ dữ liệu DMSPDV...</td></tr>}
+                                  </tbody>
+                              </table>
+                         )}
                     </div>
                   </div>
                 </div>
