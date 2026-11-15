@@ -378,20 +378,20 @@
 
                   <div className="flex-1 overflow-auto flex flex-col">
                     <div className="flex gap-4 px-8 py-6 shrink-0">
-                      <KpiCard title="1. DOANH THU LŨY KẾ" v1={fmtNum(kpi.dtThucHien)} l1="Thực hiện YTD (VNĐ)" v2={fmtNum(kpi.dtKeHoach)} l2="Kế hoạch YTD (VNĐ)" st="neutral" />
+                      <KpiCard title="1. DOANH THU LŨY KẾ" v1={fmtNum(kpi.dtThucHien)} l1="Thực hiện YTD (trĐ)" v2={fmtNum(kpi.dtKeHoach)} l2="Kế hoạch YTD (trĐ)" st="neutral" />
                       <KpiCard title="2. HIỆU SUẤT NĂM" v1={fmtPct(tyLeHT)} l1="Tỷ lệ HT Kế hoạch YTD" v2="-" l2="Tăng/Giảm (MoM)" st={tyLeHT >= 1 ? 'good' : 'risk'} />
-                      <KpiCard title="3. PIPELINE TỔNG" v1={fmtNum(kpi.pipeTongGt)} l1="Ngân sách (VNĐ)" v2={fmtNum(kpi.pipeTongSl)} l2="Số lượng Cơ hội" st="neutral" />
-                      <KpiCard title="4. PIPELINE MỞ" v1={fmtNum(kpi.pipeMoGt)} l1="Ngân sách (VNĐ)" v2={fmtNum(kpi.pipeMoSl)} l2="Số lượng" st="neutral" />
-                      <KpiCard title="5. DEAL THÀNH CÔNG" v1={fmtNum(kpi.pipeDongGt)} l1="Ngân sách chốt (VNĐ)" v2={fmtNum(kpi.pipeDongSl)} l2="Số lượng chốt" st="good" />
-                      <KpiCard title="6. CHUYỂN ĐỔI" v1={fmtPct(winRate)} l1="Winrate (Số lượng)" v2={fmtNum(kpi.pipeDongSl)} l2="Deal thành công" st={winRate >= 0.3 ? 'good' : 'risk'} />
+                      <KpiCard title="3. PIPELINE TỔNG" v1={fmtNum(kpi.pipeTongGt)} l1="Ngân sách (trĐ)" v2={fmtNum(kpi.pipeTongSl)} l2="Số lượng Cơ hội" st="neutral" />
+                      <KpiCard title="4. PIPELINE MỞ" v1={fmtNum(kpi.pipeMoGt)} l1="Ngân sách (trĐ)" v2={fmtNum(kpi.pipeMoSl)} l2="Số lượng" st="neutral" />
+                      <KpiCard title="5. DEAL THÀNH CÔNG" v1={fmtNum(kpi.pipeDongGt)} l1="Ngân sách chốt (trĐ)" v2={fmtNum(kpi.pipeDongSl)} l2="Số lượng chốt" st="good" />
+                      <KpiCard title="6. CHUYỂN ĐỔI" v1={fmtPct(winRate)} l1="Winrate (Tỉ lệ)" v2={fmtNum(kpi.pipeDongSl)} l2="Deal thành công" st={winRate >= 0.3 ? 'good' : 'risk'} />
                       <KpiCard title="7. DỰ BÁO" v1={fmtNum(kpi.duBaoDt)} l1="Doanh thu kỳ vọng" v2={fmtPct(kpi.dtKeHoach ? kpi.duBaoDt/kpi.dtKeHoach : 0)} l2="Tỷ lệ/Kế hoạch" st={(kpi.dtKeHoach ? kpi.duBaoDt/kpi.dtKeHoach : 0) >= 1 ? 'good' : 'risk'} />
-                      <KpiCard title="8. KHOẢNG TRỐNG CẦN BÙ" v1={fmtNum(thieuHut)} l1="Thiếu hụt sau Dự báo (VNĐ)" v2={fmtPct(kpi.dtKeHoach ? thieuHut/kpi.dtKeHoach : 0)} l2="Tỷ lệ thiếu hụt" st={thieuHut > 0 ? 'risk' : 'good'} />
+                      <KpiCard title="8. KHOẢNG TRỐNG CẦN BÙ" v1={fmtNum(thieuHut)} l1="Thiếu hụt sau Dự báo (trĐ)" v2={fmtPct(kpi.dtKeHoach ? thieuHut/kpi.dtKeHoach : 0)} l2="Tỷ lệ thiếu hụt" st={thieuHut > 0 ? 'risk' : 'good'} />
                     </div>
 
-                    <div className="px-8 pb-8 flex gap-8 shrink-0 min-h-[400px]">
+                    <div className="px-8 pb-8 flex gap-8 shrink-0 min-h-[350px]">
                       <div className="flex-[2] bg-white border rounded shadow-sm p-6 flex flex-col">
-                        <h2 className="text-navy font-bold text-base mb-6 uppercase">Tiến độ Phát sinh Hàng tháng (ĐVT: Tr.VNĐ)</h2>
-                        <div className="flex-1 w-full min-h-[300px]">
+                        <h2 className="text-navy font-bold text-base mb-6 uppercase">Tiến độ Phát sinh Hàng tháng (ĐVT: trĐ)</h2>
+                        <div className="flex-1 w-full min-h-[250px]">
                           {ResponsiveContainer && BarChart ? (
                             <ResponsiveContainer width="100%" height="100%">
                               <BarChart data={finalChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -419,7 +419,7 @@
                             <tbody>
                               {basePipeline.slice(0, 10).map((p, i) => {
                                 const statusRaw = (p['trang_thai'] || 'OPEN').toString().toUpperCase();
-                                const colorClass = (statusRaw === 'CLOSED' || statusRaw.includes('THẮNG') || statusRaw.includes('ĐÓNG')) 
+                                const colorClass = (statusRaw === 'CLOSED' || statusRaw.includes('ĐÓNG')) 
                                   ? 'bg-green-100 text-good' : 'bg-yellow-100 text-yellow-700';
                                 return (
                                   <tr key={i} className="border-b hover:bg-gray-50">
