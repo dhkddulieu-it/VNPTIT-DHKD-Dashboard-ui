@@ -112,39 +112,29 @@
           setLoading(false);
         };
 
+        // ==========================================
+        // 1. FETCH DỮ LIỆU (Đọc trực tiếp Key từ Dòng 5)
+        // ==========================================
         const fetchDashboardData = async () => {
           setLoading(true);
           try {
             const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'getData', provinces: user.provinces }) }).then(r => r.json());
             if (res.status === 'success') {
               
-              // 1. Chuẩn hóa Data Kế hoạch
+              // Kế hoạch: Chuẩn hóa duy nhất định dạng ngày tháng, giữ nguyên các Key gốc
               const normalizedData = (res.data || []).map(d => ({
                 ...d,
-                thang: normalizeThang(d['thang'] || d['sxkd_thang'] || d['kỳ'] || '')
+                thang: normalizeThang(d['thang'] || '')
               }));
               setRawData(normalizedData);
 
-              // 2. Chuẩn hóa Pipeline: Tự động Mapping Header Tiếng Việt sang Key chuẩn
-              const normalizedPipeline = (res.pipelineData || []).map(d => {
-                const keyThang = Object.keys(d).find(k => k.toLowerCase().includes('kỳ dự kiến') || k === 'thang') || 'thang';
-                const keyDiaBan = Object.keys(d).find(k => k.toLowerCase().includes('địa bàn') || k === 'ma_tinh') || 'ma_tinh';
-                const keyNhom = Object.keys(d).find(k => k.toLowerCase().includes('nhóm spdv') || k === 'nhomspdv_code') || 'nhomspdv_code';
-                const keyPLO = Object.keys(d).find(k => k.toLowerCase().includes('mã định danh') || k === 'plo_code') || 'plo_code';
-                const keyTrangThai = Object.keys(d).find(k => k.toLowerCase().includes('trạng thái') || k === 'trang_thai') || 'trang_thai';
-                const keyDuBao = Object.keys(d).find(k => k.toLowerCase().includes('doanh thu dự báo') || k === 'doanhthu_dubao') || 'doanhthu_dubao';
-                
-                return {
-                  ...d,
-                  _thang_chuan: normalizeThang(d[keyThang] || ''),
-                  _ma_tinh: (d[keyDiaBan] || d['ma_tinh'] || '').toString().trim(),
-                  _nhom_spdv: (d[keyNhom] || d['nhomspdv_code'] || '').toString().trim(),
-                  _plo_code: (d[keyPLO] || d['plo_code'] || '').toString().trim(),
-                  _trang_thai: (d[keyTrangThai] || '').toString().trim().toUpperCase(),
-                  _dt_dubao: d[keyDuBao] || 0
-                };
-              });
+              // Pipeline: Giữ nguyên các Key gốc từ Dòng 5 (ma_tinh, doanhthu_dubao, trang_thai, v.v.)
+              const normalizedPipeline = (res.pipelineData || []).map(d => ({
+                ...d,
+                thang: normalizeThang(d['thang'] || '')
+              }));
               setPipelineRaw(normalizedPipeline);
+              
               setPloList(res.ploData || []);
             }
           } catch (err) { console.warn("Lỗi đồng bộ dữ liệu"); }
@@ -175,7 +165,7 @@
         }
 
         // ==========================================
-        // ENGINE TÍNH TOÁN DATA CORE 
+        // 2. ENGINE TÍNH TOÁN DATA CORE (SẠCH & TRỰC DIỆN)
         // ==========================================
         const getMonthVal = (mStr) => {
           if (!mStr) return null;
@@ -187,9 +177,10 @@
         const isAllTime = !filters.thoiGian || filters.thoiGian === 'ALL' || filters.thoiGian === '';
         const filterMonthVal = isAllTime ? 999912 : getMonthVal(filters.thoiGian);
 
+        // Khởi tạo KPI
         const kpi = { dtThucHien: 0, dtKeHoach: 0, pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeMoSl: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0 };
 
-        // 1. DOANH THU (Đọc Key chuẩn từ Sheet 02)
+        // --- XỬ LÝ DOANH THU (Kế hoạch SXKD) ---
         const baseData = (rawData || []).filter(d => 
           (filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh) &&
           (filters.luongSPDV === 'ALL' || d['luong_spdv'] == filters.luongSPDV) &&
@@ -200,36 +191,37 @@
         baseData.forEach(curr => {
            const mVal = getMonthVal(curr['thang']);
            if (mVal !== null && mVal > 0 && mVal <= filterMonthVal) {
-               kpi.dtThucHien += parseNum(curr['dt_th_thang']);
-               kpi.dtKeHoach += parseNum(curr['dt_kh_thang']);
+               kpi.dtThucHien += parseNum(curr['dt_th_thang']); // Key chuẩn từ Dòng 5
+               kpi.dtKeHoach += parseNum(curr['dt_kh_thang']);  // Key chuẩn từ Dòng 5
            }
         });
 
-        // 2. PIPELINE & DỰ BÁO (Đọc Key đã map Tiếng Việt từ Sheet 03)
+        // --- XỬ LÝ PIPELINE & DỰ BÁO ---
         const basePipeline = (pipelineRaw || []).filter(d => 
-          d['_ma_tinh'] !== 'ma_tinh' && // Chống nhiễu dòng sub-header kỹ thuật
-          (filters.maTinh === 'ALL' || d['_ma_tinh'] == filters.maTinh) &&
-          (filters.nhomSPDV === 'ALL' || d['_nhom_spdv'] == filters.nhomSPDV) &&
-          (filters.plo === 'ALL' || d['_plo_code'] == filters.plo)
+          (filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh) &&
+          (filters.nhomSPDV === 'ALL' || d['nhomspdv_code'] == filters.nhomSPDV) &&
+          (filters.plo === 'ALL' || d['plo_code'] == filters.plo)
         );
 
         let snapshotMonthVal = 0;
         if (!isAllTime) {
             snapshotMonthVal = filterMonthVal;
         } else {
-            const validPipeMonths = basePipeline.map(d => getMonthVal(d['_thang_chuan']));
+            const validPipeMonths = basePipeline.map(d => getMonthVal(d['thang']));
             snapshotMonthVal = validPipeMonths.length > 0 ? Math.max(...validPipeMonths) : 0;
         }
 
         basePipeline.forEach(curr => {
-           if (getMonthVal(curr['_thang_chuan']) === snapshotMonthVal) {
-              const dtDuBao = parseNum(curr['_dt_dubao']);
-              const status = curr['_trang_thai'];
+           if (getMonthVal(curr['thang']) === snapshotMonthVal) {
+              
+              // Gọi thẳng Key chuẩn ở Dòng 5
+              const dtDuBao = parseNum(curr['doanhthu_dubao']); 
+              const status = (curr['trang_thai'] || '').toString().trim().toUpperCase();
 
               kpi.pipeTongSl += 1;
               kpi.pipeTongGt += dtDuBao;
 
-              if (status === 'CLOSED' || status.includes('THẮNG') || status.includes('ĐÓNG') || status.includes('THÀNH CÔNG')) {
+              if (status === 'CLOSED' || status.includes('THẮNG') || status.includes('ĐÓNG')) {
                   kpi.pipeDongSl += 1;
                   kpi.pipeDongGt += dtDuBao;
                   kpi.duBaoDt += dtDuBao; 
@@ -241,12 +233,12 @@
            }
         });
 
-        // 3. CHỈ SỐ PHÁI SINH
+        // --- CHỈ SỐ PHÁI SINH ---
         const tyLeHT = kpi.dtKeHoach ? kpi.dtThucHien / kpi.dtKeHoach : 0;
         const winRate = kpi.pipeTongSl ? kpi.pipeDongSl / kpi.pipeTongSl : 0;
         const thieuHut = Math.max(kpi.dtKeHoach - kpi.dtThucHien, 0);
 
-        // 4. BIỂU ĐỒ DOANH THU 12 THÁNG
+        // --- BIỂU ĐỒ XU HƯỚNG 12 THÁNG (ÉP KHUNG TĨNH) ---
         const chartGroup = {};
         monthOptions.forEach(m => chartGroup[m] = { thang: m, thucHien: null, keHoach: 0 });
 
