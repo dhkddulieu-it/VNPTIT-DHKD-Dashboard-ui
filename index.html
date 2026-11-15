@@ -117,20 +117,20 @@
           try {
             const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'getData', provinces: user.provinces }) }).then(r => r.json());
             if (res.status === 'success') {
-              // Tiền xử lý dữ liệu ngay lập tức
+              
+              // Map Kế hoạch (Key chuẩn từ Dòng 5)
               const normalizedData = (res.data || []).map(d => ({
                 ...d,
-                thang: normalizeThang(d['thang'] || d['sxkd_thang'] || d['kỳ'] || '')
+                thang: normalizeThang(d['thang'] || '')
               }));
               setRawData(normalizedData);
-      
-              // Tiền xử lý dữ liệu Pipeline
+
+              // Map Pipeline (Key chuẩn từ Dòng 5)
               const normalizedPipeline = (res.pipelineData || []).map(d => ({
                 ...d,
-                thang: normalizeThang(d['thang'] || d['sxkd_thang'] || d['kỳ'] || '')
+                thang: normalizeThang(d['thang'] || '') // Đảm bảo Dòng 5 sheet Pipeline cột tháng tên là "thang"
               }));
-              setPipelineRaw(normalizedPipeline); // Đổ dữ liệu vào state
-        
+              setPipelineRaw(normalizedPipeline);
               setPloList(res.ploData || []);
             }
           } catch (err) { console.warn("Lỗi đồng bộ dữ liệu"); }
@@ -150,7 +150,7 @@
           return (
             <div className="flex h-screen w-full items-center justify-center bg-gray-200">
               <form onSubmit={handleLogin} className="bg-white p-10 border-t-4 border-vnpt shadow-xl w-96 rounded">
-                <h2 className="text-2xl font-bold text-navy mb-6 text-center">ĐĂNG NHẬP</h2>
+                <h2 className="text-2xl font-bold text-navy mb-6 text-center">BI EXECUTIVE LOGIN</h2>
                 <input className="w-full mb-6 p-3 border rounded focus:outline-vnpt text-sm" placeholder="Email đăng nhập" value={email} onChange={e => setEmail(e.target.value)} required />
                 <button disabled={loading} className="w-full bg-vnpt text-white py-3 font-bold rounded hover:bg-navy transition">
                   {loading ? 'ĐANG KẾT NỐI...' : 'VÀO HỆ THỐNG'}
@@ -161,7 +161,7 @@
         }
 
         // ==========================================
-        // ENGINE TÍNH TOÁN DATA CORE (HỢP NHẤT DOANH THU & PIPELINE)
+        // ENGINE TÍNH TOÁN DATA CORE 
         // ==========================================
         const getMonthVal = (mStr) => {
           if (!mStr) return null;
@@ -173,10 +173,10 @@
         const isAllTime = !filters.thoiGian || filters.thoiGian === 'ALL' || filters.thoiGian === '';
         const filterMonthVal = isAllTime ? 999912 : getMonthVal(filters.thoiGian);
 
-        // 1. KHỞI TẠO BỘ CHỈ SỐ KPI TỔNG
+        // 1. KHỞI TẠO BỘ CHỈ SỐ KPI
         const kpi = { dtThucHien: 0, dtKeHoach: 0, pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeMoSl: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0 };
 
-        // 2. XỬ LÝ DOANH THU (Cộng dồn tự động đến tháng được chọn)
+        // 2. XỬ LÝ DOANH THU (Cộng dồn)
         const baseData = (rawData || []).filter(d => 
           (filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh) &&
           (filters.luongSPDV === 'ALL' || d['luong_spdv'] == filters.luongSPDV) &&
@@ -192,7 +192,7 @@
            }
         });
 
-        // 3. XỬ LÝ PIPELINE & DỰ BÁO (Snapshot: Chỉ lấy số chốt tại kỳ báo cáo)
+        // 3. XỬ LÝ PIPELINE & DỰ BÁO (Chỉ đọc Key chuẩn Dòng 5)
         const basePipeline = (pipelineRaw || []).filter(d => 
           (filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh) &&
           (filters.nhomSPDV === 'ALL' || d['nhomspdv_code'] == filters.nhomSPDV) &&
@@ -209,14 +209,14 @@
 
         basePipeline.forEach(curr => {
            if (getMonthVal(curr['thang']) === snapshotMonthVal) {
+              
+              // Đọc trực tiếp Key chuẩn (Yêu cầu Dòng 5 của Sheet Pipeline phải đặt đúng tên này)
               const dtDuBao = parseNum(curr['doanhthu_dubao']);
               const status = (curr['trang_thai'] || '').toString().trim().toUpperCase();
 
-              // Luôn tính vào Tổng Pipeline để đo tỷ lệ chuyển đổi
               kpi.pipeTongSl += 1;
               kpi.pipeTongGt += dtDuBao;
 
-              // Bóc tách theo Trạng thái
               if (status === 'CLOSED' || status.includes('THẮNG') || status.includes('ĐÓNG')) {
                   kpi.pipeDongSl += 1;
                   kpi.pipeDongGt += dtDuBao;
@@ -226,7 +226,6 @@
                   kpi.pipeMoGt += dtDuBao;
                   kpi.duBaoDt += dtDuBao; 
               }
-              // Trạng thái LOST bị loại trừ khỏi Dự báo và Mở
            }
         });
 
@@ -235,7 +234,7 @@
         const winRate = kpi.pipeTongSl ? kpi.pipeDongSl / kpi.pipeTongSl : 0;
         const thieuHut = Math.max(kpi.dtKeHoach - kpi.dtThucHien, 0);
 
-        // 5. BIỂU ĐỒ DOANH THU PHÁT SINH (Khung 12 tháng tĩnh)
+        // 5. BIỂU ĐỒ DOANH THU PHÁT SINH
         const chartGroup = {};
         monthOptions.forEach(m => chartGroup[m] = { thang: m, thucHien: null, keHoach: 0 });
 
@@ -252,7 +251,8 @@
         });
 
         const finalChartData = monthOptions.map(m => chartGroup[m]);
-
+        
+        //TÍNH TOÁN CÁC KPIs
         const KpiCard = ({ title, v1, l1, v2, l2, st }) => (
           <div className="bg-white border rounded flex-1 p-4 shadow-sm flex flex-col justify-between hover:border-vnpt transition min-w-[160px]">
             <h3 className="text-navy font-bold text-xs mb-3 uppercase truncate">{title}</h3>
