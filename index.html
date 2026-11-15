@@ -35,6 +35,13 @@
   <!-- SCRIPT BẮT LỖI TOÀN CỤC CHỐNG KẸT MÀN HÌNH -->
   <script>
     window.onerror = function(message, source, lineno, colno, error) {
+      // 1. Bỏ qua lỗi lành tính của Recharts (ResizeObserver)
+      if (message.includes('ResizeObserver loop limit exceeded') || 
+          message.includes('ResizeObserver loop completed with undelivered notifications')) {
+        return true; 
+      }
+      
+      // 2. Các lỗi nghiêm trọng khác -> Hiển thị cảnh báo
       document.getElementById('root').innerHTML = '<div style="padding: 40px; text-align: center;"><h2 style="color: #ef4444; font-size: 24px; font-weight: bold;">HỆ THỐNG GẶP SỰ CỐ</h2><p style="color: #333; margin-top: 10px;">Chi tiết lỗi: ' + message + '</p></div>';
       return false;
     };
