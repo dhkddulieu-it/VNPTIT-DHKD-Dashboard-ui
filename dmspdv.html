@@ -1,1 +1,249 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>DM SPDV - Executive Dashboard</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <script src="https://unpkg.com/react@17.0.2/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.23.6/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
 
+  <script>
+    tailwind.config = { 
+      theme: { 
+        extend: { 
+          fontFamily: { sans: ['Nunito', 'sans-serif'] },
+          colors: { vnpt: '#0094D9', navy: '#003B7A', good: '#22c55e', risk: '#ef4444', hoverbg: '#004c9e' } 
+        } 
+      } 
+    }
+  </script>
+</head>
+<body class="bg-gray-100 text-gray-800 min-h-screen flex font-sans overflow-hidden">
+  
+  <div id="root" class="w-full h-screen flex">
+    <div class="m-auto text-center text-risk font-bold text-xl">Đang khởi tạo hệ thống...</div>
+  </div>
+
+  <script type="text/babel">
+    try {
+      // ĐIỀN URL WEB APP GAS
+      const API_URL = 'https://script.google.com/macros/s/AKfycby6E6r6KhZ54J6by2s1PF8MqtOSJu74GcyqO4GsFnSwWd-GmDScZFrS5Brq0IwXlO1N/exec'; 
+
+      const MENU_ITEMS = [
+        { id: 'dashboard', label: 'Dashboard', icon: '📊', href: 'index.html' },
+        { id: 'dean', label: 'Đề án, Kế hoạch', icon: '📋', href: '#' },
+        { id: 'cohoi', label: 'Cơ hội KD', icon: '🎯', href: '#' },
+        { id: 'hopdong', label: 'Hợp đồng', icon: '📝', href: '#' },
+        { id: 'khachhang', label: 'Khách hàng', icon: '🏢', href: '#' },
+        { 
+          id: 'danhmuc', label: 'Danh mục', icon: '⚙️',
+          subItems: [
+            { id: 'dm_spdv', label: 'DM SPDV', href: 'dmspdv.html' },
+            { id: 'dm_plo', label: 'DM PLO, Nhóm SPDV', href: '#' }
+          ]
+        }
+      ];
+
+      function App() {
+        const [user, setUser] = React.useState(() => {
+          try { return JSON.parse(localStorage.getItem('vnpt_user')); } catch { return null; }
+        });
+        
+        const [loading, setLoading] = React.useState(false);
+        const [spdvRaw, setSpdvRaw] = React.useState([]);
+        
+        // State cho bộ lọc
+        const [filters, setFilters] = React.useState({ nhomSPDV: 'ALL', luongSPDV: 'ALL', plo: 'ALL' });
+        const [expandedMenu, setExpandedMenu] = React.useState('danhmuc');
+
+        React.useEffect(() => { if (user) fetchData(); }, [user]);
+
+        const fetchData = async () => {
+          setLoading(true);
+          try {
+            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'getData', provinces: user.provinces }) }).then(r => r.json());
+            if (res.status === 'success') {
+              // Yêu cầu Backend trả về res.spdvData (Đọc từ sheet DMSPDV)
+              setSpdvRaw(res.spdvData || []);
+            }
+          } catch (err) { console.warn("Lỗi đồng bộ dữ liệu"); }
+          setLoading(false);
+        };
+
+        const handleLogout = () => {
+          setUser(null);
+          localStorage.removeItem('vnpt_user');
+          window.location.href = 'index.html';
+        };
+
+        if (!user) {
+          return (
+            <div className="flex h-screen w-full items-center justify-center bg-gray-200">
+              <div className="bg-white p-10 border-t-4 border-vnpt shadow-xl w-96 rounded text-center">
+                <h2 className="text-xl font-bold text-navy mb-4">CHƯA ĐĂNG NHẬP</h2>
+                <p className="mb-6 text-sm text-gray-600">Vui lòng đăng nhập qua trang chủ Dashboard.</p>
+                <a href="index.html" className="block w-full bg-vnpt text-white py-2 font-bold rounded hover:bg-navy transition">VỀ TRANG ĐĂNG NHẬP</a>
+              </div>
+            </div>
+          );
+        }
+
+        // ==========================================
+        // ENGINE XỬ LÝ DỮ LIỆU BỘ LỌC
+        // ==========================================
+        // 1. Khai thác danh sách lọc động từ dữ liệu gốc
+        const nhomList = [...new Set(spdvRaw.map(d => d['nhomspdv_code']).filter(Boolean))].sort();
+        const luongList = [...new Set(spdvRaw.map(d => d['luong_spdv']).filter(Boolean))].sort();
+        
+        // PLO lọc phụ thuộc theo Nhóm SPDV đã chọn
+        const ploList = [...new Set(spdvRaw
+            .filter(d => filters.nhomSPDV === 'ALL' || d['nhomspdv_code'] === filters.nhomSPDV)
+            .map(d => d['plo_code'])
+            .filter(Boolean))
+        ].sort();
+
+        // 2. Lọc Data Table
+        const filteredData = spdvRaw.filter(d => 
+          (filters.nhomSPDV === 'ALL' || d['nhomspdv_code'] === filters.nhomSPDV) &&
+          (filters.luongSPDV === 'ALL' || d['luong_spdv'] === filters.luongSPDV) &&
+          (filters.plo === 'ALL' || d['plo_code'] === filters.plo)
+        );
+
+        // ==========================================
+        // RENDER GIAO DIỆN
+        // ==========================================
+        return (
+          <div className="flex h-screen w-full">
+            {/* SIDEBAR ĐIỀU HƯỚNG */}
+            <aside className="w-[200px] bg-navy text-white flex flex-col shadow-2xl z-20 shrink-0">
+              <div className="p-5 border-b border-white/20 flex flex-col items-center">
+                <div className="text-2xl font-extrabold tracking-widest text-vnpt bg-white px-3 py-1 rounded shadow mb-2">VNPT</div>
+                <div className="text-[10px] text-center font-semibold text-gray-300 tracking-wider">HỆ THỐNG ĐIỀU HÀNH</div>
+              </div>
+              <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+                {MENU_ITEMS.map(item => (
+                  <div key={item.id}>
+                    <a 
+                      href={item.href || '#'}
+                      onClick={(e) => {
+                        if (item.subItems) { e.preventDefault(); setExpandedMenu(expandedMenu === item.id ? '' : item.id); }
+                      }} 
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded text-left transition font-semibold ${item.id === 'danhmuc' ? 'bg-vnpt text-white shadow' : 'text-gray-300 hover:bg-hoverbg hover:text-white'}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">{item.icon}</span><span className="text-sm">{item.label}</span>
+                      </div>
+                      {item.subItems && <span className="text-xs">{expandedMenu === item.id ? '▼' : '▶'}</span>}
+                    </a>
+                    
+                    {item.subItems && expandedMenu === item.id && (
+                      <div className="ml-8 mt-1 space-y-1 border-l border-white/20 pl-2">
+                        {item.subItems.map(sub => (
+                          <a
+                            key={sub.id}
+                            href={sub.href}
+                            className={`block w-full text-left px-3 py-2 text-sm rounded transition ${sub.id === 'dm_spdv' ? 'bg-white/20 text-vnpt font-bold border-l-2 border-vnpt' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
+                          >
+                            {sub.label}
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </nav>
+            </aside>
+
+            {/* MAIN CONTENT */}
+            <main className="flex-1 flex flex-col overflow-hidden bg-gray-50">
+              <header className="bg-white px-8 py-4 flex justify-between items-center shrink-0 border-b">
+                <h1 className="text-2xl font-bold uppercase tracking-wide text-navy">DANH MỤC SẢN PHẨM DỊCH VỤ</h1>
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="font-semibold text-gray-600">{user.email}</span>
+                  <span className="bg-vnpt/10 text-vnpt border border-vnpt px-4 py-1.5 rounded-full font-bold">Quyền: {user.tenClo}</span>
+                  <button onClick={handleLogout} className="bg-risk text-white px-4 py-1.5 rounded font-bold hover:bg-red-700 transition">Đăng xuất</button>
+                </div>
+              </header>
+
+              <div className="flex-1 flex flex-col overflow-hidden">
+                {/* BỘ LỌC */}
+                <div className="bg-white px-8 py-4 flex gap-4 shrink-0 border-b shadow-sm items-end z-10">
+                  <div className="flex flex-col flex-1">
+                    <label className="text-xs font-bold text-navy mb-1">Nhóm SPDV</label>
+                    <select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.nhomSPDV} onChange={e => setFilters({...filters, nhomSPDV: e.target.value, plo: 'ALL'})}>
+                      <option value="ALL">-- Tất cả Nhóm --</option>
+                      {nhomList.map(n => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex flex-col flex-1">
+                    <label className="text-xs font-bold text-navy mb-1">Luồng SPDV</label>
+                    <select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.luongSPDV} onChange={e => setFilters({...filters, luongSPDV: e.target.value})}>
+                      <option value="ALL">-- Tất cả Luồng --</option>
+                      {luongList.map(n => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex flex-col flex-1">
+                    <label className="text-xs font-bold text-navy mb-1">PLO (Định danh)</label>
+                    <select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.plo} onChange={e => setFilters({...filters, plo: e.target.value})}>
+                      <option value="ALL">-- Tất cả PLO --</option>
+                      {ploList.map(n => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                {loading && <div className="text-center text-vnpt text-sm py-1 font-bold animate-pulse bg-white">Đang tải danh mục...</div>}
+
+                {/* BẢNG DỮ LIỆU */}
+                <div className="flex-1 p-8 overflow-hidden bg-gray-50">
+                  <div className="bg-white border rounded shadow-sm flex flex-col h-full overflow-hidden">
+                    <div className="px-6 py-4 border-b bg-gray-50 flex justify-between items-center shrink-0">
+                      <h2 className="text-navy font-bold text-base uppercase">Tổng số: {filteredData.length} SPDV</h2>
+                    </div>
+                    <div className="flex-1 overflow-auto">
+                      <table className="w-full text-left text-sm border-collapse">
+                        <thead className="bg-navy text-white sticky top-0 shadow z-10">
+                            <tr>
+                              <th className="p-4 border-b font-semibold w-16 text-center">STT</th>
+                              <th className="p-4 border-b font-semibold">Mã SPDV</th>
+                              <th className="p-4 border-b font-semibold">Tên SPDV</th>
+                              <th className="p-4 border-b font-semibold">Nhóm SPDV</th>
+                              <th className="p-4 border-b font-semibold">Luồng</th>
+                              <th className="p-4 border-b font-semibold">PLO (Định danh)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredData.length > 0 ? filteredData.map((p, i) => (
+                                <tr key={i} className="border-b hover:bg-blue-50 transition">
+                                    <td className="p-4 text-gray-500 text-center">{i + 1}</td>
+                                    <td className="p-4 font-bold text-navy">{p.ma_spdv || '-'}</td>
+                                    <td className="p-4 font-medium text-gray-800">{p.ten_spdv || '-'}</td>
+                                    <td className="p-4 text-gray-700">{p.nhomspdv_code || '-'}</td>
+                                    <td className="p-4 text-gray-700">{p.luong_spdv || '-'}</td>
+                                    <td className="p-4 font-semibold text-vnpt">{p.plo_code || '-'}</td>
+                                </tr>
+                            )) : (
+                                <tr><td colSpan="6" className="p-8 text-center text-gray-400 font-medium">Không tìm thấy sản phẩm dịch vụ nào phù hợp với bộ lọc.</td></tr>
+                            )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </main>
+          </div>
+        );
+      }
+      ReactDOM.render(<App />, document.getElementById('root'));
+    } catch (err) {
+      document.getElementById('root').innerHTML = `<div class="p-10 text-center text-risk font-bold text-xl">Lỗi hệ thống: ${err.message}</div>`;
+    }
+  </script>
+</body>
+</html>
