@@ -683,10 +683,79 @@
                       </div>
                     </div>
 
-                    {/* PHÂN KHU 2: BẢNG DRILL-DOWN NHÓM NHIỆM VỤ (Dành cho việc render chi tiết sau này) */}
-                    <div className="px-8 pb-8 flex shrink-0">
-                      {/* ... Bảng Data Table ... */}
+                    {/* PHÂN KHU 2: BẢNG ĐIỀU HÀNH TÁC CHIẾN (ACTION BOARD) */}
+                    <div className="px-8 pb-8 flex gap-8 shrink-0 min-h-[450px]">
+                      
+                      {/* BẢNG 1: CƠ HỘI CHÍN MUỒI (CẦN TẬP TRUNG CHỐT) */}
+                      <div className="flex-[1] bg-white border rounded shadow-sm flex flex-col overflow-hidden border-t-4 border-t-vnpt">
+                        <div className="px-6 py-4 border-b bg-gray-50 shrink-0">
+                          <h2 className="text-navy font-bold text-sm uppercase">🔥 Top Cơ Hội Cao (VNPT Ưu Thế)</h2>
+                          <p className="text-xs text-gray-500 mt-1">Nhiệm vụ VNPT đang bám sát & Khả năng thắng cao (Sắp xếp theo Ngân sách)</p>
+                        </div>
+                        <div className="overflow-auto flex-1 p-2">
+                          <table className="w-full text-left text-sm">
+                            <thead className="bg-white text-navy sticky top-0 shadow-sm z-10">
+                              <tr>
+                                <th className="p-2 border-b font-semibold">Tỉnh</th>
+                                <th className="p-2 border-b font-semibold">Tên Nhiệm vụ</th>
+                                <th className="p-2 border-b font-semibold text-right">Quy mô (Tr.VNĐ)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {baseDean
+                                .filter(d => (d['donvi_donghanh'] || '').toUpperCase() === 'VNPT' && (d['loithe_vnpt'] || '').toUpperCase() === 'CAO')
+                                .sort((a, b) => parseNum(b['ngansach']) - parseNum(a['ngansach']))
+                                .slice(0, 15) // Lấy Top 15 Cơ hội lớn nhất
+                                .map((p, i) => (
+                                  <tr key={i} className="border-b hover:bg-blue-50 transition">
+                                    <td className="p-2 font-bold text-navy whitespace-nowrap">{p['ma_tinh'] || '-'}</td>
+                                    <td className="p-2 font-medium text-gray-700">{p['ten_nhiemvu'] || '-'}</td>
+                                    <td className="p-2 text-right font-bold text-vnpt">{fmtNum(parseNum(p['ngansach']))}</td>
+                                  </tr>
+                                ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* BẢNG 2: ĐIỂM NÓNG & ĐỀ XUẤT CHỈ ĐẠO (CẦN LÃNH ĐẠO CAN THIỆP) */}
+                      <div className="flex-[1.5] bg-white border rounded shadow-sm flex flex-col overflow-hidden border-t-4 border-t-risk">
+                        <div className="px-6 py-4 border-b bg-gray-50 shrink-0">
+                          <h2 className="text-risk font-bold text-sm uppercase">⚠️ Điểm Nóng & Đề Xuất Chỉ Đạo</h2>
+                          <p className="text-xs text-gray-500 mt-1">Các dự án rủi ro mất thị phần hoặc cần cấp Lãnh đạo TCT can thiệp tháo gỡ</p>
+                        </div>
+                        <div className="overflow-auto flex-1 p-2">
+                          <table className="w-full text-left text-sm">
+                            <thead className="bg-white text-navy sticky top-0 shadow-sm z-10">
+                              <tr>
+                                <th className="p-2 border-b font-semibold w-16">Tỉnh</th>
+                                <th className="p-2 border-b font-semibold">Cảnh báo rủi ro</th>
+                                <th className="p-2 border-b font-semibold text-risk">Đề xuất Lãnh đạo</th>
+                                <th className="p-2 border-b font-semibold text-center w-24">Ngân sách</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {baseDean
+                                .filter(d => d['dexuat_lanhdao'] || d['canhbao_ruiro'] || (d['donvi_donghanh'] || '').toUpperCase() === 'ĐỐI THỦ')
+                                .sort((a, b) => parseNum(b['ngansach']) - parseNum(a['ngansach']))
+                                .map((p, i) => (
+                                  <tr key={i} className="border-b hover:bg-red-50 transition">
+                                    <td className="p-2 font-bold text-navy">{p['ma_tinh'] || '-'}</td>
+                                    <td className="p-2 text-gray-700 text-xs">
+                                      {p['canhbao_ruiro'] ? p['canhbao_ruiro'] : 
+                                      ((p['donvi_donghanh'] || '').toUpperCase() === 'ĐỐI THỦ' ? 'Đối thủ đang bám sát dự án này' : '-')}
+                                    </td>
+                                    <td className="p-2 font-bold text-risk text-xs">{p['dexuat_lanhdao'] || '-'}</td>
+                                    <td className="p-2 text-center font-semibold text-gray-800">{fmtNum(parseNum(p['ngansach']))}</td>
+                                  </tr>
+                                ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
                     </div>
+                    
                   </div>
                 </div>
               ) : (
