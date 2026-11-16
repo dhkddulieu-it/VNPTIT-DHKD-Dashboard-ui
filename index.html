@@ -369,40 +369,32 @@
         );
 
         const deanKpi = {
-          nhomSet: new Set(),
           tongSl: 0, tongNs: 0,
           daTrienKhaiSl: 0, daTrienKhaiNs: 0,
-          vnptSl: 0, vnptNs: 0,
-          doiThuSl: 0, doiThuNs: 0
+          vnptSl: 0, vnptNs: 0,       // Rổ 1: VNPT đang bám
+          trangSl: 0, trangNs: 0,     // Rổ 2: Khoảng trống (Chưa ai bám)
+          doiThuSl: 0, doiThuNs: 0    // Rổ 3: Đối thủ đang bám
         };
 
         baseDean.forEach(d => {
           const ns = parseNum(d['ngansach']);
           const trangThai = (d['trangthai_trienkhai'] || '').toString().trim().toUpperCase();
           const donVi = (d['donvi_donghanh'] || '').toString().trim().toUpperCase();
-          const nhom = (d['nhom_nhiemvu'] || '').toString().trim();
 
-          // 1. Đếm Nhóm nhiệm vụ (Unique)
-          if (nhom) deanKpi.nhomSet.add(nhom);
-
-          // 2. Tổng Nhiệm vụ cụ thể
           deanKpi.tongSl += 1;
           deanKpi.tongNs += ns;
 
-          // Phân rã trạng thái
           if (trangThai === 'ĐÃ TRIỂN KHAI') {
-              // 3. Đã triển khai
               deanKpi.daTrienKhaiSl += 1;
               deanKpi.daTrienKhaiNs += ns;
-          } else if (trangThai === 'CHƯA TRIỂN KHAI') {
+          } else { 
+              // Phân rã 3 rổ cho nhóm CHƯA TRIỂN KHAI
               if (donVi === 'VNPT') {
-                  // 4. Cơ hội VNPT (Pipeline tương lai)
-                  deanKpi.vnptSl += 1;
-                  deanKpi.vnptNs += ns;
+                  deanKpi.vnptSl += 1; deanKpi.vnptNs += ns;
               } else if (donVi === 'ĐỐI THỦ') {
-                  // 5. Rủi ro mất thị phần
-                  deanKpi.doiThuSl += 1;
-                  deanKpi.doiThuNs += ns;
+                  deanKpi.doiThuSl += 1; deanKpi.doiThuNs += ns;
+              } else {
+                  deanKpi.trangSl += 1; deanKpi.trangNs += ns;
               }
           }
         });
@@ -647,42 +639,46 @@
                   {loading && <div className="text-center text-vnpt text-sm py-1 font-bold animate-pulse bg-white">Đang đồng bộ dữ liệu...</div>}
                   
                   <div className="flex-1 overflow-auto flex flex-col">
-                    {/* PHÂN KHU 1: 5 THẺ KPIs ĐIỀU HÀNH */}
+                    {/* PHÂN KHU 1: 5 THẺ KPIs ĐIỀU HÀNH ĐỀ ÁN */}
                     <div className="flex gap-4 px-8 py-6 shrink-0">
                       <KpiCard 
-                        title="1. TỔNG SỐ NHÓM" 
-                        v1={fmtNum(deanKpi.nhomSet.size)} l1="Đề án / Trụ cột CĐS" 
-                        v2="-" l2="Phân bổ ngân sách" 
-                        st="neutral" 
-                      />
-                      <KpiCard 
-                        title="2. TỔNG NHIỆM VỤ" 
-                        v1={fmtNum(deanKpi.tongSl)} l1="Nhiệm vụ cụ thể" 
+                        title="1. TỔNG QUY MÔ (TAM)" 
+                        v1={fmtNum(deanKpi.tongSl)} l1="Nhiệm vụ CĐS" 
                         v2={fmtNum(deanKpi.tongNs)} l2="Tổng Ngân sách (VNĐ)" 
                         st="neutral" 
                       />
                       <KpiCard 
-                        title="3. ĐÃ TRIỂN KHAI" 
-                        v1={fmtNum(deanKpi.daTrienKhaiSl)} l1="Nhiệm vụ hoàn thành/đang chạy" 
+                        title="2. ĐÃ TRIỂN KHAI" 
+                        v1={fmtNum(deanKpi.daTrienKhaiSl)} l1="Đang thực hiện" 
                         v2={fmtNum(deanKpi.daTrienKhaiNs)} l2="Ngân sách (VNĐ)" 
                         st="neutral" 
                       />
                       <div className="bg-white border-2 border-vnpt rounded flex-1 p-4 shadow-sm flex flex-col justify-between">
-                        <h3 className="text-vnpt font-bold text-xs mb-3 uppercase">4. CƠ HỘI VNPT (CHƯA LÀM)</h3>
+                        <h3 className="text-vnpt font-bold text-xs mb-3 uppercase">3. VNPT ĐANG BÁM</h3>
                         <div>
                           <div className="text-3xl font-bold mb-1 text-vnpt">{fmtNum(deanKpi.vnptSl)}</div>
-                          <div className="text-xs text-gray-500 mb-3">Nhiệm vụ VNPT bám sát</div>
+                          <div className="text-xs text-gray-500 mb-3">Nhiệm vụ tiềm năng</div>
                           <div className="text-base font-bold text-gray-700 border-t pt-2">{fmtNum(deanKpi.vnptNs)}</div>
-                          <div className="text-xs text-gray-500">Ngân sách Tiềm năng (VNĐ)</div>
+                          <div className="text-xs text-gray-500">Ngân sách (VNĐ)</div>
                         </div>
                       </div>
-                      <div className="bg-white border-2 border-risk rounded flex-1 p-4 shadow-sm flex flex-col justify-between">
-                        <h3 className="text-risk font-bold text-xs mb-3 uppercase">5. RỦI RO (ĐỐI THỦ LÀM)</h3>
+                      <div className="bg-white border-2 border-orange-400 rounded flex-1 p-4 shadow-sm flex flex-col justify-between">
+                        <h3 className="text-orange-500 font-bold text-xs mb-3 uppercase">4. KHOẢNG TRỐNG (CHƯA CÓ)</h3>
+                        <div>
+                          <div className="text-3xl font-bold mb-1 text-orange-500">{fmtNum(deanKpi.trangSl)}</div>
+                          <div className="text-xs text-gray-500 mb-3">Chưa đơn vị nào tiếp cận</div>
+                          <div className="text-base font-bold text-gray-700 border-t pt-2">{fmtNum(deanKpi.trangNs)}</div>
+                          <div className="text-xs text-gray-500">Ngân sách bỏ ngỏ (VNĐ)</div>
+                        </div>
+                      </div>
+                      <div className="bg-white border-2 border-risk rounded flex-1 p-4 shadow-sm flex flex-col justify-between relative overflow-hidden">
+                        <div className="absolute top-0 right-0 bg-risk text-white text-[9px] font-bold px-2 py-1 rounded-bl">CẢNH BÁO</div>
+                        <h3 className="text-risk font-bold text-xs mb-3 uppercase">5. ĐỐI THỦ ĐANG BÁM</h3>
                         <div>
                           <div className="text-3xl font-bold mb-1 text-risk">{fmtNum(deanKpi.doiThuSl)}</div>
-                          <div className="text-xs text-gray-500 mb-3">Nhiệm vụ rơi vào đối thủ</div>
+                          <div className="text-xs text-gray-500 mb-3">Nguy cơ mất thị phần</div>
                           <div className="text-base font-bold text-gray-700 border-t pt-2">{fmtNum(deanKpi.doiThuNs)}</div>
-                          <div className="text-xs text-gray-500">Ngân sách Mất mát (VNĐ)</div>
+                          <div className="text-xs text-gray-500">Ngân sách rủi ro (VNĐ)</div>
                         </div>
                       </div>
                     </div>
