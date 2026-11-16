@@ -32,23 +32,18 @@
     <div class="m-auto text-center text-risk font-bold text-xl">Đang khởi tạo hệ thống...</div>
   </div>
 
-  <!-- SCRIPT BẮT LỖI TOÀN CỤC CHỐNG KẸT MÀN HÌNH -->
   <script>
     window.onerror = function(message, source, lineno, colno, error) {
-      // 1. Bỏ qua lỗi lành tính của Recharts (ResizeObserver)
       if (message.includes('ResizeObserver loop limit exceeded') || 
           message.includes('ResizeObserver loop completed with undelivered notifications')) {
         return true; 
       }
-      
-      // 2. Các lỗi nghiêm trọng khác -> Hiển thị cảnh báo
       document.getElementById('root').innerHTML = '<div style="padding: 40px; text-align: center;"><h2 style="color: #ef4444; font-size: 24px; font-weight: bold;">HỆ THỐNG GẶP SỰ CỐ</h2><p style="color: #333; margin-top: 10px;">Chi tiết lỗi: ' + message + '</p></div>';
       return false;
     };
   </script>
 
   <script type="text/babel">
-    // --- HÀM TIỆN ÍCH DÙNG CHUNG ---
     const parseNum = (val) => {
       if (val === null || val === undefined || val === '') return 0;
       if (typeof val === 'number') return val;
@@ -72,7 +67,6 @@
     const fmtNum = (num) => new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num || 0);
     const fmtPct = (num) => `${(num * 100).toFixed(1)}%`;
 
-    // --- COMPONENT THẺ KPI ĐỘC LẬP ---
     function KpiCard({ title, v1, l1, v2, l2, st }) {
       return (
         <div className="bg-white border rounded flex-1 p-4 shadow-sm flex flex-col justify-between hover:border-vnpt transition min-w-[160px]">
@@ -88,10 +82,8 @@
     }
 
     try {
-      // Khai báo an toàn thư viện Recharts
       const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = window.Recharts || {};
       
-      // ĐIỀN URL WEB APP GAS TẠI ĐÂY
       const API_URL = 'https://script.google.com/macros/s/AKfycby6E6r6KhZ54J6by2s1PF8MqtOSJu74GcyqO4GsFnSwWd-GmDScZFrS5Brq0IwXlO1N/exec'; 
 
       const currentYear = new Date().getFullYear();
@@ -113,7 +105,6 @@
       ];
 
       function App() {
-        // --- HOOKS ---
         const [user, setUser] = React.useState(() => {
           try { return JSON.parse(localStorage.getItem('vnpt_user')); } catch { return null; }
         });
@@ -131,7 +122,6 @@
 
         React.useEffect(() => { if (user) fetchDashboardData(); }, [user]);
 
-        // --- FETCH DATA ---
         const handleLogin = async (e) => {
           e.preventDefault();
           setLoading(true);
@@ -140,10 +130,10 @@
             if (res.status === 'success') {
               localStorage.setItem('vnpt_user', JSON.stringify(res.user));
               setUser(res.user);
-            } else { alert('Sai thông tin đăng nhập!'); }
+            } else { alert(res.message || 'Sai thông tin đăng nhập!'); }
           } catch (err) {
             alert('Mất kết nối API. Chạy giả lập UI.');
-            setUser({ email, level: 1, tenClo: 'CLO_L1_MB', provinces: ['HN', 'HP', 'QN'] });
+            setUser({ email, level: 'CLO_L1', tenClo: 'MienBac', provinces: ['HNI', 'HPG', 'QNH'] });
           }
           setLoading(false);
         };
@@ -157,8 +147,7 @@
               setRawData(normalizedData);
               const normalizedPipeline = (res.pipelineData || []).map(d => ({ ...d, thang: normalizeThang(d['thang'] || '') }));
               setPipelineRaw(normalizedPipeline);
-              
-              setDeanRaw(res.deanData || []); // Hứng luồng dữ liệu Đề án
+              setDeanRaw(res.deanData || []); 
               setPloList(res.ploData || []);
             }
           } catch (err) { console.warn("Lỗi đồng bộ dữ liệu API"); }
@@ -185,9 +174,6 @@
           );
         }
 
-        // ==========================================
-        // ENGINE DATA CORE
-        // ==========================================
         const getMonthVal = (mStr) => {
           if (!mStr) return null;
           const parts = mStr.toString().trim().split('/');
@@ -228,7 +214,7 @@
            if (isMatchTime) {
               const nganSach = parseNum(curr['ngansach_duan']);
               const dtDuBao = parseNum(curr['doanhthu_dubao']); 
-              const statusStr = (curr['trang_thai'] || '').toString().trim().toUpperCase(); // Xử lý lỗi TypeError an toàn
+              const statusStr = (curr['trang_thai'] || '').toString().trim().toUpperCase(); 
 
               kpi.pipeTongSl += 1;
               kpi.pipeTongGt += nganSach;
@@ -264,7 +250,6 @@
         });
         const finalChartData = monthOptions.map(m => chartGroup[m]);
         
-        // 5. TỔNG HỢP KPI CHI TIẾT THEO ĐỊA BÀN (TAB DASHBOARD)
         const provStats = {};
         const initProv = (p) => {
           if (!provStats[p]) provStats[p] = { maTinh: p, dtThucHien: 0, dtKeHoach: 0, pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0 };
@@ -303,7 +288,6 @@
           }
         });
 
-        // Ánh xạ thành Array & Tính các chỉ số phái sinh, Xếp hạng Thực hiện YTD giảm dần
         const provStatsArray = Object.values(provStats).map(p => ({
            ...p,
            tyLeHT: p.dtKeHoach ? p.dtThucHien / p.dtKeHoach : 0,
@@ -311,11 +295,10 @@
            thieuHut: Math.max(p.dtKeHoach - p.dtThucHien - p.duBaoDt, 0)
         })).sort((a, b) => b.dtThucHien - a.dtThucHien);
 
-        // 6. TỔNG HỢP KPI CHI TIẾT THEO PLO (TAB DASHBOARD)
         const ploStats = {};
         const initPlo = (p) => {
           const key = p ? p.toString().trim() : '';
-          const finalKey = key === '' ? 'Chưa gán PLO' : key; // Gom nhóm dữ liệu khuyết
+          const finalKey = key === '' ? 'Chưa gán PLO' : key; 
           if (!ploStats[finalKey]) {
               ploStats[finalKey] = { ploCode: finalKey, dtThucHien: 0, dtKeHoach: 0, pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0 };
           }
@@ -353,17 +336,12 @@
           }
         });
 
-        // Ánh xạ thành Array & Xếp hạng Thực hiện YTD giảm dần
         const ploStatsArray = Object.values(ploStats).map(p => ({
            ...p,
            tyLeHT: p.dtKeHoach ? p.dtThucHien / p.dtKeHoach : 0,
            thieuHut: Math.max(p.dtKeHoach - p.dtThucHien - p.duBaoDt, 0)
         })).sort((a, b) => b.dtThucHien - a.dtThucHien);
 
-        // ==========================================
-        // 7. ENGINE: ĐỀ ÁN & KẾ HOẠCH (TAB ĐỀ ÁN)
-        // ==========================================
-        // Lưu ý: state deanRaw được fetch từ API tương tự rawData
         const baseDean = (deanRaw || []).filter(d => 
           (filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh)
         );
@@ -371,9 +349,9 @@
         const deanKpi = {
           tongSl: 0, tongNs: 0,
           daTrienKhaiSl: 0, daTrienKhaiNs: 0,
-          vnptSl: 0, vnptNs: 0,       // Rổ 1: VNPT đang bám
-          trangSl: 0, trangNs: 0,     // Rổ 2: Khoảng trống (Chưa ai bám)
-          doiThuSl: 0, doiThuNs: 0    // Rổ 3: Đối thủ đang bám
+          vnptSl: 0, vnptNs: 0,       
+          trangSl: 0, trangNs: 0,     
+          doiThuSl: 0, doiThuNs: 0    
         };
 
         baseDean.forEach(d => {
@@ -388,7 +366,6 @@
               deanKpi.daTrienKhaiSl += 1;
               deanKpi.daTrienKhaiNs += ns;
           } else { 
-              // Phân rã 3 rổ cho nhóm CHƯA TRIỂN KHAI
               if (donVi === 'VNPT') {
                   deanKpi.vnptSl += 1; deanKpi.vnptNs += ns;
               } else if (donVi === 'ĐỐI THỦ') {
@@ -399,13 +376,14 @@
           }
         });
         
-        // Trích xuất tiêu đề an toàn
         const activeMenuItem = MENU_ITEMS.find(m => m.id === activeTab);
         const headerTitle = activeMenuItem ? activeMenuItem.label : 'DASHBOARD';
 
-        // ==========================================
-        // RENDER UI
-        // ==========================================
+        // Lấy danh sách Địa Bàn cấp cho user, nếu là ALL (CEO) thì trích xuất từ dữ liệu
+        const dsDiaBanHienThi = (user.provinces && user.provinces.includes('ALL')) 
+          ? [...new Set(rawData.map(d => d['ma_tinh']).filter(Boolean))].sort()
+          : (user.provinces || []);
+
         return (
           <div className="flex h-screen w-full">
             <aside className="w-[200px] bg-navy text-white flex flex-col shadow-2xl z-20 shrink-0">
@@ -460,7 +438,13 @@
                 <div className="flex-1 flex flex-col overflow-hidden">
                   <div className="bg-white px-8 py-3 flex gap-4 shrink-0 border-b shadow-sm items-end z-10">
                     <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Thời gian</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.thoiGian} onChange={e => setFilters({...filters, thoiGian: e.target.value})}><option value="">-- Tất cả --</option>{monthOptions.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
-                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">CLO Địa bàn</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.maTinh} onChange={e => setFilters({...filters, maTinh: e.target.value})}><option value="ALL">Toàn địa bàn</option>{user.provinces && user.provinces.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
+                    <div className="flex flex-col flex-1">
+                      <label className="text-xs font-bold text-navy mb-1">CLO Địa bàn</label>
+                      <select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.maTinh} onChange={e => setFilters({...filters, maTinh: e.target.value})}>
+                        <option value="ALL">Toàn địa bàn</option>
+                        {dsDiaBanHienThi.map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                    </div>
                     <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Luồng SPDV</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.luongSPDV} onChange={e => setFilters({...filters, luongSPDV: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(rawData.map(d => d['luong_spdv']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
                     <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Nhóm SPDV</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.nhomSPDV} onChange={e => setFilters({...filters, nhomSPDV: e.target.value, plo: 'ALL'})}><option value="ALL">Tất cả</option>{[...new Set(ploList.map(p => p['nhomspdv_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
                     <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Dịch vụ (PLO)</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.plo} onChange={e => setFilters({...filters, plo: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(ploList.filter(p => filters.nhomSPDV === 'ALL' || p['nhomspdv_code'] === filters.nhomSPDV).map(p => p['plo_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
@@ -529,7 +513,6 @@
                         </div>
                       </div>
                     </div>
-                    {/* BẢNG ĐÁNH GIÁ KPI ĐỊA BÀN */}
                     <div className="px-6 pb-6 flex shrink-0">
                       <div className="w-full bg-white border rounded shadow-sm p-6 flex flex-col overflow-hidden">
                         <h2 className="text-navy font-bold text-base mb-4 uppercase">Bảng KPIS Chi Tiết Địa Bàn</h2>
@@ -577,7 +560,6 @@
                       </div>
                     </div>
 
-                    {/* BẢNG ĐÁNH GIÁ KPI THEO PLO */}
                     <div className="px-6 pb-6 flex shrink-0">
                       <div className="w-full bg-white border rounded shadow-sm p-6 flex flex-col overflow-hidden">
                         <h2 className="text-navy font-bold text-base mb-4 uppercase">Bảng KPIs Chi Tiết Từng PLO</h2>
@@ -630,7 +612,13 @@
                 <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
                   <div className="bg-white px-8 py-3 flex gap-4 shrink-0 border-b shadow-sm items-end z-10">
                     <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Thời gian</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.thoiGian} onChange={e => setFilters({...filters, thoiGian: e.target.value})}><option value="">-- Tất cả --</option>{monthOptions.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
-                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">CLO Địa bàn</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.maTinh} onChange={e => setFilters({...filters, maTinh: e.target.value})}><option value="ALL">Toàn địa bàn</option>{user.provinces && user.provinces.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
+                    <div className="flex flex-col flex-1">
+                      <label className="text-xs font-bold text-navy mb-1">CLO Địa bàn</label>
+                      <select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.maTinh} onChange={e => setFilters({...filters, maTinh: e.target.value})}>
+                        <option value="ALL">Toàn địa bàn</option>
+                        {dsDiaBanHienThi.map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                    </div>
                     <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Luồng SPDV</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.luongSPDV} onChange={e => setFilters({...filters, luongSPDV: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(rawData.map(d => d['luong_spdv']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
                     <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Nhóm SPDV</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.nhomSPDV} onChange={e => setFilters({...filters, nhomSPDV: e.target.value, plo: 'ALL'})}><option value="ALL">Tất cả</option>{[...new Set(ploList.map(p => p['nhomspdv_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
                     <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Dịch vụ (PLO)</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.plo} onChange={e => setFilters({...filters, plo: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(ploList.filter(p => filters.nhomSPDV === 'ALL' || p['nhomspdv_code'] === filters.nhomSPDV).map(p => p['plo_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
@@ -639,7 +627,6 @@
                   {loading && <div className="text-center text-vnpt text-sm py-1 font-bold animate-pulse bg-white">Đang đồng bộ dữ liệu...</div>}
                   
                   <div className="flex-1 overflow-auto flex flex-col">
-                    {/* PHÂN KHU 1: 5 THẺ KPIs ĐIỀU HÀNH ĐỀ ÁN */}
                     <div className="flex gap-4 px-8 py-6 shrink-0">
                       <KpiCard 
                         title="1. TỔNG QUY MÔ (TAM)" 
@@ -683,10 +670,8 @@
                       </div>
                     </div>
 
-                    {/* PHÂN KHU 2: BẢNG ĐIỀU HÀNH TÁC CHIẾN (ACTION BOARD) */}
                     <div className="px-8 pb-8 flex gap-8 shrink-0 min-h-[450px]">
                       
-                      {/* BẢNG 1: CƠ HỘI CHÍN MUỒI (CẦN TẬP TRUNG CHỐT) */}
                       <div className="flex-[1] bg-white border rounded shadow-sm flex flex-col overflow-hidden border-t-4 border-t-vnpt">
                         <div className="px-6 py-4 border-b bg-gray-50 shrink-0">
                           <h2 className="text-navy font-bold text-sm uppercase">🔥 Top Cơ Hội Cao (VNPT Ưu Thế)</h2>
@@ -705,7 +690,7 @@
                               {baseDean
                                 .filter(d => (d['donvi_donghanh'] || '').toUpperCase() === 'VNPT' && (d['loithe_vnpt'] || '').toUpperCase() === 'CAO')
                                 .sort((a, b) => parseNum(b['ngansach']) - parseNum(a['ngansach']))
-                                .slice(0, 15) // Lấy Top 15 Cơ hội lớn nhất
+                                .slice(0, 15) 
                                 .map((p, i) => (
                                   <tr key={i} className="border-b hover:bg-blue-50 transition">
                                     <td className="p-2 font-bold text-navy whitespace-nowrap">{p['ma_tinh'] || '-'}</td>
@@ -718,7 +703,6 @@
                         </div>
                       </div>
 
-                      {/* BẢNG 2: ĐIỂM NÓNG & ĐỀ XUẤT CHỈ ĐẠO (CẦN LÃNH ĐẠO CAN THIỆP) */}
                       <div className="flex-[1.5] bg-white border rounded shadow-sm flex flex-col overflow-hidden border-t-4 border-t-risk">
                         <div className="px-6 py-4 border-b bg-gray-50 shrink-0">
                           <h2 className="text-risk font-bold text-sm uppercase">⚠️ Điểm Nóng & Đề Xuất Chỉ Đạo</h2>
