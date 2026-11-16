@@ -306,6 +306,55 @@
            winRate: p.pipeTongSl ? p.pipeDongSl / p.pipeTongSl : 0,
            thieuHut: Math.max(p.dtKeHoach - p.dtThucHien - p.duBaoDt, 0)
         })).sort((a, b) => b.dtThucHien - a.dtThucHien);
+
+        // 6. TỔNG HỢP KPI CHI TIẾT THEO PLO
+        const ploStats = {};
+        const initPlo = (p) => {
+          const key = p ? p.toString().trim() : '';
+          const finalKey = key === '' ? 'Chưa gán PLO' : key; // Gom nhóm dữ liệu khuyết
+          if (!ploStats[finalKey]) {
+              ploStats[finalKey] = { ploCode: finalKey, dtThucHien: 0, dtKeHoach: 0, pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0 };
+          }
+          return finalKey;
+        };
+
+        baseData.forEach(curr => {
+          const key = initPlo(curr['plo_code']);
+          const mVal = getMonthVal(curr['thang']);
+          if (mVal !== null && mVal > 0 && mVal <= filterMonthVal) {
+              ploStats[key].dtThucHien += parseNum(curr['dt_th_thang']);
+              ploStats[key].dtKeHoach += parseNum(curr['dt_kh_thang']);
+          }
+        });
+
+        basePipeline.forEach(curr => {
+          const key = initPlo(curr['plo_code']);
+          const mVal = getMonthVal(curr['thang']);
+          if (isAllTime || mVal === filterMonthVal) {
+              const nganSach = parseNum(curr['ngansach_duan']);
+              const dtDuBao = parseNum(curr['doanhthu_dubao']); 
+              const statusStr = (curr['trang_thai'] || '').toString().trim().toUpperCase();
+
+              ploStats[key].pipeTongSl += 1;
+              ploStats[key].pipeTongGt += nganSach;
+
+              if (statusStr === 'CLOSED' || statusStr.includes('THẮNG') || statusStr.includes('ĐÓNG') || statusStr.includes('THÀNH CÔNG')) {
+                  ploStats[key].pipeDongSl += 1;
+                  ploStats[key].pipeDongGt += nganSach;
+                  ploStats[key].duBaoDt += dtDuBao; 
+              } else if (statusStr === 'OPEN' || statusStr.includes('MỞ') || statusStr.includes('ĐANG')) {
+                  ploStats[key].pipeMoGt += nganSach;
+                  ploStats[key].duBaoDt += dtDuBao; 
+              }
+          }
+        });
+
+        // Ánh xạ thành Array & Xếp hạng Thực hiện YTD giảm dần
+        const ploStatsArray = Object.values(ploStats).map(p => ({
+           ...p,
+           tyLeHT: p.dtKeHoach ? p.dtThucHien / p.dtKeHoach : 0,
+           thieuHut: Math.max(p.dtKeHoach - p.dtThucHien - p.duBaoDt, 0)
+        })).sort((a, b) => b.dtThucHien - a.dtThucHien);
         
         // Trích xuất tiêu đề an toàn
         const activeMenuItem = MENU_ITEMS.find(m => m.id === activeTab);
@@ -437,7 +486,7 @@
                         </div>
                       </div>
                     </div>
-                      {/* BẢNG ĐÁNH GIÁ KPI ĐỊA BÀN */}
+                    {/* BẢNG ĐÁNH GIÁ KPI ĐỊA BÀN */}
                     <div className="px-6 pb-6 flex shrink-0">
                       <div className="w-full bg-white border rounded shadow-sm p-6 flex flex-col overflow-hidden">
                         <h2 className="text-navy font-bold text-base mb-4 uppercase">Bảng KPIS Chi Tiết Địa Bàn</h2>
@@ -484,7 +533,54 @@
                         </div>
                       </div>
                     </div>
-                
+
+                    {/* BẢNG ĐÁNH GIÁ KPI THEO PLO */}
+                    <div className="px-6 pb-6 flex shrink-0">
+                      <div className="w-full bg-white border rounded shadow-sm p-6 flex flex-col overflow-hidden">
+                        <h2 className="text-navy font-bold text-base mb-4 uppercase">Bảng KPIs Chi Tiết Từng PLO</h2>
+                        <div className="overflow-auto max-h-[500px]">
+                          <table className="w-full text-left text-sm border-collapse">
+                            <thead className="bg-navy text-white sticky top-0 z-10 shadow">
+                              <tr>
+                                <th className="p-2 border-b font-semibold text-center w-12">STT</th>
+                                <th className="p-2 border-b font-semibold">Mã Định Danh (PLO)</th>
+                                <th className="p-2 border-b font-semibold text-right">Kế hoạch YTD</th>
+                                <th className="p-2 border-b font-semibold text-right">Thực hiện YTD</th>
+                                <th className="p-2 border-b font-semibold text-right w-24">Tỷ lệ HT</th>
+                                <th className="p-2 border-b font-semibold text-right">Pipeline Tổng</th>
+                                <th className="p-2 border-b font-semibold text-right">Pipeline Mở</th>
+                                <th className="p-2 border-b font-semibold text-right">Pipeline Chốt</th>
+                                <th className="p-2 border-b font-semibold text-right">Winrate</th>
+                                <th className="p-2 border-b font-semibold text-right">Dự báo DT</th>
+                                <th className="p-2 border-b font-semibold text-right">Khoảng trống</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {ploStatsArray.map((p, i) => (
+                                <tr key={i} className="border-b hover:bg-blue-50 transition">
+                                  <td className="p-2 text-center text-gray-500">{i + 1}</td>
+                                  <td className={`p-2 font-bold ${p.ploCode === 'Chưa gán PLO' ? 'text-gray-400 italic' : 'text-navy'}`}>{p.ploCode}</td>
+                                  <td className="p-2 text-right text-gray-700 font-medium">{fmtNum(p.dtKeHoach)}</td>
+                                  <td className="p-2 text-right text-vnpt font-bold">{fmtNum(p.dtThucHien)}</td>
+                                  <td className={`p-2 text-right font-bold ${p.tyLeHT >= 1 ? 'text-good' : 'text-risk'}`}>
+                                    <span className={`px-2 py-1 rounded-full text-xs ${p.tyLeHT >= 1 ? 'bg-green-100' : 'bg-red-100'}`}>{fmtPct(p.tyLeHT)}</span>
+                                  </td>
+                                  <td className="p-2 text-right text-gray-700">{fmtNum(p.pipeTongGt)}</td>
+                                  <td className="p-2 text-right text-gray-700">{fmtNum(p.pipeMoGt)}</td>
+                                  <td className="p-2 text-right text-gray-700">{fmtNum(p.pipeDongGt)}</td>
+                                  <td className="p-2 text-right text-gray-700">{fmtNum(p.winrate)}</td>
+                                  <td className="p-2 text-right text-vnpt font-semibold">{fmtNum(p.duBaoDt)}</td>
+                                  <td className={`p-2 text-right font-bold ${p.thieuHut > 0 ? 'text-risk' : 'text-good'}`}>{fmtNum(p.thieuHut)}</td>
+                                </tr>
+                              ))}
+                              {ploStatsArray.length === 0 && (
+                                <tr><td colSpan="9" className="p-6 text-center text-gray-400">Không có dữ liệu</td></tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ) : (
