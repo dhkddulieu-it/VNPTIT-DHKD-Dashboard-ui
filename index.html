@@ -157,6 +157,8 @@
               setRawData(normalizedData);
               const normalizedPipeline = (res.pipelineData || []).map(d => ({ ...d, thang: normalizeThang(d['thang'] || '') }));
               setPipelineRaw(normalizedPipeline);
+              
+              setDeanRaw(res.deanData || []); // Hứng luồng dữ liệu Đề án
               setPloList(res.ploData || []);
             }
           } catch (err) { console.warn("Lỗi đồng bộ dữ liệu API"); }
