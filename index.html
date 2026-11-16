@@ -321,7 +321,7 @@
                 <div className="text-2xl font-extrabold tracking-widest text-vnpt bg-white px-3 py-1 rounded shadow mb-2">VNPT</div>
                 <div className="text-[10px] text-center font-semibold text-gray-300 tracking-wider">HỆ THỐNG ĐIỀU HÀNH</div>
               </div>
-              <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+              <nav className="flex-1 py-3 px-3 space-y-1 overflow-y-auto">
                 {MENU_ITEMS.map(item => (
                   <div key={item.id}>
                     <a 
@@ -388,7 +388,7 @@
                       <KpiCard title="8. KHOẢNG TRỐNG CẦN BÙ" v1={fmtNum(thieuHut)} l1="Thiếu hụt sau Dự báo (trĐ)" v2={fmtPct(kpi.dtKeHoach ? thieuHut/kpi.dtKeHoach : 0)} l2="Tỷ lệ thiếu hụt" st={thieuHut > 0 ? 'risk' : 'good'} />
                     </div>
 
-                    <div className="px-8 pb-8 flex gap-8 shrink-0 min-h-[350px]">
+                    <div className="px-6 pb-6 flex gap-8 shrink-0 min-h-[350px]">
                       <div className="flex-[2] bg-white border rounded shadow-sm p-6 flex flex-col">
                         <h2 className="text-navy font-bold text-base mb-6 uppercase">THEO DÕI DOANH THU HÀNG THÁNG (ĐVT: trĐ)</h2>
                         <div className="flex-1 w-full min-h-[250px]">
@@ -438,7 +438,7 @@
                       </div>
                     </div>
                       {/* BẢNG ĐÁNH GIÁ KPI ĐỊA BÀN */}
-                    <div className="px-8 pb-8 flex shrink-0">
+                    <div className="px-6 pb-6 flex shrink-0">
                       <div className="w-full bg-white border rounded shadow-sm p-6 flex flex-col overflow-hidden">
                         <h2 className="text-navy font-bold text-base mb-4 uppercase">Bảng KPIS Chi Tiết Địa Bàn</h2>
                         <div className="overflow-auto max-h-[500px]">
@@ -471,7 +471,7 @@
                                   <td className="p-2 text-right text-gray-700">{fmtNum(p.pipeTongGt)}</td>
                                   <td className="p-2 text-right text-gray-700">{fmtNum(p.pipeMoGt)}</td>
                                   <td className="p-2 text-right text-gray-700">{fmtNum(p.pipeDongGt)}</td>
-                                  <td className="p-2 text-right text-gray-700">{fmtPct(p.winrate)}</td>
+                                  <td className="p-2 text-right text-gray-700">{fmtPct(winrate)}</td>
                                   <td className="p-2 text-right text-vnpt font-semibold">{fmtNum(p.duBaoDt)}</td>
                                   <td className={`p-2 text-right font-bold ${p.thieuHut > 0 ? 'text-risk' : 'text-good'}`}>{fmtNum(p.thieuHut)}</td>
                                 </tr>
