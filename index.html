@@ -377,66 +377,64 @@
           }
         });
 
-        //
         // ==========================================
-// ENGINE TÍNH TOÁN KPI CƠ HỘI KINH DOANH
-// ==========================================
-const kpiCHKD = {
-  tongSl: 0, tongGt: 0,
-  moSl: 0, moGt: 0,
-  chotSl: 0, chotGt: 0,
-  thuaSl: 0, thuaGt: 0,
-  thieuTiemNang: 0, quaHanKy: 0, lauKhongCapNhat: 0, thieuGiaTri: 0
-};
+        // ENGINE TÍNH TOÁN KPI CƠ HỘI KINH DOANH
+        // ==========================================
+      const kpiCHKD = {
+        tongSl: 0, tongGt: 0,
+        moSl: 0, moGt: 0,
+        chotSl: 0, chotGt: 0,
+        thuaSl: 0, thuaGt: 0,
+        thieuTiemNang: 0, quaHanKy: 0, lauKhongCapNhat: 0, thieuGiaTri: 0
+      };
 
-// Đặt mốc thời gian chuẩn để so sánh cảnh báo
-const now = new Date();
-const ninetyDaysAgo = new Date(now.getTime() - (90 * 24 * 60 * 60 * 1000));
+      // Đặt mốc thời gian chuẩn để so sánh cảnh báo
+      const now = new Date();
+      const ninetyDaysAgo = new Date(now.getTime() - (90 * 24 * 60 * 60 * 1000));
 
-basePipeline.forEach(d => {
-  const gtTrieu = parseNum(d['gia_tri_du_kien']);
-  const status = (d['trang_thai'] || 'OPEN').toString().trim().toUpperCase();
+      basePipeline.forEach(d => {
+        const gtTrieu = parseNum(d['gia_tri_du_kien']);
+        const status = (d['trang_thai'] || 'OPEN').toString().trim().toUpperCase();
   
-  kpiCHKD.tongSl += 1;
-  kpiCHKD.tongGt += gtTrieu;
+      kpiCHKD.tongSl += 1;
+      kpiCHKD.tongGt += gtTrieu;
 
-  if (status === 'WON' || status === 'CLOSED' || status.includes('THẮNG')) {
-    kpiCHKD.chotSl += 1; kpiCHKD.chotGt += gtTrieu;
-  } else if (status === 'LOST' || status.includes('THUA') || status.includes('THẤT BẠI')) {
-    kpiCHKD.thuaSl += 1; kpiCHKD.thuaGt += gtTrieu;
-  } else {
-    // Nhóm CHKD ĐANG MỞ (OPEN)
-    kpiCHKD.moSl += 1; kpiCHKD.moGt += gtTrieu;
+      if (status === 'WON' || status === 'CLOSED' || status.includes('THẮNG')) {
+        kpiCHKD.chotSl += 1; kpiCHKD.chotGt += gtTrieu;
+      } else if (status === 'LOST' || status.includes('THUA') || status.includes('THẤT BẠI')) {
+        kpiCHKD.thuaSl += 1; kpiCHKD.thuaGt += gtTrieu;
+      } else {
+        // Nhóm CHKD ĐANG MỞ (OPEN)
+        kpiCHKD.moSl += 1; kpiCHKD.moGt += gtTrieu;
 
-    // Cảnh báo 1: Thiếu tiềm năng
-    if (!d['muc_do_tiem_nang'] || d['muc_do_tiem_nang'].toString().trim() === '') kpiCHKD.thieuTiemNang += 1;
+        // Cảnh báo 1: Thiếu tiềm năng
+        if (!d['muc_do_tiem_nang'] || d['muc_do_tiem_nang'].toString().trim() === '') kpiCHKD.thieuTiemNang += 1;
+        
+        // Cảnh báo 2: Thiếu giá trị ( = 0)
+        if (gtTrieu === 0) kpiCHKD.thieuGiaTri += 1;
+        
+        // Cảnh báo 3: Quá hạn ký HĐ
+        if (d['ngay_du_kien_ky']) {
+          const ngayKy = new Date(d['ngay_du_kien_ky']);
+          if (ngayKy < now) kpiCHKD.quaHanKy += 1;
+        }
     
-    // Cảnh báo 2: Thiếu giá trị ( = 0)
-    if (gtTrieu === 0) kpiCHKD.thieuGiaTri += 1;
-    
-    // Cảnh báo 3: Quá hạn ký HĐ
-    if (d['ngay_du_kien_ky']) {
-      const ngayKy = new Date(d['ngay_du_kien_ky']);
-      if (ngayKy < now) kpiCHKD.quaHanKy += 1;
-    }
-    
-    // Cảnh báo 4: > 90 ngày chưa cập nhật
-    if (d['ngay_cap_nhat_cuoi']) {
-      const ngayCapNhat = new Date(d['ngay_cap_nhat_cuoi']);
-      if (ngayCapNhat < ninetyDaysAgo) kpiCHKD.lauKhongCapNhat += 1;
-    }
-  }
-});
+        // Cảnh báo 4: > 90 ngày chưa cập nhật
+        if (d['ngay_cap_nhat_cuoi']) {
+          const ngayCapNhat = new Date(d['ngay_cap_nhat_cuoi']);
+          if (ngayCapNhat < ninetyDaysAgo) kpiCHKD.lauKhongCapNhat += 1;
+        }
+      }
+    });
 
-// Chỉ số phái sinh
-const tyLeMoGt = kpiCHKD.tongGt ? (kpiCHKD.moGt / kpiCHKD.tongGt) : 0;
-const closedTotalSl = kpiCHKD.chotSl + kpiCHKD.thuaSl;
-const closedTotalGt = kpiCHKD.chotGt + kpiCHKD.thuaGt;
-const winRateSl = closedTotalSl ? (kpiCHKD.chotSl / closedTotalSl) : 0;
-const winRateGt = closedTotalGt ? (kpiCHKD.chotGt / closedTotalGt) : 0;
+    // Chỉ số phái sinh
+    const tyLeMoGt = kpiCHKD.tongGt ? (kpiCHKD.moGt / kpiCHKD.tongGt) : 0;
+    const closedTotalSl = kpiCHKD.chotSl + kpiCHKD.thuaSl;
+    const closedTotalGt = kpiCHKD.chotGt + kpiCHKD.thuaGt;
+    const winRateSl = closedTotalSl ? (kpiCHKD.chotSl / closedTotalSl) : 0;
+    const winRateGt = closedTotalGt ? (kpiCHKD.chotGt / closedTotalGt) : 0;
 
-// Format Tỷ đồng (Data gốc là Triệu VNĐ)
-//const fmtTy = (trieu) => new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(trieu / 1000);
+
         
         const activeMenuItem = MENU_ITEMS.find(m => m.id === activeTab);
         const headerTitle = activeMenuItem ? activeMenuItem.label : 'DASHBOARD';
@@ -496,7 +494,7 @@ const winRateGt = closedTotalGt ? (kpiCHKD.chotGt / closedTotalGt) : 0;
                 </div>
               </header>
 
-              {activeTab === 'dashboard' ? (
+              { activeTab === 'dashboard' ? (
                 <div className="flex-1 flex flex-col overflow-hidden">
                   <div className="bg-white px-8 py-3 flex gap-4 shrink-0 border-b shadow-sm items-end z-10">
                     <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Thời gian</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.thoiGian} onChange={e => setFilters({...filters, thoiGian: e.target.value})}><option value="">-- Tất cả --</option>{monthOptions.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
@@ -804,41 +802,36 @@ const winRateGt = closedTotalGt ? (kpiCHKD.chotGt / closedTotalGt) : 0;
                     
                   </div>
                 </div>
-              ): activeTab ==='cohoi' ? (
-
-                {/* ========================================== */}
-                {/* RENDER UI - KHU VỰC CƠ HỘI KINH DOANH      */}
-                {/* ========================================== */}
-
+              ) : activeTab ==='cohoi' ? (
                 <div className="flex-1 overflow-auto flex flex-col bg-[#F4F6F8]">
                   
-                  {/* ROW 1: TỔNG QUAN PIPELINE */}
+                  {/* ROW 1: TỔNG QUAN PIPELINE - GIAO DIEN CHKD */}
                   <div className="flex gap-4 px-8 pt-6 pb-2 shrink-0">
                     
                     {/* Thẻ Đang Mở (Xanh Navy) */}
                     <div className="bg-navy text-white rounded-lg shadow-sm p-4 flex-[1.2] flex flex-col justify-between">
                       <h3 className="text-[11px] font-bold text-gray-200 uppercase tracking-wide">PIPELINE ĐANG MỞ</h3>
-                      <div className="text-[2.5rem] font-bold leading-none my-2">{fmtTy(kpiCHKD.moGt)}</div>
+                      <div className="text-[2.5rem] font-bold leading-none my-2">{fmtNum(kpiCHKD.moGt)}</div>
                       <div className="text-[11px] text-gray-300">
-                        Tỷ đồng - {fmtNum(kpiCHKD.moSl)} CHKD - {fmtPct(tyLeMoGt)} giá trị
+                        TR đồng - {fmtNum(kpiCHKD.moSl)} CHKD - {fmtPct(tyLeMoGt)} giá trị
                       </div>
                     </div>
                 
                     <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
                       <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">TỔNG GIÁ TRỊ</h3>
-                      <div className="text-3xl font-bold text-navy my-2">{fmtTy(kpiCHKD.tongGt)}</div>
+                      <div className="text-3xl font-bold text-navy my-2">{fmtNum(kpiCHKD.tongGt)}</div>
                       <div className="text-[11px] text-gray-500">Tỷ đồng - {fmtNum(kpiCHKD.tongSl)} CHKD</div>
                     </div>
                 
                     <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
                       <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">ĐÃ CHỐT</h3>
-                      <div className="text-3xl font-bold text-navy my-2">{fmtTy(kpiCHKD.chotGt)}</div>
+                      <div className="text-3xl font-bold text-navy my-2">{fmtNum(kpiCHKD.chotGt)}</div>
                       <div className="text-[11px] text-gray-500">Tỷ đồng - {fmtNum(kpiCHKD.chotSl)} CHKD</div>
                     </div>
                 
                     <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
                       <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">THẤT BẠI</h3>
-                      <div className="text-3xl font-bold text-navy my-2">{fmtTy(kpiCHKD.thuaGt)}</div>
+                      <div className="text-3xl font-bold text-navy my-2">{fmtNum(kpiCHKD.thuaGt)}</div>
                       <div className="text-[11px] text-gray-500">Tỷ đồng - {fmtNum(kpiCHKD.thuaSl)} CHKD</div>
                     </div>
                 
