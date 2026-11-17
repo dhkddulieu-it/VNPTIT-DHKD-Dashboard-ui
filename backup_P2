@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Executive Dashboard - VNPT</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <script src="https://unpkg.com/react@17.0.2/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.23.6/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
+  <script src="https://unpkg.com/recharts@2.1.12/umd/Recharts.js"></script>
+
+  <script>
+    tailwind.config = { 
+      theme: { 
+        extend: { 
+          fontFamily: { sans: ['Nunito', 'sans-serif'] },
+          colors: { vnpt: '#0094D9', navy: '#003B7A', good: '#22c55e', risk: '#ef4444', hoverbg: '#004c9e' } 
+        } 
+      } 
+    }
+  </script>
+</head>
+<body class="bg-gray-100 text-gray-800 min-h-screen flex font-sans overflow-hidden">
+  
+  <div id="root" class="w-full h-screen flex">
+    <div class="m-auto text-center text-risk font-bold text-xl">Đang khởi tạo hệ thống...</div>
+  </div>
+
+  <script>
+    window.onerror = function(message, source, lineno, colno, error) {
+      if (message.includes('ResizeObserver loop limit exceeded') || 
+          message.includes('ResizeObserver loop completed with undelivered notifications')) {
+        return true; 
+      }
+      document.getElementById('root').innerHTML = '<div style="padding: 40px; text-align: center;"><h2 style="color: #ef4444; font-size: 24px; font-weight: bold;">HỆ THỐNG GẶP SỰ CỐ</h2><p style="color: #333; margin-top: 10px;">Chi tiết lỗi: ' + message + '</p></div>';
+      return false;
+    };
+  </script>
+
+  <script type="text/babel">
+    const parseNum = (val) => {
+      if (val === null || val === undefined || val === '') return 0;
+      if (typeof val === 'number') return val;
+      return parseFloat(val.toString().replace(/,/g, '')) || 0;
+    };
+
+    const normalizeThang = (val) => {
+      if (!val) return '';
+      const str = val.toString().trim();
+      if (str.match(/^\d{4}-\d{2}-\d{2}/)) {
+        const parts = str.split('T')[0].split('-');
+        return `${parseInt(parts[1], 10)}/${parts[0]}`;
+      }
+      if (str.includes('/')) {
+          const parts = str.split('/');
+          return `${parseInt(parts[0], 10)}/${parts[1]}`;
+      }
+      return str; 
+    };
+
+    const fmtNum = (num) => new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num || 0);
+    const fmtPct = (num) => `${(num * 100).toFixed(1)}%`;
+
+    function KpiCard({ title, v1, l1, v2, l2, st }) {
+      return (
+        <div className="bg-white border rounded flex-1 p-4 shadow-sm flex flex-col justify-between hover:border-vnpt transition min-w-[160px]">
+          <h3 className="text-navy font-bold text-xs mb-3 uppercase truncate">{title}</h3>
+          <div>
+            <div className={`text-3xl font-bold mb-1 ${st === 'good' ? 'text-good' : st === 'risk' ? 'text-risk' : 'text-vnpt'}`}>{v1}</div>
+            <div className="text-xs text-gray-500 mb-3 truncate">{l1}</div>
+            <div className="text-base font-bold text-gray-700 border-t pt-2">{v2}</div>
+            <div className="text-xs text-gray-500 truncate">{l2}</div>
+          </div>
+        </div>
+      );
+    }
+
+    try {
+      const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = window.Recharts || {};
+      
+      const API_URL = 'https://script.google.com/macros/s/AKfycby6E6r6KhZ54J6by2s1PF8MqtOSJu74GcyqO4GsFnSwWd-GmDScZFrS5Brq0IwXlO1N/exec'; 
+
+      const currentYear = new Date().getFullYear();
+      const monthOptions = Array.from({length: 12}, (_, i) => `${i + 1}/${currentYear}`);
+      
+      const MENU_ITEMS = [
+        { id: 'dashboard', label: 'DASHBOARD', href: '#' },
+        { id: 'dean', label: 'ĐỀ ÁN, KẾ HOẠCH', href: '#' },
+        { id: 'cohoi', label: 'CƠ HỘI KINH DOANH', href: '#' },
+        { id: 'hopdong', label: 'HỢP ĐỒNG', href: '#' },
+        { id: 'khachhang', label: 'KHÁCH HÀNG', href: '#' },
+        { 
+          id: 'danhmuc', label: 'DANH MỤC',
+          subItems: [
+            { id: 'dm_spdv', label: 'Danh mục SPDV', href: 'dmspdv.html' },
+            { id: 'dm_plo', label: 'Danh mục PLO', href: '#' }
+          ]
+        }
+      ];
+
+      function App() {
+        const [user, setUser] = React.useState(() => {
+          try { return JSON.parse(localStorage.getItem('vnpt_user')); } catch { return null; }
+        });
+        
+        const [email, setEmail] = React.useState('');
+        const [loading, setLoading] = React.useState(false);
+        const [rawData, setRawData] = React.useState([]);
+        const [pipelineRaw, setPipelineRaw] = React.useState([]);
+        const [ploList, setPloList] = React.useState([]);
+        const [deanRaw, setDeanRaw] = React.useState([]);
+        
+        const [activeTab, setActiveTab] = React.useState('dashboard');
+        const [expandedMenu, setExpandedMenu] = React.useState(''); 
+        const [filters, setFilters] = React.useState({ thoiGian: '', maTinh: 'ALL', luongSPDV: 'ALL', nhomSPDV: 'ALL', plo: 'ALL' });
+
+        React.useEffect(() => { if (user) fetchDashboardData(); }, [user]);
+
+        const handleLogin = async (e) => {
+          e.preventDefault();
+          setLoading(true);
+          try {
+            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'login', email }) }).then(r => r.json());
+            if (res.status === 'success') {
+              localStorage.setItem('vnpt_user', JSON.stringify(res.user));
+              setUser(res.user);
+            } else { alert(res.message || 'Sai thông tin đăng nhập!'); }
+          } catch (err) {
+            alert('Mất kết nối API. Chạy giả lập UI.');
+            setUser({ email, level: 'CLO_L1', tenClo: 'MienBac', provinces: ['HNI', 'HPG', 'QNH'] });
+          }
+          setLoading(false);
+        };
+
+        const fetchDashboardData = async () => {
+          setLoading(true);
+          try {
+            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'getData', provinces: user.provinces }) }).then(r => r.json());
+            if (res.status === 'success') {
+              const normalizedData = (res.data || []).map(d => ({ ...d, thang: normalizeThang(d['thang'] || '') }));
+              setRawData(normalizedData);
+              const normalizedPipeline = (res.pipelineData || []).map(d => ({ ...d, thang: normalizeThang(d['thang'] || '') }));
+              setPipelineRaw(normalizedPipeline);
+              setDeanRaw(res.deanData || []); 
+              setPloList(res.ploData || []);
+            }
+          } catch (err) { console.warn("Lỗi đồng bộ dữ liệu API"); }
+          setLoading(false);
+        };
+
+        const handleLogout = () => {
+          setUser(null);
+          localStorage.removeItem('vnpt_user');
+          setRawData([]);
+        };
+
+        if (!user) {
+          return (
+            <div className="flex h-screen w-full items-center justify-center bg-gray-200">
+              <form onSubmit={handleLogin} className="bg-white p-10 border-t-4 border-vnpt shadow-xl w-96 rounded">
+                <h2 className="text-2xl font-bold text-navy mb-6 text-center">ĐĂNG NHẬP</h2>
+                <input className="w-full mb-6 p-3 border rounded focus:outline-vnpt text-sm" placeholder="Email đăng nhập" value={email} onChange={e => setEmail(e.target.value)} required />
+                <button disabled={loading} className="w-full bg-vnpt text-white py-3 font-bold rounded hover:bg-navy transition">
+                  {loading ? 'ĐANG KẾT NỐI...' : 'VÀO HỆ THỐNG'}
+                </button>
+              </form>
+            </div>
+          );
+        }
+
+        const getMonthVal = (mStr) => {
+          if (!mStr) return null;
+          const parts = mStr.toString().trim().split('/');
+          if (parts.length === 2) return parseInt(parts[1]) * 100 + parseInt(parts[0]);
+          return 0;
+        };
+
+        const isAllTime = !filters.thoiGian || filters.thoiGian === 'ALL' || filters.thoiGian === '';
+        const filterMonthVal = isAllTime ? 999912 : getMonthVal(filters.thoiGian);
+
+        const kpi = { dtThucHien: 0, dtKeHoach: 0, pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeMoSl: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0 };
+
+        const baseData = (rawData || []).filter(d => 
+          (filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh) &&
+          (filters.luongSPDV === 'ALL' || d['luong_spdv'] == filters.luongSPDV) &&
+          (filters.nhomSPDV === 'ALL' || d['nhomspdv_code'] == filters.nhomSPDV) &&
+          (filters.plo === 'ALL' || d['plo_code'] == filters.plo)
+        );
+
+        baseData.forEach(curr => {
+           const mVal = getMonthVal(curr['thang']);
+           if (mVal !== null && mVal > 0 && mVal <= filterMonthVal) {
+               kpi.dtThucHien += parseNum(curr['dt_th_thang']);
+               kpi.dtKeHoach += parseNum(curr['dt_kh_thang']);
+           }
+        });
+
+        const basePipeline = (pipelineRaw || []).filter(d => 
+          (filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh) &&
+          (filters.nhomSPDV === 'ALL' || d['nhomspdv_code'] == filters.nhomSPDV) &&
+          (filters.plo === 'ALL' || d['plo_code'] == filters.plo)
+        );
+
+        basePipeline.forEach(curr => {
+           const mVal = getMonthVal(curr['thang']);
+           const isMatchTime = isAllTime ? true : (mVal === filterMonthVal);
+
+           if (isMatchTime) {
+              const nganSach = parseNum(curr['ngansach_duan']);
+              const dtDuBao = parseNum(curr['doanhthu_dubao']); 
+              const statusStr = (curr['trang_thai'] || '').toString().trim().toUpperCase(); 
+
+              kpi.pipeTongSl += 1;
+              kpi.pipeTongGt += nganSach;
+
+              if (statusStr === 'CLOSED' || statusStr.includes('THẮNG') || statusStr.includes('ĐÓNG') || statusStr.includes('THÀNH CÔNG')) {
+                  kpi.pipeDongSl += 1;
+                  kpi.pipeDongGt += nganSach;
+                  kpi.duBaoDt += dtDuBao; 
+              } else if (statusStr === 'OPEN' || statusStr.includes('MỞ') || statusStr.includes('ĐANG')) {
+                  kpi.pipeMoSl += 1;
+                  kpi.pipeMoGt += nganSach;
+                  kpi.duBaoDt += dtDuBao; 
+              }
+           }
+        });
+
+        const tyLeHT = kpi.dtKeHoach ? kpi.dtThucHien / kpi.dtKeHoach : 0;
+        const winRate = kpi.pipeTongSl ? kpi.pipeDongSl / kpi.pipeTongSl : 0;
+        const thieuHut = Math.max(kpi.dtKeHoach - kpi.dtThucHien - kpi.duBaoDt, 0); 
+
+        const chartGroup = {};
+        monthOptions.forEach(m => chartGroup[m] = { thang: m, thucHien: null, keHoach: 0 });
+        baseData.forEach(curr => {
+          const t = curr['thang'];
+          if (chartGroup[t]) {
+            chartGroup[t].keHoach += parseNum(curr['dt_kh_thang']);
+            const rawTH = curr['dt_th_thang'];
+            if (rawTH !== '' && rawTH != null) {
+               const valTH = parseNum(rawTH);
+               chartGroup[t].thucHien = (chartGroup[t].thucHien === null) ? valTH : chartGroup[t].thucHien + valTH;
+            }
+          }
+        });
+        const finalChartData = monthOptions.map(m => chartGroup[m]);
+        
+        const provStats = {};
+        const initProv = (p) => {
+          if (!provStats[p]) provStats[p] = { maTinh: p, dtThucHien: 0, dtKeHoach: 0, pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0 };
+        };
+
+        baseData.forEach(curr => {
+          const p = curr['ma_tinh'] || 'N/A';
+          initProv(p);
+          const mVal = getMonthVal(curr['thang']);
+          if (mVal !== null && mVal > 0 && mVal <= filterMonthVal) {
+              provStats[p].dtThucHien += parseNum(curr['dt_th_thang']);
+              provStats[p].dtKeHoach += parseNum(curr['dt_kh_thang']);
+          }
+        });
+
+        basePipeline.forEach(curr => {
+          const p = curr['ma_tinh'] || 'N/A';
+          initProv(p);
+          const mVal = getMonthVal(curr['thang']);
+          if (isAllTime || mVal === filterMonthVal) {
+              const nganSach = parseNum(curr['ngansach_duan']);
+              const dtDuBao = parseNum(curr['doanhthu_dubao']); 
+              const statusStr = (curr['trang_thai'] || '').toString().trim().toUpperCase();
+
+              provStats[p].pipeTongSl += 1;
+              provStats[p].pipeTongGt += nganSach;
+
+              if (statusStr === 'CLOSED' || statusStr.includes('ĐÓNG') || statusStr.includes('THÀNH CÔNG')) {
+                  provStats[p].pipeDongSl += 1;
+                  provStats[p].pipeDongGt += nganSach;
+                  provStats[p].duBaoDt += dtDuBao; 
+              } else if (statusStr === 'OPEN' || statusStr.includes('MỞ') ) {
+                  provStats[p].pipeMoGt += nganSach;
+                  provStats[p].duBaoDt += dtDuBao; 
+              }
+          }
+        });
+
+        const provStatsArray = Object.values(provStats).map(p => ({
+           ...p,
+           tyLeHT: p.dtKeHoach ? p.dtThucHien / p.dtKeHoach : 0,
+           winRate: p.pipeTongSl ? p.pipeDongSl / p.pipeTongSl : 0,
+           thieuHut: Math.max(p.dtKeHoach - p.dtThucHien - p.duBaoDt, 0)
+        })).sort((a, b) => b.dtThucHien - a.dtThucHien);
+
+        const ploStats = {};
+        const initPlo = (p) => {
+          const key = p ? p.toString().trim() : '';
+          const finalKey = key === '' ? 'Chưa gán PLO' : key; 
+          if (!ploStats[finalKey]) {
+              ploStats[finalKey] = { ploCode: finalKey, dtThucHien: 0, dtKeHoach: 0, pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0 };
+          }
+          return finalKey;
+        };
+
+        baseData.forEach(curr => {
+          const key = initPlo(curr['plo_code']);
+          const mVal = getMonthVal(curr['thang']);
+          if (mVal !== null && mVal > 0 && mVal <= filterMonthVal) {
+              ploStats[key].dtThucHien += parseNum(curr['dt_th_thang']);
+              ploStats[key].dtKeHoach += parseNum(curr['dt_kh_thang']);
+          }
+        });
+
+        basePipeline.forEach(curr => {
+          const key = initPlo(curr['plo_code']);
+          const mVal = getMonthVal(curr['thang']);
+          if (isAllTime || mVal === filterMonthVal) {
+              const nganSach = parseNum(curr['ngansach_duan']);
+              const dtDuBao = parseNum(curr['doanhthu_dubao']); 
+              const statusStr = (curr['trang_thai'] || '').toString().trim().toUpperCase();
+
+              ploStats[key].pipeTongSl += 1;
+              ploStats[key].pipeTongGt += nganSach;
+
+              if (statusStr === 'CLOSED' || statusStr.includes('THẮNG') || statusStr.includes('ĐÓNG') || statusStr.includes('THÀNH CÔNG')) {
+                  ploStats[key].pipeDongSl += 1;
+                  ploStats[key].pipeDongGt += nganSach;
+                  ploStats[key].duBaoDt += dtDuBao; 
+              } else if (statusStr === 'OPEN' || statusStr.includes('MỞ') || statusStr.includes('ĐANG')) {
+                  ploStats[key].pipeMoGt += nganSach;
+                  ploStats[key].duBaoDt += dtDuBao; 
+              }
+          }
+        });
+
+        const ploStatsArray = Object.values(ploStats).map(p => ({
+           ...p,
+           tyLeHT: p.dtKeHoach ? p.dtThucHien / p.dtKeHoach : 0,
+           thieuHut: Math.max(p.dtKeHoach - p.dtThucHien - p.duBaoDt, 0)
+        })).sort((a, b) => b.dtThucHien - a.dtThucHien);
+
+        const baseDean = (deanRaw || []).filter(d => 
+          (filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh)
+        );
+
+        const deanKpi = {
+          tongSl: 0, tongNs: 0,
+          daTrienKhaiSl: 0, daTrienKhaiNs: 0,
+          vnptSl: 0, vnptNs: 0,       
+          trangSl: 0, trangNs: 0,     
+          doiThuSl: 0, doiThuNs: 0    
+        };
+
+        baseDean.forEach(d => {
+          const ns = parseNum(d['ngansach']);
+          const trangThai = (d['trangthai_trienkhai'] || '').toString().trim().toUpperCase();
+          const donVi = (d['donvi_donghanh'] || '').toString().trim().toUpperCase();
+
+          deanKpi.tongSl += 1;
+          deanKpi.tongNs += ns;
+
+          if (trangThai === 'ĐÃ TRIỂN KHAI') {
+              deanKpi.daTrienKhaiSl += 1;
+              deanKpi.daTrienKhaiNs += ns;
+          } else { 
+              if (donVi === 'VNPT') {
+                  deanKpi.vnptSl += 1; deanKpi.vnptNs += ns;
+              } else if (donVi === 'ĐỐI THỦ') {
+                  deanKpi.doiThuSl += 1; deanKpi.doiThuNs += ns;
+              } else {
+                  deanKpi.trangSl += 1; deanKpi.trangNs += ns;
+              }
+          }
+        });
+        
+        const activeMenuItem = MENU_ITEMS.find(m => m.id === activeTab);
+        const headerTitle = activeMenuItem ? activeMenuItem.label : 'DASHBOARD';
+
+        // Lấy danh sách Địa Bàn cấp cho user, nếu là ALL (CEO) thì trích xuất từ dữ liệu
+        const dsDiaBanHienThi = (user.provinces && user.provinces.includes('ALL')) 
+          ? [...new Set(rawData.map(d => d['ma_tinh']).filter(Boolean))].sort()
+          : (user.provinces || []);
+
+        return (
+          <div className="flex h-screen w-full">
+            <aside className="w-[200px] bg-navy text-white flex flex-col shadow-2xl z-20 shrink-0">
+              <div className="p-4 border-b border-white/20 flex flex-col items-center">
+                <div className="text-2xl font-extrabold tracking-widest text-vnpt bg-white px-3 py-1 rounded shadow mb-2">VNPT</div>
+                <div className="text-[10px] text-center font-semibold text-gray-300 tracking-wider">HỆ THỐNG ĐIỀU HÀNH</div>
+              </div>
+              <nav className="flex-1 py-3 px-3 space-y-1 overflow-y-auto">
+                {MENU_ITEMS.map(item => (
+                  <div key={item.id}>
+                    <a 
+                      href={item.href || '#'}
+                      onClick={(e) => {
+                        if (item.subItems) { e.preventDefault(); setExpandedMenu(expandedMenu === item.id ? '' : item.id); }
+                        else { setActiveTab(item.id); }
+                      }} 
+                      className={`w-full flex items-center justify-between px-3 py-3 rounded text-left transition font-semibold ${activeTab === item.id ? 'bg-vnpt text-white shadow' : 'text-gray-300 hover:bg-hoverbg hover:text-white'}`}
+                    >
+                      <span className="text-sm font-bold tracking-wide">{item.label}</span>
+                      {item.subItems && <span className="text-xs">{expandedMenu === item.id ? '▼' : '▶'}</span>}
+                    </a>
+                    
+                    {item.subItems && expandedMenu === item.id && (
+                      <div className="ml-4 mt-1 space-y-1 border-l border-white/20 pl-2">
+                        {item.subItems.map(sub => (
+                          <a
+                            key={sub.id}
+                            href={sub.href}
+                            className="block w-full text-left px-2 py-2 text-sm rounded transition text-gray-400 hover:text-white hover:bg-white/10"
+                          >
+                            {sub.label}
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </nav>
+            </aside>
+
+            <main className="flex-1 flex flex-col overflow-hidden bg-gray-50">
+              <header className="bg-white px-8 py-4 flex justify-between items-center shrink-0 border-b">
+                <h1 className="text-2xl font-bold uppercase tracking-wide text-navy">{headerTitle}</h1>
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="font-semibold text-gray-600">{user.email}</span>
+                  <span className="bg-vnpt/10 text-vnpt border border-vnpt px-3 py-1.5 rounded-full font-bold">Quyền: {user.tenClo}</span>
+                  <button onClick={handleLogout} className="bg-risk text-white px-3 py-1.5 rounded font-bold hover:bg-red-700 transition">Đăng xuất</button>
+                </div>
+              </header>
+
+              {activeTab === 'dashboard' ? (
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  <div className="bg-white px-8 py-3 flex gap-4 shrink-0 border-b shadow-sm items-end z-10">
+                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Thời gian</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.thoiGian} onChange={e => setFilters({...filters, thoiGian: e.target.value})}><option value="">-- Tất cả --</option>{monthOptions.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
+                    <div className="flex flex-col flex-1">
+                      <label className="text-xs font-bold text-navy mb-1">CLO Địa bàn</label>
+                      <select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.maTinh} onChange={e => setFilters({...filters, maTinh: e.target.value})}>
+                        <option value="ALL">Toàn địa bàn</option>
+                        {dsDiaBanHienThi.map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                    </div>
+                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Luồng SPDV</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.luongSPDV} onChange={e => setFilters({...filters, luongSPDV: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(rawData.map(d => d['luong_spdv']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
+                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Nhóm SPDV</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.nhomSPDV} onChange={e => setFilters({...filters, nhomSPDV: e.target.value, plo: 'ALL'})}><option value="ALL">Tất cả</option>{[...new Set(ploList.map(p => p['nhomspdv_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
+                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Dịch vụ (PLO)</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.plo} onChange={e => setFilters({...filters, plo: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(ploList.filter(p => filters.nhomSPDV === 'ALL' || p['nhomspdv_code'] === filters.nhomSPDV).map(p => p['plo_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
+                  </div>
+
+                  {loading && <div className="text-center text-vnpt text-sm py-1 font-bold animate-pulse bg-white">Đang đồng bộ dữ liệu...</div>}
+
+                  <div className="flex-1 overflow-auto flex flex-col">
+                    <div className="flex gap-4 px-6 py-6 shrink-0">
+                      <KpiCard title="1. DOANH THU LŨY KẾ" v1={fmtNum(kpi.dtThucHien)} l1="Thực hiện YTD (trĐ)" v2={fmtNum(kpi.dtKeHoach)} l2="Kế hoạch YTD (trĐ)" st="neutral" />
+                      <KpiCard title="2. HIỆU SUẤT NĂM" v1={fmtPct(tyLeHT)} l1="Tỷ lệ HT Kế hoạch YTD" v2="-" l2="Tăng/Giảm (MoM)" st={tyLeHT >= 1 ? 'good' : 'risk'} />
+                      <KpiCard title="3. PIPELINE TỔNG" v1={fmtNum(kpi.pipeTongGt)} l1="Ngân sách (trĐ)" v2={fmtNum(kpi.pipeTongSl)} l2="Số lượng Cơ hội" st="neutral" />
+                      <KpiCard title="4. PIPELINE MỞ" v1={fmtNum(kpi.pipeMoGt)} l1="Ngân sách (trĐ)" v2={fmtNum(kpi.pipeMoSl)} l2="Số lượng Cơ hội mở" st="neutral" />
+                      <KpiCard title="5. DEAL THÀNH CÔNG" v1={fmtNum(kpi.pipeDongGt)} l1="Ngân sách chốt (trĐ)" v2={fmtNum(kpi.pipeDongSl)} l2="Số lượng Co hội chốt" st="good" />
+                      <KpiCard title="6. TỈ LỆ CHUYỂN ĐỔI" v1={fmtPct(winRate)} l1="Winrate (Tỉ lệ)" v2={fmtNum(kpi.pipeDongSl)} l2="Deal thành công" st={winRate >= 0.3 ? 'good' : 'risk'} />
+                      <KpiCard title="7. DỰ BÁO" v1={fmtNum(kpi.duBaoDt)} l1="Doanh thu kỳ vọng" v2={fmtPct(kpi.dtKeHoach ? kpi.duBaoDt/kpi.dtKeHoach : 0)} l2="Tỷ lệ/Kế hoạch" st={(kpi.dtKeHoach ? kpi.duBaoDt/kpi.dtKeHoach : 0) >= 1 ? 'good' : 'risk'} />
+                      <KpiCard title="8. KHOẢNG TRỐNG CẦN BÙ" v1={fmtNum(thieuHut)} l1="Thiếu hụt sau Dự báo (trĐ)" v2={fmtPct(kpi.dtKeHoach ? thieuHut/kpi.dtKeHoach : 0)} l2="Tỷ lệ thiếu hụt" st={thieuHut > 0 ? 'risk' : 'good'} />
+                    </div>
+
+                    <div className="px-6 pb-6 flex gap-8 shrink-0 min-h-[350px]">
+                      <div className="flex-[2] bg-white border rounded shadow-sm p-6 flex flex-col">
+                        <h2 className="text-navy font-bold text-base mb-6 uppercase">THEO DÕI DOANH THU HÀNG THÁNG (ĐVT: trĐ)</h2>
+                        <div className="flex-1 w-full min-h-[250px]">
+                          {ResponsiveContainer && BarChart ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={finalChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis dataKey="thang" tick={{fontSize: 12}} />
+                                <YAxis tick={{fontSize: 12}} />
+                                <Tooltip cursor={{fill: '#f3f4f6'}} formatter={(value) => new Intl.NumberFormat('vi-VN', {minimumFractionDigits: 2}).format(value)} />
+                                <Legend wrapperStyle={{fontSize: '12px', paddingTop: '10px'}}/>
+                                <Bar dataKey="thucHien" name="Thực hiện" fill="#0094D9" radius={[4,4,0,0]} />
+                                <Bar dataKey="keHoach" name="Kế hoạch" fill="#cbd5e1" radius={[4,4,0,0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          ) : (
+                            <div className="flex items-center justify-center h-full text-gray-400 text-sm">Đang tải thư viện biểu đồ...</div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex-[1] bg-white border rounded shadow-sm p-6 flex flex-col overflow-hidden">
+                        <h2 className="text-navy font-bold text-base mb-6 uppercase">Cơ hội Trọng điểm (Cần thúc đẩy)</h2>
+                        <div className="overflow-auto flex-1 pr-2">
+                          <table className="w-full text-left text-sm">
+                            <thead className="bg-gray-100 text-navy sticky top-0">
+                              <tr><th className="p-2">Mã CHKD</th><th className="p-2 text-right">Dự báo</th><th className="p-2 text-center">Trạng thái</th></tr>
+                            </thead>
+                            <tbody>
+                              {basePipeline.slice(0, 10).map((p, i) => {
+                                const statusRaw = (p['trang_thai'] || 'OPEN').toString().toUpperCase();
+                                const colorClass = (statusRaw === 'CLOSED' || statusRaw.includes('ĐÓNG')) 
+                                  ? 'bg-green-100 text-good' : 'bg-yellow-100 text-yellow-700';
+                                return (
+                                  <tr key={i} className="border-b hover:bg-gray-50">
+                                    <td className="p-2 font-medium text-gray-700 truncate max-w-[120px]" title={p['ten_duan'] || p['CHKD_ID']}>{p['CHKD_ID'] || `Deal-${i+1}`}</td>
+                                    <td className="p-2 text-right font-bold text-vnpt">{fmtNum(parseNum(p['doanhthu_dubao']))}</td>
+                                    <td className="p-2 text-center">
+                                      <span className={`text-[10px] px-2 py-1 rounded-full font-bold ${colorClass}`}>{statusRaw}</span>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                              {basePipeline.length === 0 && <tr><td colSpan="3" className="p-4 text-center text-gray-400">Không có Pipeline</td></tr>}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="px-6 pb-6 flex shrink-0">
+                      <div className="w-full bg-white border rounded shadow-sm p-6 flex flex-col overflow-hidden">
+                        <h2 className="text-navy font-bold text-base mb-4 uppercase">Bảng KPIS Chi Tiết Địa Bàn</h2>
+                        <div className="overflow-auto max-h-[500px]">
+                          <table className="w-full text-left text-sm border-collapse">
+                            <thead className="bg-navy text-white sticky top-0 z-10 shadow">
+                              <tr>
+                                <th className="p-2 border-b font-semibold text-center w-12">STT</th>
+                                <th className="p-2 border-b font-semibold">Địa bàn</th>
+                                <th className="p-2 border-b font-semibold text-right">Kế hoạch YTD</th>
+                                <th className="p-2 border-b font-semibold text-right">Thực hiện YTD</th>
+                                <th className="p-2 border-b font-semibold text-right w-24">Tỷ lệ HT</th>
+                                <th className="p-2 border-b font-semibold text-right">Pipeline Tổng</th>
+                                <th className="p-2 border-b font-semibold text-right">Pipeline Mở</th>
+                                <th className="p-2 border-b font-semibold text-right">Pipeline Chốt</th>
+                                <th className="p-2 border-b font-semibold text-right">Winrate</th>
+                                <th className="p-2 border-b font-semibold text-right">Dự báo DT</th>
+                                <th className="p-2 border-b font-semibold text-right">Khoảng trống</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {provStatsArray.map((p, i) => (
+                                <tr key={i} className="border-b hover:bg-blue-50 transition">
+                                  <td className="p-2 text-center text-gray-500">{i + 1}</td>
+                                  <td className="p-2 font-bold text-navy">{p.maTinh}</td>
+                                  <td className="p-2 text-right text-gray-700 font-medium">{fmtNum(p.dtKeHoach)}</td>
+                                  <td className="p-2 text-right text-vnpt font-bold">{fmtNum(p.dtThucHien)}</td>
+                                  <td className={`p-2 text-right font-bold ${p.tyLeHT >= 1 ? 'text-good' : 'text-risk'}`}>
+                                    <span className={`px-2 py-1 rounded-full text-xs ${p.tyLeHT >= 1 ? 'bg-green-100' : 'bg-red-100'}`}>{fmtPct(p.tyLeHT)}</span>
+                                  </td>
+                                  <td className="p-2 text-right text-gray-700">{fmtNum(p.pipeTongGt)}</td>
+                                  <td className="p-2 text-right text-gray-700">{fmtNum(p.pipeMoGt)}</td>
+                                  <td className="p-2 text-right text-gray-700">{fmtNum(p.pipeDongGt)}</td>
+                                  <td className="p-2 text-right text-gray-700">{fmtPct(p.winrate)}</td>
+                                  <td className="p-2 text-right text-vnpt font-semibold">{fmtNum(p.duBaoDt)}</td>
+                                  <td className={`p-2 text-right font-bold ${p.thieuHut > 0 ? 'text-risk' : 'text-good'}`}>{fmtNum(p.thieuHut)}</td>
+                                </tr>
+                              ))}
+                              {provStatsArray.length === 0 && (
+                                <tr><td colSpan="9" className="p-6 text-center text-gray-400">Không có dữ liệu</td></tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="px-6 pb-6 flex shrink-0">
+                      <div className="w-full bg-white border rounded shadow-sm p-6 flex flex-col overflow-hidden">
+                        <h2 className="text-navy font-bold text-base mb-4 uppercase">Bảng KPIs Chi Tiết Từng PLO</h2>
+                        <div className="overflow-auto max-h-[500px]">
+                          <table className="w-full text-left text-sm border-collapse">
+                            <thead className="bg-navy text-white sticky top-0 z-10 shadow">
+                              <tr>
+                                <th className="p-2 border-b font-semibold text-center w-12">STT</th>
+                                <th className="p-2 border-b font-semibold">Mã Định Danh (PLO)</th>
+                                <th className="p-2 border-b font-semibold text-right">Kế hoạch YTD</th>
+                                <th className="p-2 border-b font-semibold text-right">Thực hiện YTD</th>
+                                <th className="p-2 border-b font-semibold text-right w-24">Tỷ lệ HT</th>
+                                <th className="p-2 border-b font-semibold text-right">Pipeline Tổng</th>
+                                <th className="p-2 border-b font-semibold text-right">Pipeline Mở</th>
+                                <th className="p-2 border-b font-semibold text-right">Pipeline Chốt</th>
+                                <th className="p-2 border-b font-semibold text-right">Winrate</th>
+                                <th className="p-2 border-b font-semibold text-right">Dự báo DT</th>
+                                <th className="p-2 border-b font-semibold text-right">Khoảng trống</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {ploStatsArray.map((p, i) => (
+                                <tr key={i} className="border-b hover:bg-blue-50 transition">
+                                  <td className="p-2 text-center text-gray-500">{i + 1}</td>
+                                  <td className={`p-2 font-bold ${p.ploCode === 'Chưa gán PLO' ? 'text-gray-400 italic' : 'text-navy'}`}>{p.ploCode}</td>
+                                  <td className="p-2 text-right text-gray-700 font-medium">{fmtNum(p.dtKeHoach)}</td>
+                                  <td className="p-2 text-right text-vnpt font-bold">{fmtNum(p.dtThucHien)}</td>
+                                  <td className={`p-2 text-right font-bold ${p.tyLeHT >= 1 ? 'text-good' : 'text-risk'}`}>
+                                    <span className={`px-2 py-1 rounded-full text-xs ${p.tyLeHT >= 1 ? 'bg-green-100' : 'bg-red-100'}`}>{fmtPct(p.tyLeHT)}</span>
+                                  </td>
+                                  <td className="p-2 text-right text-gray-700">{fmtNum(p.pipeTongGt)}</td>
+                                  <td className="p-2 text-right text-gray-700">{fmtNum(p.pipeMoGt)}</td>
+                                  <td className="p-2 text-right text-gray-700">{fmtNum(p.pipeDongGt)}</td>
+                                  <td className="p-2 text-right text-gray-700">{fmtNum(p.winrate)}</td>
+                                  <td className="p-2 text-right text-vnpt font-semibold">{fmtNum(p.duBaoDt)}</td>
+                                  <td className={`p-2 text-right font-bold ${p.thieuHut > 0 ? 'text-risk' : 'text-good'}`}>{fmtNum(p.thieuHut)}</td>
+                                </tr>
+                              ))}
+                              {ploStatsArray.length === 0 && (
+                                <tr><td colSpan="9" className="p-6 text-center text-gray-400">Không có dữ liệu</td></tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : activeTab ==='dean' ? (
+                <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
+                  <div className="bg-white px-8 py-3 flex gap-4 shrink-0 border-b shadow-sm items-end z-10">
+                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Thời gian</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.thoiGian} onChange={e => setFilters({...filters, thoiGian: e.target.value})}><option value="">-- Tất cả --</option>{monthOptions.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
+                    <div className="flex flex-col flex-1">
+                      <label className="text-xs font-bold text-navy mb-1">CLO Địa bàn</label>
+                      <select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.maTinh} onChange={e => setFilters({...filters, maTinh: e.target.value})}>
+                        <option value="ALL">Toàn địa bàn</option>
+                        {dsDiaBanHienThi.map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                    </div>
+                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Luồng SPDV</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.luongSPDV} onChange={e => setFilters({...filters, luongSPDV: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(rawData.map(d => d['luong_spdv']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
+                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Nhóm SPDV</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.nhomSPDV} onChange={e => setFilters({...filters, nhomSPDV: e.target.value, plo: 'ALL'})}><option value="ALL">Tất cả</option>{[...new Set(ploList.map(p => p['nhomspdv_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
+                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Dịch vụ (PLO)</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.plo} onChange={e => setFilters({...filters, plo: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(ploList.filter(p => filters.nhomSPDV === 'ALL' || p['nhomspdv_code'] === filters.nhomSPDV).map(p => p['plo_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
+                  </div>
+
+                  {loading && <div className="text-center text-vnpt text-sm py-1 font-bold animate-pulse bg-white">Đang đồng bộ dữ liệu...</div>}
+                  
+                  <div className="flex-1 overflow-auto flex flex-col">
+                    <div className="flex gap-4 px-8 py-6 shrink-0">
+                      <KpiCard 
+                        title="1. TỔNG QUY MÔ (TAM)" 
+                        v1={fmtNum(deanKpi.tongSl)} l1="Nhiệm vụ CĐS" 
+                        v2={fmtNum(deanKpi.tongNs)} l2="Tổng Ngân sách (VNĐ)" 
+                        st="neutral" 
+                      />
+                      <KpiCard 
+                        title="2. ĐÃ TRIỂN KHAI" 
+                        v1={fmtNum(deanKpi.daTrienKhaiSl)} l1="Đang thực hiện" 
+                        v2={fmtNum(deanKpi.daTrienKhaiNs)} l2="Ngân sách (VNĐ)" 
+                        st="neutral" 
+                      />
+                      <div className="bg-white border-2 border-vnpt rounded flex-1 p-4 shadow-sm flex flex-col justify-between">
+                        <h3 className="text-vnpt font-bold text-xs mb-3 uppercase">3. VNPT ĐANG BÁM</h3>
+                        <div>
+                          <div className="text-3xl font-bold mb-1 text-vnpt">{fmtNum(deanKpi.vnptSl)}</div>
+                          <div className="text-xs text-gray-500 mb-3">Nhiệm vụ tiềm năng</div>
+                          <div className="text-base font-bold text-gray-700 border-t pt-2">{fmtNum(deanKpi.vnptNs)}</div>
+                          <div className="text-xs text-gray-500">Ngân sách (VNĐ)</div>
+                        </div>
+                      </div>
+                      <div className="bg-white border-2 border-orange-400 rounded flex-1 p-4 shadow-sm flex flex-col justify-between">
+                        <h3 className="text-orange-500 font-bold text-xs mb-3 uppercase">4. KHOẢNG TRỐNG (CHƯA CÓ)</h3>
+                        <div>
+                          <div className="text-3xl font-bold mb-1 text-orange-500">{fmtNum(deanKpi.trangSl)}</div>
+                          <div className="text-xs text-gray-500 mb-3">Chưa đơn vị nào tiếp cận</div>
+                          <div className="text-base font-bold text-gray-700 border-t pt-2">{fmtNum(deanKpi.trangNs)}</div>
+                          <div className="text-xs text-gray-500">Ngân sách bỏ ngỏ (VNĐ)</div>
+                        </div>
+                      </div>
+                      <div className="bg-white border-2 border-risk rounded flex-1 p-4 shadow-sm flex flex-col justify-between relative overflow-hidden">
+                        <div className="absolute top-0 right-0 bg-risk text-white text-[9px] font-bold px-2 py-1 rounded-bl">CẢNH BÁO</div>
+                        <h3 className="text-risk font-bold text-xs mb-3 uppercase">5. ĐỐI THỦ ĐANG BÁM</h3>
+                        <div>
+                          <div className="text-3xl font-bold mb-1 text-risk">{fmtNum(deanKpi.doiThuSl)}</div>
+                          <div className="text-xs text-gray-500 mb-3">Nguy cơ mất thị phần</div>
+                          <div className="text-base font-bold text-gray-700 border-t pt-2">{fmtNum(deanKpi.doiThuNs)}</div>
+                          <div className="text-xs text-gray-500">Ngân sách rủi ro (VNĐ)</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="px-8 pb-8 flex gap-8 shrink-0 min-h-[450px]">
+                      
+                      <div className="flex-[1] bg-white border rounded shadow-sm flex flex-col overflow-hidden border-t-4 border-t-vnpt">
+                        <div className="px-6 py-4 border-b bg-gray-50 shrink-0">
+                          <h2 className="text-navy font-bold text-sm uppercase">🔥 Top Cơ Hội Cao (VNPT Ưu Thế)</h2>
+                          <p className="text-xs text-gray-500 mt-1">Nhiệm vụ VNPT đang bám sát & Khả năng thắng cao (Sắp xếp theo Ngân sách)</p>
+                        </div>
+                        <div className="overflow-auto flex-1 p-2">
+                          <table className="w-full text-left text-sm">
+                            <thead className="bg-white text-navy sticky top-0 shadow-sm z-10">
+                              <tr>
+                                <th className="p-2 border-b font-semibold">Tỉnh</th>
+                                <th className="p-2 border-b font-semibold">Tên Nhiệm vụ</th>
+                                <th className="p-2 border-b font-semibold text-right">Quy mô (Tr.VNĐ)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {baseDean
+                                .filter(d => (d['donvi_donghanh'] || '').toUpperCase() === 'VNPT' && (d['loithe_vnpt'] || '').toUpperCase() === 'CAO')
+                                .sort((a, b) => parseNum(b['ngansach']) - parseNum(a['ngansach']))
+                                .slice(0, 15) 
+                                .map((p, i) => (
+                                  <tr key={i} className="border-b hover:bg-blue-50 transition">
+                                    <td className="p-2 font-bold text-navy whitespace-nowrap">{p['ma_tinh'] || '-'}</td>
+                                    <td className="p-2 font-medium text-gray-700">{p['ten_nhiemvu'] || '-'}</td>
+                                    <td className="p-2 text-right font-bold text-vnpt">{fmtNum(parseNum(p['ngansach']))}</td>
+                                  </tr>
+                                ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      <div className="flex-[1.5] bg-white border rounded shadow-sm flex flex-col overflow-hidden border-t-4 border-t-risk">
+                        <div className="px-6 py-4 border-b bg-gray-50 shrink-0">
+                          <h2 className="text-risk font-bold text-sm uppercase">⚠️ Điểm Nóng & Đề Xuất Chỉ Đạo</h2>
+                          <p className="text-xs text-gray-500 mt-1">Các dự án rủi ro mất thị phần hoặc cần cấp Lãnh đạo TCT can thiệp tháo gỡ</p>
+                        </div>
+                        <div className="overflow-auto flex-1 p-2">
+                          <table className="w-full text-left text-sm">
+                            <thead className="bg-white text-navy sticky top-0 shadow-sm z-10">
+                              <tr>
+                                <th className="p-2 border-b font-semibold w-16">Tỉnh</th>
+                                <th className="p-2 border-b font-semibold">Cảnh báo rủi ro</th>
+                                <th className="p-2 border-b font-semibold text-risk">Đề xuất Lãnh đạo</th>
+                                <th className="p-2 border-b font-semibold text-center w-24">Ngân sách</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {baseDean
+                                .filter(d => d['dexuat_lanhdao'] || d['canhbao_ruiro'] || (d['donvi_donghanh'] || '').toUpperCase() === 'ĐỐI THỦ')
+                                .sort((a, b) => parseNum(b['ngansach']) - parseNum(a['ngansach']))
+                                .map((p, i) => (
+                                  <tr key={i} className="border-b hover:bg-red-50 transition">
+                                    <td className="p-2 font-bold text-navy">{p['ma_tinh'] || '-'}</td>
+                                    <td className="p-2 text-gray-700 text-xs">
+                                      {p['canhbao_ruiro'] ? p['canhbao_ruiro'] : 
+                                      ((p['donvi_donghanh'] || '').toUpperCase() === 'ĐỐI THỦ' ? 'Đối thủ đang bám sát dự án này' : '-')}
+                                    </td>
+                                    <td className="p-2 font-bold text-risk text-xs">{p['dexuat_lanhdao'] || '-'}</td>
+                                    <td className="p-2 text-center font-semibold text-gray-800">{fmtNum(parseNum(p['ngansach']))}</td>
+                                  </tr>
+                                ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                    </div>
+                    
+                  </div>
+                </div>
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-gray-50">
+                  <div className="text-6xl mb-4">🚧</div>
+                  <h2 className="text-2xl font-bold text-navy mb-2">Tính năng đang phát triển</h2>
+                  <p>Module hiện tại chưa được tích hợp trên Dashboard.</p>
+                </div>
+              )}
+            </main>
+          </div>
+        );
+      }
+      ReactDOM.render(<App />, document.getElementById('root'));
+    } catch (err) {
+      document.getElementById('root').innerHTML = `<div style="padding: 40px; text-align: center;"><h2 style="color: #ef4444; font-size: 24px; font-weight: bold;">LỖI BIÊN DỊCH REACT</h2><p style="color: #333; margin-top: 10px;">${err.message}</p></div>`;
+    }
+  </script>
+</body>
+</html>
