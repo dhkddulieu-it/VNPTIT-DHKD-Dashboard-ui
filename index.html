@@ -461,8 +461,16 @@
           funnelDataMap[stage].count += 1;
         });
         
-        // Chuyển object thành array và sắp xếp theo tên giai đoạn (A-Z hoặc 1-9)
-        const funnelData = Object.values(funnelDataMap).sort((a, b) => a.name.localeCompare(b.name));
+        // Chuyển object thành array và sắp xếp theo số thứ tự ở đầu chuỗi (1 đến 12)
+        const funnelData = Object.values(funnelDataMap).sort((a, b) => {
+          // Trích xuất số từ chuỗi, VD: "1. Khởi tạo CHKD" -> 1
+          const getStageNumber = (name) => {
+            const match = name.match(/^(\d+)\./); 
+            return match ? parseInt(match[1], 10) : 99; // Các chuỗi rác không có số sẽ đẩy xuống cuối (số 99)
+          };
+          
+          return getStageNumber(a.name) - getStageNumber(b.name);
+        });
         
         // Bảng màu gradient từ VNPT Navy xuống VNPT Blue cho phễu
         const FUNNEL_COLORS = ['#003B7A', '#004c9e', '#0062c3', '#007ad9', '#0094D9', '#33aae0', '#66bfe8'];
