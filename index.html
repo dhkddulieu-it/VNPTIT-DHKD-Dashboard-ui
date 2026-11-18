@@ -998,7 +998,7 @@
                               <BarChart 
                                 layout="vertical" 
                                 data={funnelData} 
-                                margin={{ top: 10, right: 100, left: -70, bottom: 0 }}
+                                margin={{ top: 10, right: 90, left: -70, bottom: 0 }}
                               >
                                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#E5E7EB"/>
                                 <XAxis type="number" hide />
@@ -1009,6 +1009,7 @@
                                   axisLine={false} 
                                   tickLine={false} 
                                   width={220}
+                                  interval={0} /* <--- BỔ SUNG THUỘC TÍNH NÀY CHỐNG ẨN DÒNG */
                                   tick={{fontSize: 11, fill: '#4B5563', fontWeight: 600}} 
                                 />
                                 <Tooltip 
@@ -1092,10 +1093,12 @@
                           <table className="w-full text-left text-sm">
                             <thead className="bg-white text-navy sticky top-0 shadow-sm z-10">
                               <tr>
+                                <th className="p-3 border-b font-semibold w-32">Mã TTP</th>
                                 <th className="p-3 border-b font-semibold w-32">Mã CHKD</th>
                                 <th className="p-3 border-b font-semibold w-40">Mã PLO</th>
                                 <th className="p-3 border-b font-semibold">Tên Dự án</th>
                                 <th className="p-3 border-b font-semibold w-48">Khách hàng</th>
+                                <th className="p-3 border-b font-semibold w-48">Mức độ tiềm năng</th>
                                 <th className="p-3 border-b font-semibold w-32">Giai đoạn</th>
                                 <th className="p-3 border-b font-semibold text-right w-28">Giá trị (trĐ)</th>
                               </tr>
@@ -1104,7 +1107,7 @@
                               {basePipeline
                                 .filter(d => (d['trang_thai'] || '').toString().toUpperCase() === 'OPEN')
                                 .sort((a, b) => parseNum(b['ngansach_duan']) - parseNum(a['ngansach_duan']))
-                                .slice(0, 15) // Top 15
+                                .slice(0, 50) // Top 15
                                 .map((p, i) => (
                                   <tr key={i} className="border-b hover:bg-blue-50 transition">
                                     <td className="p-3 font-bold text-navy truncate" title={p['ma_tinh']}>{p['ma_tinh'] || '-'}</td>
