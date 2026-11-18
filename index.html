@@ -451,6 +451,7 @@
         
           // Gom nhóm theo trạng thái Pipeline
           const stage = (d['trangthai_pipeline'] || 'Chưa xác định').toString().trim();
+          
           const valTy = parseNum(d['ngansach_duan']); 
         
           if (!funnelDataMap[stage]) {
@@ -919,23 +920,23 @@
                         <h3 className="text-[11px] font-bold text-gray-200 uppercase tracking-wide">PIPELINE ĐANG MỞ</h3>
                         <div className="text-[2.5rem] font-bold leading-none my-2">{fmtNum(kpiCHKD.moGt)}</div>
                         <div className="text-[11px] text-gray-300">
-                          Tr đồng - {fmtNum(kpiCHKD.moSl)} CHKD - {fmtPct(tyLeMoGt)} giá trị
+                          trVNĐ - {fmtNum(kpiCHKD.moSl)} CHKD - {fmtPct(tyLeMoGt)} giá trị
                         </div>
                       </div>
                       <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
                         <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">TỔNG GIÁ TRỊ</h3>
                         <div className="text-3xl font-bold text-navy my-2">{fmtNum(kpiCHKD.tongGt)}</div>
-                        <div className="text-[11px] text-gray-500">Tr đồng - {fmtNum(kpiCHKD.tongSl)} CHKD</div>
+                        <div className="text-[11px] text-gray-500">trVNĐ - {fmtNum(kpiCHKD.tongSl)} CHKD</div>
                       </div>
                       <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
                         <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">ĐÃ CHỐT</h3>
                         <div className="text-3xl font-bold text-navy my-2">{fmtNum(kpiCHKD.chotGt)}</div>
-                        <div className="text-[11px] text-gray-500">Tr đồng - {fmtNum(kpiCHKD.chotSl)} CHKD</div>
+                        <div className="text-[11px] text-gray-500">trVNĐ - {fmtNum(kpiCHKD.chotSl)} CHKD</div>
                       </div>
                       <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
                         <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">THẤT BẠI</h3>
                         <div className="text-3xl font-bold text-navy my-2">{fmtNum(kpiCHKD.thuaGt)}</div>
-                        <div className="text-[11px] text-gray-500">Tr đồng - {fmtNum(kpiCHKD.thuaSl)} CHKD</div>
+                        <div className="text-[11px] text-gray-500">trVNĐ - {fmtNum(kpiCHKD.thuaSl)} CHKD</div>
                       </div>
                       <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
                         <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">TỶ LỆ THẮNG</h3>
@@ -957,12 +958,12 @@
                       {/* NEW: Thẻ 5 - Thiếu Hình thức */}
                       <div className="bg-[#FEF9E7] border-l-[3px] border-yellow-500 rounded-r-md shadow-sm p-4 flex flex-col justify-center">
                         <div className="text-2xl font-bold text-yellow-700 leading-none mb-1">{fmtNum(kpiCHKD.thieuHinhThuc)}</div>
-                        <div className="text-xs font-semibold text-yellow-800 leading-snug">Thiếu phân loại<br/>Hình thức cung cấp</div>
+                        <div className="text-xs font-semibold text-yellow-800 leading-snug">Thiếu phân loại Hình thức cung cấp</div>
                       </div>
                       {/* NEW: Thẻ 6 - Thiếu PLO */}
                       <div className="bg-[#FEF9E7] border-l-[3px] border-yellow-500 rounded-r-md shadow-sm p-4 flex flex-col justify-center">
                         <div className="text-2xl font-bold text-yellow-700 leading-none mb-1">{fmtNum(kpiCHKD.thieuPLO)}</div>
-                        <div className="text-xs font-semibold text-yellow-800 leading-snug">Chưa gán<br/> PLO</div>
+                        <div className="text-xs font-semibold text-yellow-800 leading-snug">Chưa gán PLO</div>
                       </div>
                       <div className="bg-[#FDEDEC] border-l-[3px] border-red-500 rounded-r-md shadow-sm p-4 flex-1">
                         <div className="text-2xl font-bold text-red-700">{fmtNum(kpiCHKD.quaHanKy)}</div>
@@ -1070,7 +1071,7 @@
                                     <td className="p-3 text-gray-600">
                                       <span className="px-2 py-1 bg-gray-100 rounded text-[11px] uppercase whitespace-nowrap">{p['trangthai_pipeline'] || '-'}</span>
                                     </td>
-                                    <td className="p-3 text-right font-bold text-vnpt">{fmtTy(parseNum(p['ngansach_duan']))}</td>
+                                    <td className="p-3 text-right font-bold text-vnpt">{fmtNum(parseNum(p['ngansach_duan']))}</td>
                                   </tr>
                                 ))}
                               {basePipeline.filter(d => (d['trang_thai'] || '').toString().toUpperCase() === 'OPEN').length === 0 && (
