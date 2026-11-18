@@ -386,7 +386,8 @@
           moSl: 0, moGt: 0,
           chotSl: 0, chotGt: 0,
           thuaSl: 0, thuaGt: 0,
-          thieuTiemNang: 0, quaHanKy: 0, lauKhongCapNhat: 0, thieuGiaTri: 0
+          thieuTiemNang: 0, quaHanKy: 0, lauKhongCapNhat: 0, thieuGiaTri: 0,
+          thieuHinhThuc: 0, thieuPLO: 0 // <--- NEW: Bổ sung 2 biến mới
         };
   
         // Đặt mốc thời gian chuẩn để so sánh cảnh báo
@@ -425,6 +426,9 @@
             const ngayCapNhat = new Date(d['ngay_cap_nhat_cuoi']);
             if (ngayCapNhat < ninetyDaysAgo) kpiCHKD.lauKhongCapNhat += 1;
           }
+          // <--- NEW: Cảnh báo 5 & 6
+          if (!d['hinhthuc_cungcap'] || d['hinhthuc_cungcap'].toString().trim() === '') kpiCHKD.thieuHinhThuc += 1;
+          if (!d['plo_code'] || d['plo_code'].toString().trim() === '') kpiCHKD.thieuPLO += 1;
         }
       });
         
@@ -888,192 +892,197 @@
                   </div>
                 </div>
               ) : activeTab === 'cohoi' ? (
-
-              <div className="flex-1 flex flex-col overflow-hidden bg-[#F4F6F8]">
-                {/* 1. THANH ĐIỀU HƯỚNG & BỘ LỌC */}
-                <div className="bg-white px-8 py-3 flex gap-4 shrink-0 border-b shadow-sm items-end z-10">
-                  <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Thời gian</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.thoiGian} onChange={e => setFilters({...filters, thoiGian: e.target.value})}><option value="">-- Tất cả --</option>{monthOptions.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
-                  <div className="flex flex-col flex-1">
-                    <label className="text-xs font-bold text-navy mb-1">CLO Địa bàn</label>
-                    <select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.maTinh} onChange={e => setFilters({...filters, maTinh: e.target.value})}>
-                      <option value="ALL">Toàn bộ địa bàn</option>
-                      {dsDiaBanHienThi.map(p => <option key={p} value={p}>{p}</option>)}
-                    </select>
+                <div className="flex-1 flex flex-col overflow-hidden bg-[#F4F6F8]">
+                  {/* 1. THANH ĐIỀU HƯỚNG & BỘ LỌC */}
+                  <div className="bg-white px-8 py-3 flex gap-4 shrink-0 border-b shadow-sm items-end z-10">
+                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Thời gian</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.thoiGian} onChange={e => setFilters({...filters, thoiGian: e.target.value})}><option value="">-- Tất cả --</option>{monthOptions.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
+                    <div className="flex flex-col flex-1">
+                      <label className="text-xs font-bold text-navy mb-1">CLO Địa bàn</label>
+                      <select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.maTinh} onChange={e => setFilters({...filters, maTinh: e.target.value})}>
+                        <option value="ALL">Toàn bộ địa bàn</option>
+                        {dsDiaBanHienThi.map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                    </div>
+                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Luồng SPDV</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.luongSPDV} onChange={e => setFilters({...filters, luongSPDV: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(rawData.map(d => d['luong_spdv']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
+                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Nhóm SPDV</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.nhomSPDV} onChange={e => setFilters({...filters, nhomSPDV: e.target.value, plo: 'ALL'})}><option value="ALL">Tất cả</option>{[...new Set(ploList.map(p => p['nhomspdv_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
+                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">PLO (theo mô hình mới)</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.plo} onChange={e => setFilters({...filters, plo: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(ploList.filter(p => filters.nhomSPDV === 'ALL' || p['nhomspdv_code'] === filters.nhomSPDV).map(p => p['plo_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
                   </div>
-                  <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Luồng SPDV</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.luongSPDV} onChange={e => setFilters({...filters, luongSPDV: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(rawData.map(d => d['luong_spdv']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
-                  <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Nhóm SPDV</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.nhomSPDV} onChange={e => setFilters({...filters, nhomSPDV: e.target.value, plo: 'ALL'})}><option value="ALL">Tất cả</option>{[...new Set(ploList.map(p => p['nhomspdv_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
-                  <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">PLO (theo mô hình mới)</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.plo} onChange={e => setFilters({...filters, plo: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(ploList.filter(p => filters.nhomSPDV === 'ALL' || p['nhomspdv_code'] === filters.nhomSPDV).map(p => p['plo_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
-                </div>
 
-                {loading && <div className="text-center text-vnpt text-sm py-1 font-bold animate-pulse bg-white">Đang đồng bộ dữ liệu...</div>}
+                  {loading && <div className="text-center text-vnpt text-sm py-1 font-bold animate-pulse bg-white">Đang đồng bộ dữ liệu...</div>}
         
-                {/* 2. KHÔNG GIAN HIỂN THỊ KPI */}
-                <div className="flex-1 overflow-auto flex flex-col">
-                  {/* ROW 1: TỔNG QUAN PIPELINE */}
-                  <div className="flex gap-4 px-8 pt-6 pb-2 shrink-0">
-                    
-                    {/* Thẻ Đang Mở (Xanh Navy) */}
-                    <div className="bg-navy text-white rounded-lg shadow-sm p-4 flex-[1.2] flex flex-col justify-between">
-                      <h3 className="text-[11px] font-bold text-gray-200 uppercase tracking-wide">PIPELINE ĐANG MỞ</h3>
-                      <div className="text-[2.5rem] font-bold leading-none my-2">{fmtNum(kpiCHKD.moGt)}</div>
-                      <div className="text-[11px] text-gray-300">
-                        Tr đồng - {fmtNum(kpiCHKD.moSl)} CHKD - {fmtPct(tyLeMoGt)} giá trị
+                  {/* 2. KHÔNG GIAN HIỂN THỊ KPI */}
+                  <div className="flex-1 overflow-auto flex flex-col">
+                    {/* ROW 1: TỔNG QUAN PIPELINE */}
+                    <div className="flex gap-4 px-8 pt-6 pb-2 shrink-0">
+                      {/* Thẻ Đang Mở (Xanh Navy) */}
+                      <div className="bg-navy text-white rounded-lg shadow-sm p-4 flex-[1.2] flex flex-col justify-between">
+                        <h3 className="text-[11px] font-bold text-gray-200 uppercase tracking-wide">PIPELINE ĐANG MỞ</h3>
+                        <div className="text-[2.5rem] font-bold leading-none my-2">{fmtNum(kpiCHKD.moGt)}</div>
+                        <div className="text-[11px] text-gray-300">
+                          Tr đồng - {fmtNum(kpiCHKD.moSl)} CHKD - {fmtPct(tyLeMoGt)} giá trị
+                        </div>
+                      </div>
+                      <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
+                        <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">TỔNG GIÁ TRỊ</h3>
+                        <div className="text-3xl font-bold text-navy my-2">{fmtNum(kpiCHKD.tongGt)}</div>
+                        <div className="text-[11px] text-gray-500">Tr đồng - {fmtNum(kpiCHKD.tongSl)} CHKD</div>
+                      </div>
+                      <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
+                        <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">ĐÃ CHỐT</h3>
+                        <div className="text-3xl font-bold text-navy my-2">{fmtNum(kpiCHKD.chotGt)}</div>
+                        <div className="text-[11px] text-gray-500">Tr đồng - {fmtNum(kpiCHKD.chotSl)} CHKD</div>
+                      </div>
+                      <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
+                        <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">THẤT BẠI</h3>
+                        <div className="text-3xl font-bold text-navy my-2">{fmtNum(kpiCHKD.thuaGt)}</div>
+                        <div className="text-[11px] text-gray-500">Tr đồng - {fmtNum(kpiCHKD.thuaSl)} CHKD</div>
+                      </div>
+                      <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
+                        <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">TỶ LỆ THẮNG</h3>
+                        <div className="text-3xl font-bold text-navy my-2">{fmtPct(winRateSl)}</div>
+                        <div className="text-[11px] text-gray-500">theo số lượng - {fmtPct(winRateGt)} theo giá trị</div>
                       </div>
                     </div>
             
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
-                      <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">TỔNG GIÁ TRỊ</h3>
-                      <div className="text-3xl font-bold text-navy my-2">{fmtNum(kpiCHKD.tongGt)}</div>
-                      <div className="text-[11px] text-gray-500">Tr đồng - {fmtNum(kpiCHKD.tongSl)} CHKD</div>
+                    {/* ROW 2: THẺ CẢNH BÁO TÁC CHIẾN */}
+                    <div className="flex gap-4 px-8 pb-6 shrink-0">
+                      <div className="bg-[#FEF9E7] border-l-[3px] border-yellow-500 rounded-r-md shadow-sm p-4 flex-1">
+                        <div className="text-2xl font-bold text-yellow-700">{fmtNum(kpiCHKD.thieuTiemNang)}</div>
+                        <div className="text-xs font-semibold text-yellow-800 mt-1">CHKD mở chưa đánh giá tiềm năng</div>
+                      </div>  
+                      <div className="bg-[#FEF9E7] border-l-[3px] border-yellow-500 rounded-r-md shadow-sm p-4 flex-1">
+                        <div className="text-2xl font-bold text-yellow-700">{fmtNum(kpiCHKD.thieuGiaTri)}</div>
+                        <div className="text-xs font-semibold text-yellow-800 mt-1">CHKD thiếu giá trị ngân sách</div>
+                      </div>
+                      {/* NEW: Thẻ 5 - Thiếu Hình thức */}
+                      <div className="bg-[#FEF9E7] border-l-[3px] border-yellow-500 rounded-r-md shadow-sm p-4 flex flex-col justify-center">
+                        <div className="text-2xl font-bold text-yellow-700 leading-none mb-1">{fmtNum(kpiCHKD.thieuHinhThuc)}</div>
+                        <div className="text-xs font-semibold text-yellow-800 leading-snug">Thiếu phân loại<br/>Hình thức cung cấp</div>
+                      </div>
+                      {/* NEW: Thẻ 6 - Thiếu PLO */}
+                      <div className="bg-[#FEF9E7] border-l-[3px] border-yellow-500 rounded-r-md shadow-sm p-4 flex flex-col justify-center">
+                        <div className="text-2xl font-bold text-yellow-700 leading-none mb-1">{fmtNum(kpiCHKD.thieuPLO)}</div>
+                        <div className="text-xs font-semibold text-yellow-800 leading-snug">Chưa gán<br/> PLO</div>
+                      </div>
+                      <div className="bg-[#FDEDEC] border-l-[3px] border-red-500 rounded-r-md shadow-sm p-4 flex-1">
+                        <div className="text-2xl font-bold text-red-700">{fmtNum(kpiCHKD.quaHanKy)}</div>
+                        <div className="text-xs font-semibold text-red-800 mt-1">CHKD mở quá ngày dự kiến ký HĐ</div>
+                      </div>
+                      <div className="bg-[#FDEDEC] border-l-[3px] border-red-500 rounded-r-md shadow-sm p-4 flex-1">
+                        <div className="text-2xl font-bold text-red-700">{fmtNum(kpiCHKD.lauKhongCapNhat)}</div>
+                        <div className="text-xs font-semibold text-red-800 mt-1">CHKD mở &gt; 90 ngày chưa cập nhật</div>
+                      </div>
                     </div>
-            
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
-                      <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">ĐÃ CHỐT</h3>
-                      <div className="text-3xl font-bold text-navy my-2">{fmtNum(kpiCHKD.chotGt)}</div>
-                      <div className="text-[11px] text-gray-500">Tr đồng - {fmtNum(kpiCHKD.chotSl)} CHKD</div>
-                    </div>
-            
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
-                      <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">THẤT BẠI</h3>
-                      <div className="text-3xl font-bold text-navy my-2">{fmtNum(kpiCHKD.thuaGt)}</div>
-                      <div className="text-[11px] text-gray-500">Tr đồng - {fmtNum(kpiCHKD.thuaSl)} CHKD</div>
-                    </div>
-            
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
-                      <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">TỶ LỆ THẮNG</h3>
-                      <div className="text-3xl font-bold text-navy my-2">{fmtPct(winRateSl)}</div>
-                      <div className="text-[11px] text-gray-500">theo số lượng - {fmtPct(winRateGt)} theo giá trị</div>
-                    </div>
-                  </div>
-            
-                  {/* ROW 2: THẺ CẢNH BÁO TÁC CHIẾN */}
-                  <div className="flex gap-4 px-8 pb-6 shrink-0">
-                    <div className="bg-[#FEF9E7] border-l-[3px] border-yellow-500 rounded-r-md shadow-sm p-4 flex-1">
-                      <div className="text-2xl font-bold text-yellow-700">{fmtNum(kpiCHKD.thieuTiemNang)}</div>
-                      <div className="text-xs font-semibold text-yellow-800 mt-1">CHKD mở chưa đánh giá tiềm năng</div>
-                    </div>
-                    
-                    <div className="bg-[#FDEDEC] border-l-[3px] border-red-500 rounded-r-md shadow-sm p-4 flex-1">
-                      <div className="text-2xl font-bold text-red-700">{fmtNum(kpiCHKD.quaHanKy)}</div>
-                      <div className="text-xs font-semibold text-red-800 mt-1">CHKD mở quá ngày dự kiến ký HĐ</div>
-                    </div>
-            
-                    <div className="bg-[#FDEDEC] border-l-[3px] border-red-500 rounded-r-md shadow-sm p-4 flex-1">
-                      <div className="text-2xl font-bold text-red-700">{fmtNum(kpiCHKD.lauKhongCapNhat)}</div>
-                      <div className="text-xs font-semibold text-red-800 mt-1">CHKD mở &gt; 90 ngày chưa cập nhật</div>
-                    </div>
-            
-                    <div className="bg-[#FEF9E7] border-l-[3px] border-yellow-500 rounded-r-md shadow-sm p-4 flex-1">
-                      <div className="text-2xl font-bold text-yellow-700">{fmtNum(kpiCHKD.thieuGiaTri)}</div>
-                      <div className="text-xs font-semibold text-yellow-800 mt-1">CHKD thiếu giá trị dự kiến</div>
-                    </div>
-                  </div>
-              
-                  {/* KHÔNG GIAN BÊN DƯỚI: BIỂU ĐỒ PHỄU, CỘT XẾP CHỒNG THEO TRẠNG THÁI (ĐỊA BÀN) VÀ BẢNG CHI TIẾT */}
-                  <div className="px-8 pb-6 flex-1 flex gap-6">
-                    {/* BLOCK 1: BIỂU ĐỒ PHỄU PIPELINE */}
-                    <div className="bg-white border border-gray-200 rounded shadow-sm p-6 flex-[1.5] flex flex-col">
-                      <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-navy font-bold text-sm uppercase tracking-wide">PHỄU CƠ HỘI KINH DOANH</h2>
-                        <span className="text-xs text-gray-500">Đơn vị: trVNĐ</span>
+                    {/* ROW 3: BIỂU ĐỒ PHỄU, CỘT XẾP CHỒNG THEO TRẠNG THÁI (ĐỊA BÀN) */}
+                    <div className="px-8 pb-6 flex-1 flex gap-6 shrink-0 min-h-[400px]">
+                      {/* BLOCK 1: BIỂU ĐỒ PHỄU PIPELINE */}
+                      <div className="bg-white border border-gray-200 rounded shadow-sm p-6 flex-1 flex flex-col">
+                        <div className="flex justify-between items-center mb-4">
+                          <h2 className="text-navy font-bold text-sm uppercase tracking-wide">PHỄU CƠ HỘI KINH DOANH</h2>
+                          <span className="text-xs text-gray-500">Đơn vị: trVNĐ</span>
+                        </div>
+                        
+                        <div className="flex-1 w-full h-full">
+                          {ResponsiveContainer && FunnelChart ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                              <FunnelChart>
+                                <Tooltip 
+                                  formatter={(value, name, props) => [
+                                    `${new Intl.NumberFormat('vi-VN', {maximumFractionDigits: 1}).format(value)} trVNĐ (${props.payload.count} Deal)`, 
+                                    'Quy mô'
+                                  ]} 
+                                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                />
+                                <Funnel dataKey="value" data={funnelData} isAnimationActive>
+                                  <LabelList position="right" fill="#4B5563" stroke="none" dataKey="name" fontSize={12} fontWeight="bold" />
+                                  <LabelList position="center" fill="#fff" stroke="none" dataKey="value" formatter={(val) => fmtNum(val)} fontSize={14} fontWeight="bold" />
+                                  {funnelData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={FUNNEL_COLORS[index % FUNNEL_COLORS.length]} />
+                                  ))}
+                                </Funnel>
+                              </FunnelChart>
+                            </ResponsiveContainer>
+                          ) : (
+                            <div className="flex items-center justify-center h-full text-gray-400 text-sm">Đang tải biểu đồ...</div>
+                          )}
+                        </div>
                       </div>
                       
-                      <div className="flex-1 w-full min-h-[250px]">
-                        {ResponsiveContainer && FunnelChart ? (
-                          <ResponsiveContainer width="100%" height="100%">
-                            <FunnelChart>
-                              <Tooltip 
-                                formatter={(value, name, props) => [
-                                  `${new Intl.NumberFormat('vi-VN', {maximumFractionDigits: 1}).format(value)} trVNĐ (${props.payload.count} Deal)`, 
-                                  'Quy mô'
-                                ]} 
-                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                              />
-                              <Funnel dataKey="value" data={funnelData} isAnimationActive>
-                                <LabelList position="right" fill="#4B5563" stroke="none" dataKey="name" fontSize={12} fontWeight="bold" />
-                                <LabelList position="center" fill="#fff" stroke="none" dataKey="value" formatter={(val) => fmtNum(val)} fontSize={14} fontWeight="bold" />
-                                {funnelData.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={FUNNEL_COLORS[index % FUNNEL_COLORS.length]} />
+                      {/* BLOCK 2: BIỂU ĐỒ CỘT XẾP CHỒNG THEO TRẠNG THÁI (ĐỊA BÀN) */}
+                      <div className="bg-white border border-gray-200 rounded shadow-sm p-6 flex-[2] flex flex-col">
+                        <div className="flex justify-between items-center mb-4">
+                          <h2 className="text-navy font-bold text-sm uppercase tracking-wide">CỘT XẾP CHỒNG THEO TRẠNG THÁI</h2>
+                          <span className="text-xs text-gray-500">Đơn vị: Tỷ VNĐ</span>
+                        </div>
+                        
+                        <div className="flex-1 w-full h-full">
+                          {ResponsiveContainer && BarChart ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={provPipelineChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                                <XAxis dataKey="maTinh" tick={{ fontSize: 11, fill: '#6B7280' }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fontSize: 11, fill: '#6B7280' }} axisLine={false} tickLine={false} />
+                                <Tooltip content={<CustomBarTooltip />} cursor={{ fill: '#F3F4F6' }} />
+                                <Legend verticalAlign="top" wrapperStyle={{ paddingBottom: '20px', fontSize: '12px' }} iconType="square" />
+                                
+                                <Bar dataKey="dangMoGt" name="OPEN" stackId="a" fill="#2563EB" maxBarSize={45} />
+                                <Bar dataKey="daChotGt" name="CLOSED" stackId="a" fill="#10B981" maxBarSize={45} />
+                                <Bar dataKey="thatBaiGt" name="LOST" stackId="a" fill="#EF4444" maxBarSize={45} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          ) : (
+                            <div className="flex items-center justify-center h-full text-gray-400 text-sm">Đang tải biểu đồ...</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* ROW 4: DATA GRID CHI TIẾT DEAL ĐANG MỞ KHẨN CẤP */}
+                    <div className="px-8 pb-8 flex flex-col shrink-0 min-h-[350px]">
+                      <div className="bg-white border border-gray-200 rounded shadow-sm flex-1 flex flex-col overflow-hidden">
+                        <div className="px-6 py-4 border-b bg-gray-50 shrink-0">
+                          <h2 className="text-navy font-bold text-sm uppercase tracking-wide">CHI TIẾT DEAL ĐANG MỞ KHẨN CẤP</h2>
+                          <p className="text-xs text-gray-500 mt-1">Danh sách Top 15 cơ hội kinh doanh đang mở có giá trị lớn nhất cần tập trung xử lý.</p>
+                        </div>
+                        <div className="overflow-auto flex-1 p-2">
+                          <table className="w-full text-left text-sm">
+                            <thead className="bg-white text-navy sticky top-0 shadow-sm z-10">
+                              <tr>
+                                <th className="p-3 border-b font-semibold w-32">Mã CHKD</th>
+                                <th className="p-3 border-b font-semibold w-40">Mã PLO</th>
+                                <th className="p-3 border-b font-semibold">Tên Dự án</th>
+                                <th className="p-3 border-b font-semibold w-48">Khách hàng</th>
+                                <th className="p-3 border-b font-semibold w-32">Giai đoạn</th>
+                                <th className="p-3 border-b font-semibold text-right w-28">Giá trị (trVNĐ)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {basePipeline
+                                .filter(d => (d['trang_thai'] || '').toString().toUpperCase() === 'OPEN')
+                                .sort((a, b) => parseNum(b['ngansach_duan']) - parseNum(a['ngansach_duan']))
+                                .slice(0, 15) // Top 15
+                                .map((p, i) => (
+                                  <tr key={i} className="border-b hover:bg-blue-50 transition">
+                                    <td className="p-3 font-bold text-navy truncate" title={p['ma_chkd']}>{p['ma_chkd'] || '-'}</td>
+                                    <td className="p-3 font-medium text-gray-600 truncate" title={p['plo_code']}>{p['plo_code'] || 'Chưa gán PLO'}</td>
+                                    <td className="p-3 font-medium text-gray-800 line-clamp-2" title={p['ten_duan']}>{p['ten_duan'] || '-'}</td>
+                                    <td className="p-3 font-medium text-gray-700 truncate" title={p['khach_hang']}>{p['khach_hang'] || 'Chưa cập nhật'}</td>
+                                    <td className="p-3 text-gray-600">
+                                      <span className="px-2 py-1 bg-gray-100 rounded text-[11px] uppercase whitespace-nowrap">{p['trangthai_pipeline'] || '-'}</span>
+                                    </td>
+                                    <td className="p-3 text-right font-bold text-vnpt">{fmtTy(parseNum(p['ngansach_duan']))}</td>
+                                  </tr>
                                 ))}
-                              </Funnel>
-                            </FunnelChart>
-                          </ResponsiveContainer>
-                        ) : (
-                          <div className="flex items-center justify-center h-full text-gray-400 text-sm">Đang tải biểu đồ...</div>
-                        )}
+                              {basePipeline.filter(d => (d['trang_thai'] || '').toString().toUpperCase() === 'OPEN').length === 0 && (
+                                <tr><td colSpan="6" className="p-6 text-center text-gray-400">Không có Deal mở khẩn cấp.</td></tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     </div>
-                    {/* BLOCK 2: BIỂU ĐỒ CỘT XẾP CHỒNG THEO TRẠNG THÁI (ĐỊA BÀN) */}
-                    <div className="bg-white border border-gray-200 rounded shadow-sm p-6 flex-[2] flex flex-col">
-                      <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-navy font-bold text-sm uppercase tracking-wide">CỘT XẾP CHỒNG THEO TRẠNG THÁI</h2>
-                        <span className="text-xs text-gray-500">Đơn vị: TrVNĐ</span>
-                      </div>
-                      
-                      <div className="flex-1 w-full min-h-[300px]">
-                        {ResponsiveContainer && BarChart ? (
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={provPipelineChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                              <XAxis dataKey="maTinh" tick={{ fontSize: 11, fill: '#6B7280' }} axisLine={false} tickLine={false} />
-                              <YAxis tick={{ fontSize: 11, fill: '#6B7280' }} axisLine={false} tickLine={false} />
-                              <Tooltip content={<CustomBarTooltip />} cursor={{ fill: '#F3F4F6' }} />
-                              
-                              {/* Đưa Legend lên trên cùng, canh giữa */}
-                              <Legend verticalAlign="top" wrapperStyle={{ paddingBottom: '20px', fontSize: '12px' }} iconType="square" />
-                              
-                              <Bar dataKey="dangMoGt" name="Đang mở" stackId="a" fill="#2563EB" maxBarSize={45} />
-                              <Bar dataKey="daChotGt" name="Đã chốt" stackId="a" fill="#10B981" maxBarSize={45} />
-                              <Bar dataKey="thatBaiGt" name="Thất bại" stackId="a" fill="#EF4444" maxBarSize={45} />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        ) : (
-                          <div className="flex items-center justify-center h-full text-gray-400 text-sm">Đang tải biểu đồ...</div>
-                        )}
-                      </div>
                   </div>
-        {/* BLOCK 3: DATA GRID CHI TIẾT (Có thể cuộn) */}
-        <div className="bg-white border border-gray-200 rounded shadow-sm flex-[2] flex flex-col overflow-hidden">
-          <div className="px-6 py-4 border-b bg-gray-50 shrink-0">
-            <h2 className="text-navy font-bold text-sm uppercase tracking-wide">CHI TIẾT DEAL ĐANG MỞ KHẨN CẤP</h2>
-          </div>
-          <div className="overflow-auto flex-1 p-2">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-white text-navy sticky top-0 shadow-sm z-10">
-                <tr>
-                  <th className="p-3 border-b font-semibold">Mã CHKD</th>
-                  <th className="p-3 border-b font-semibold">Mã PLO</th>
-                  <th className="p-3 border-b font-semibold">Tên dự án</th>
-                  <th className="p-3 border-b font-semibold">Khách hàng</th>
-                  <th className="p-3 border-b font-semibold">Giai đoạn</th>
-                  <th className="p-3 border-b font-semibold text-right">Giá trị (trVNĐ)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {basePipeline
-                  .filter(d => (d['trang_thai'] || '').toString().toUpperCase() === 'OPEN')
-                  .sort((a, b) => parseNum(b['ngansach_duan']) - parseNum(a['ngansach_duan']))
-                  .slice(0, 15) // Lấy Top 15 Deal lớn nhất
-                  .map((p, i) => (
-                    <tr key={i} className="border-b hover:bg-blue-50 transition">
-                      <td className="p-3 font-bold text-navy">{p['ma_chkd'] || '-'}</td>
-                      <td className="p-3 font-medium text-gray-700 truncate max-w-[200px]" title={p['plo_code']}>{p['plo_code'] || 'Chưa gán PLO'}</td>
-                      <td className="p-3 font-medium text-gray-700 truncate max-w-[200px]" title={p['ten_duan']}>{p['ten_duan'] || 'Chưa cập nhật'}</td>
-                      <td className="p-3 font-medium text-gray-700 truncate max-w-[200px]" title={p['ten_khachhang']}>{p['ten_khachhang'] || 'Chưa cập nhật'}</td>
-                      <td className="p-3 text-gray-600">
-                        <span className="px-2 py-1 bg-gray-100 rounded text-xs">{p['trangthai_pipeline'] || '-'}</span>
-                      </td>
-                      <td className="p-3 text-right font-bold text-vnpt">{fmtNum(p['ngansach_duan'])}</td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-</div>
-    </div>
-  </div>
-
+                </div>
               )  : (
                 <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-gray-50">
                   <div className="text-6xl mb-4">🚧</div>
