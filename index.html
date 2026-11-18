@@ -792,58 +792,57 @@
 
                   {loading && <div className="text-center text-vnpt text-sm py-1 font-bold animate-pulse bg-white">Đang đồng bộ dữ liệu...</div>}
                   
-                  <div className="flex-1 overflow-auto flex flex-col">
-                    <div className="flex gap-4 px-6 py-6 shrink-0">
-                      <KpiCard 
-                        title="1. TỔNG QUY MÔ (TAM)" 
-                        v1={fmtNum(deanKpi.tongSl)} l1="Nhiệm vụ CĐS" 
-                        v2={fmtNum(deanKpi.tongNs)} l2="Tổng Ngân sách (trĐ)" 
-                        st="neutral" 
-                      />
-                      <KpiCard 
-                        title="2. ĐÃ TRIỂN KHAI" 
-                        v1={fmtNum(deanKpi.daTrienKhaiSl)} l1="Đang thực hiện" 
-                        v2={fmtNum(deanKpi.daTrienKhaiNs)} l2="Ngân sách (trĐ)" 
-                        st="neutral" 
-                      />
-                      <div className="bg-white border-2 border-vnpt rounded flex-1 p-4 shadow-sm flex flex-col justify-between">
-                        <h3 className="text-vnpt font-bold text-xs mb-3 uppercase">3. VNPT ĐANG BÁM</h3>
-                        <div>
-                          <div className="text-3xl font-bold mb-1 text-vnpt">{fmtNum(deanKpi.vnptSl)}</div>
-                          <div className="text-xs text-gray-500 mb-3">Nhiệm vụ tiềm năng</div>
-                          <div className="text-base font-bold text-gray-700 border-t pt-2">{fmtNum(deanKpi.vnptNs)}</div>
-                          <div className="text-xs text-gray-500">Ngân sách (trĐ)</div>
-                        </div>
-                      </div>
-                      <div className="bg-white border-2 border-orange-400 rounded flex-1 p-4 shadow-sm flex flex-col justify-between">
-                        <h3 className="text-orange-500 font-bold text-xs mb-3 uppercase">4. KHOẢNG TRỐNG (CHƯA CÓ)</h3>
-                        <div>
-                          <div className="text-3xl font-bold mb-1 text-orange-500">{fmtNum(deanKpi.trangSl)}</div>
-                          <div className="text-xs text-gray-500 mb-3">Chưa đơn vị nào tiếp cận</div>
-                          <div className="text-base font-bold text-gray-700 border-t pt-2">{fmtNum(deanKpi.trangNs)}</div>
-                          <div className="text-xs text-gray-500">Ngân sách bỏ ngỏ (trĐ)</div>
-                        </div>
-                      </div>
-                      <div className="bg-white border-2 border-risk rounded flex-1 p-4 shadow-sm flex flex-col justify-between relative overflow-hidden">
-                        <div className="absolute top-0 right-0 bg-risk text-white text-[9px] font-bold px-2 py-1 rounded-bl">CẢNH BÁO</div>
-                        <h3 className="text-risk font-bold text-xs mb-3 uppercase">5. ĐỐI THỦ ĐANG BÁM</h3>
-                        <div>
-                          <div className="text-3xl font-bold mb-1 text-risk">{fmtNum(deanKpi.doiThuSl)}</div>
-                          <div className="text-xs text-gray-500 mb-3">Nguy cơ mất thị phần</div>
-                          <div className="text-base font-bold text-gray-700 border-t pt-2">{fmtNum(deanKpi.doiThuNs)}</div>
-                          <div className="text-xs text-gray-500">Ngân sách rủi ro (trĐ)</div>
-                        </div>
-                      </div>
-                      <div className="bg-white border-2 border-good rounded p-4 shadow-sm flex flex-col justify-between">
-                        <h3 className="text-good font-bold text-xs mb-3 uppercase">6. ĐÃ CHUYỂN HÓA</h3>
-                        <div>
-                          <div className="text-3xl font-bold mb-1 text-good">{fmtNum(deanKpi.chuyenHoaSl)}</div>
-                          <div className="text-xs text-gray-500 mb-3 truncate">Chuyển CHKD thành công</div>
-                          <div className="text-base font-bold text-gray-700 border-t pt-2">{fmtNum(deanKpi.chuyenHoaNs)}</div>
-                          <div className="text-xs text-gray-500">Ngân sách Phễu (trĐ)</div>
-                        </div>
+                  <div className="grid grid-cols-6 gap-4 px-6 py-6 shrink-0">
+                    <KpiCard 
+                      title="1. TỔNG QUY MÔ" 
+                      v1={fmtNum(deanKpi.tongSl)} l1="Nhiệm vụ CĐS" 
+                      v2={fmtNum(deanKpi.tongNs)} l2="Tổng Ngân sách (trĐ)" 
+                      st="neutral" 
+                    />
+                    <KpiCard 
+                      title="2. ĐÃ TRIỂN KHAI" 
+                      v1={fmtNum(deanKpi.daTrienKhaiSl)} l1="Đang thực hiện" 
+                      v2={fmtNum(deanKpi.daTrienKhaiNs)} l2="Ngân sách (trĐ)" 
+                      st="neutral" 
+                    />
+                    <div className="bg-white border-2 border-vnpt rounded p-4 shadow-sm flex flex-col justify-between">
+                      <h3 className="text-vnpt font-bold text-xs mb-3 uppercase">3. VNPT ĐANG BÁM</h3>
+                      <div>
+                        <div className="text-3xl font-bold mb-1 text-vnpt">{fmtNum(deanKpi.vnptSl)}</div>
+                        <div className="text-xs text-gray-500 mb-3">Nhiệm vụ tiềm năng</div>
+                        <div className="text-base font-bold text-gray-700 border-t pt-2">{fmtNum(deanKpi.vnptNs)}</div>
+                        <div className="text-xs text-gray-500">Ngân sách (trĐ)</div>
                       </div>
                     </div>
+                    <div className="bg-white border-2 border-orange-400 rounded p-4 shadow-sm flex flex-col justify-between">
+                      <h3 className="text-orange-500 font-bold text-xs mb-3 uppercase">4. KHOẢNG TRỐNG (CHƯA CÓ)</h3>
+                      <div>
+                        <div className="text-3xl font-bold mb-1 text-orange-500">{fmtNum(deanKpi.trangSl)}</div>
+                        <div className="text-xs text-gray-500 mb-3">Chưa ai tiếp cận</div>
+                        <div className="text-base font-bold text-gray-700 border-t pt-2">{fmtNum(deanKpi.trangNs)}</div>
+                        <div className="text-xs text-gray-500">Ngân sách bỏ ngỏ (trĐ)</div>
+                      </div>
+                    </div>
+                    <div className="bg-white border-2 border-risk rounded p-4 shadow-sm flex flex-col justify-between relative overflow-hidden">
+                      <div className="absolute top-0 right-0 bg-risk text-white text-[9px] font-bold px-2 py-1 rounded-bl">CẢNH BÁO</div>
+                      <h3 className="text-risk font-bold text-xs mb-3 uppercase">5. ĐỐI THỦ ĐANG BÁM</h3>
+                      <div>
+                        <div className="text-3xl font-bold mb-1 text-risk">{fmtNum(deanKpi.doiThuSl)}</div>
+                        <div className="text-xs text-gray-500 mb-3">Nguy cơ mất thị phần</div>
+                        <div className="text-base font-bold text-gray-700 border-t pt-2">{fmtNum(deanKpi.doiThuNs)}</div>
+                        <div className="text-xs text-gray-500">Ngân sách rủi ro (trĐ)</div>
+                      </div>
+                    </div>
+                    <div className="bg-white border-2 border-good rounded p-4 shadow-sm flex flex-col justify-between">
+                      <h3 className="text-good font-bold text-xs mb-3 uppercase">6. ĐÃ CHUYỂN HÓA</h3>
+                      <div>
+                        <div className="text-3xl font-bold mb-1 text-good">{fmtNum(deanKpi.chuyenHoaSl)}</div>
+                        <div className="text-xs text-gray-500 mb-3 truncate">Chuyển CHKD thành công</div>
+                        <div className="text-base font-bold text-gray-700 border-t pt-2">{fmtNum(deanKpi.chuyenHoaNs)}</div>
+                        <div className="text-xs text-gray-500">Ngân sách Phễu (trĐ)</div>
+                      </div>
+                    </div>
+                  </div>
 
                     <div className="px-6 pb-6 flex gap-8 shrink-0 min-h-[450px]">
                       
@@ -888,7 +887,7 @@
                             <thead className="bg-white text-navy sticky top-0 shadow-sm z-10">
                               <tr>
                                 <th className="p-2 border-b font-semibold w-16">Tỉnh</th>
-                      
+                                <th className="p-2 border-b font-semibold">Nhiệm vụ</th>
                                 <th className="p-2 border-b font-semibold">Cảnh báo rủi ro</th>
                                 <th className="p-2 border-b font-semibold text-risk">Đề xuất Lãnh đạo</th>
                                 <th className="p-2 border-b font-semibold text-center w-24">Ngân sách</th>
@@ -901,7 +900,7 @@
                                 .map((p, i) => (
                                   <tr key={i} className="border-b hover:bg-red-50 transition">
                                     <td className="p-2 font-bold text-navy">{p['ma_tinh'] || '-'}</td>
-                                   
+                                     <td className="p-2 font-bold text-navy">{p['ten_nhiemvu'] || '-'}</td>
                                     <td className="p-2 text-gray-700 text-xs">
                                       {p['canhbao_ruiro'] ? p['canhbao_ruiro'] : 
                                       ((p['donvi_donghanh'] || '').toUpperCase() === 'ĐỐI THỦ' ? 'Đối thủ đang bám sát dự án này' : '-')}
