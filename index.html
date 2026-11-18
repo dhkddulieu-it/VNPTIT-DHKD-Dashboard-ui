@@ -353,7 +353,8 @@
           daTrienKhaiSl: 0, daTrienKhaiNs: 0,
           vnptSl: 0, vnptNs: 0,       
           trangSl: 0, trangNs: 0,     
-          doiThuSl: 0, doiThuNs: 0    
+          doiThuSl: 0, doiThuNs: 0,
+          chuyenHoaSl: 0, chuyenHoaNs: 0  // KPI Mới: Đã chuyển hóa thành Phễu
         };
 
         baseDean.forEach(d => {
@@ -363,6 +364,12 @@
 
           deanKpi.tongSl += 1;
           deanKpi.tongNs += ns;
+
+          // Tính KPI Chuyển hóa CHKD (Độc lập với trạng thái triển khai)
+          if (maChkd !== '') {
+              deanKpi.chuyenHoaSl += 1;
+              deanKpi.chuyenHoaNs += ns;
+          }
 
           if (trangThai === 'ĐÃ TRIỂN KHAI') {
               deanKpi.daTrienKhaiSl += 1;
@@ -826,6 +833,15 @@
                           <div className="text-xs text-gray-500">Ngân sách rủi ro (VNĐ)</div>
                         </div>
                       </div>
+                      <div className="bg-white border-2 border-good rounded p-4 shadow-sm flex flex-col justify-between">
+                        <h3 className="text-good font-bold text-xs mb-3 uppercase">6. ĐÃ CHUYỂN HÓA</h3>
+                        <div>
+                          <div className="text-3xl font-bold mb-1 text-good">{fmtNum(deanKpi.chuyenHoaSl)}</div>
+                          <div className="text-xs text-gray-500 mb-3 truncate">Tạo mã CHKD thành công</div>
+                          <div className="text-base font-bold text-gray-700 border-t pt-2">{fmtNum(deanKpi.chuyenHoaNs)}</div>
+                          <div className="text-xs text-gray-500">Ngân sách Phễu (VNĐ)</div>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="px-6 pb-6 flex gap-8 shrink-0 min-h-[450px]">
@@ -871,6 +887,7 @@
                             <thead className="bg-white text-navy sticky top-0 shadow-sm z-10">
                               <tr>
                                 <th className="p-2 border-b font-semibold w-16">Tỉnh</th>
+                                <th className="p-2 border-b font-semibold w-16">Nhiệm vụ</th>
                                 <th className="p-2 border-b font-semibold">Cảnh báo rủi ro</th>
                                 <th className="p-2 border-b font-semibold text-risk">Đề xuất Lãnh đạo</th>
                                 <th className="p-2 border-b font-semibold text-center w-24">Ngân sách</th>
@@ -883,6 +900,7 @@
                                 .map((p, i) => (
                                   <tr key={i} className="border-b hover:bg-red-50 transition">
                                     <td className="p-2 font-bold text-navy">{p['ma_tinh'] || '-'}</td>
+                                    <td className="p-2 font-bold text-navy">{p['ten_nhiemvu'] || '-'}</td>
                                     <td className="p-2 text-gray-700 text-xs">
                                       {p['canhbao_ruiro'] ? p['canhbao_ruiro'] : 
                                       ((p['donvi_donghanh'] || '').toUpperCase() === 'ĐỐI THỦ' ? 'Đối thủ đang bám sát dự án này' : '-')}
