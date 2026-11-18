@@ -998,7 +998,7 @@
                               <BarChart 
                                 layout="vertical" 
                                 data={funnelData} 
-                                margin={{ top: 10, right: 30, left: 10, bottom: 0 }}
+                                margin={{ top: 10, right: 20, left: 10, bottom: 0 }}
                               >
                                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#E5E7EB"/>
                                 <XAxis type="number" hide />
@@ -1008,7 +1008,7 @@
                                   type="category" 
                                   axisLine={false} 
                                   tickLine={false} 
-                                  width={240}
+                                  width={220}
                                   tick={{fontSize: 11, fill: '#4B5563', fontWeight: 600}} 
                                 />
                                 <Tooltip 
@@ -1019,7 +1019,7 @@
                                   ]}
                                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                                 />
-                                <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={35}>
+                                <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={30}>
                                   {/* Đổ màu Gradient từ Navy -> Blue tùy theo số lượng mảng */}
                                   {funnelData.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={FUNNEL_COLORS[index % FUNNEL_COLORS.length]} />
