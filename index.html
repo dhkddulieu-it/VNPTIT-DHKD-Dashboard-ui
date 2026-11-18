@@ -946,30 +946,30 @@
                     </div>
             
                     {/* ROW 2: THẺ CẢNH BÁO TÁC CHIẾN */}
-                    <div className="flex gap-4 px-8 pb-6 shrink-0">
-                      <div className="bg-[#FEF9E7] border-l-[3px] border-yellow-500 rounded-r-md shadow-sm p-4 flex-1">
+                    <div className="grid grid-cols-6 gap-4 px-8 pb-6 shrink-0">
+                      <div className="bg-[#FEF9E7] border-l-[3px] border-yellow-500 rounded-r-md shadow-sm p-4 flex flex-col justify-center">
                         <div className="text-2xl font-bold text-yellow-700">{fmtNum(kpiCHKD.thieuTiemNang)}</div>
                         <div className="text-xs font-semibold text-yellow-800 mt-1">CHKD mở chưa đánh giá tiềm năng</div>
                       </div>  
-                      <div className="bg-[#FEF9E7] border-l-[3px] border-yellow-500 rounded-r-md shadow-sm p-4 flex-1">
+                      <div className="bg-[#FEF9E7] border-l-[3px] border-yellow-500 rounded-r-md shadow-sm p-4 flex flex-col justify-center">
                         <div className="text-2xl font-bold text-yellow-700">{fmtNum(kpiCHKD.thieuGiaTri)}</div>
                         <div className="text-xs font-semibold text-yellow-800 mt-1">CHKD thiếu giá trị ngân sách</div>
                       </div>
                       {/* NEW: Thẻ 5 - Thiếu Hình thức */}
                       <div className="bg-[#FEF9E7] border-l-[3px] border-yellow-500 rounded-r-md shadow-sm p-4 flex flex-col justify-center">
                         <div className="text-2xl font-bold text-yellow-700 leading-none mb-1">{fmtNum(kpiCHKD.thieuHinhThuc)}</div>
-                        <div className="text-xs font-semibold text-yellow-800 leading-snug">Thiếu phân loại Hình thức cung cấp</div>
+                        <div className="text-xs font-semibold text-yellow-800 leading-snug">CHKD thiếu Hình thức cung cấp</div>
                       </div>
                       {/* NEW: Thẻ 6 - Thiếu PLO */}
                       <div className="bg-[#FEF9E7] border-l-[3px] border-yellow-500 rounded-r-md shadow-sm p-4 flex flex-col justify-center">
                         <div className="text-2xl font-bold text-yellow-700 leading-none mb-1">{fmtNum(kpiCHKD.thieuPLO)}</div>
-                        <div className="text-xs font-semibold text-yellow-800 leading-snug">Chưa gán PLO</div>
+                        <div className="text-xs font-semibold text-yellow-800 leading-snug">CHKD chưa gán PLO</div>
                       </div>
-                      <div className="bg-[#FDEDEC] border-l-[3px] border-red-500 rounded-r-md shadow-sm p-4 flex-1">
+                      <div className="bg-[#FDEDEC] border-l-[3px] border-red-500 rounded-r-md shadow-sm p-4 flex flex-col justify-center">
                         <div className="text-2xl font-bold text-red-700">{fmtNum(kpiCHKD.quaHanKy)}</div>
                         <div className="text-xs font-semibold text-red-800 mt-1">CHKD mở quá ngày dự kiến ký HĐ</div>
                       </div>
-                      <div className="bg-[#FDEDEC] border-l-[3px] border-red-500 rounded-r-md shadow-sm p-4 flex-1">
+                      <div className="bg-[#FDEDEC] border-l-[3px] border-red-500 rounded-r-md shadow-sm p-4 flex flex-col justify-center">
                         <div className="text-2xl font-bold text-red-700">{fmtNum(kpiCHKD.lauKhongCapNhat)}</div>
                         <div className="text-xs font-semibold text-red-800 mt-1">CHKD mở &gt; 90 ngày chưa cập nhật</div>
                       </div>
