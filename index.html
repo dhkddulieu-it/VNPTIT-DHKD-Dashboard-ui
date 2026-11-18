@@ -447,7 +447,7 @@
         
           // Gom nhóm theo trạng thái Pipeline
           const stage = (d['trangthai_pipeline'] || 'Chưa xác định').toString().trim();
-          const valTy = parseNum(d['gia_tri_du_kien']) / 1000; 
+          const valTy = parseNum(d['ngansach_duan']) / 1000; 
         
           if (!funnelDataMap[stage]) {
             funnelDataMap[stage] = { name: stage, value: 0, count: 0 };
@@ -527,13 +527,13 @@
                     <div className="flex flex-col flex-1">
                       <label className="text-xs font-bold text-navy mb-1">CLO Địa bàn</label>
                       <select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.maTinh} onChange={e => setFilters({...filters, maTinh: e.target.value})}>
-                        <option value="ALL">Toàn địa bàn</option>
+                        <option value="ALL">Toàn bộ địa bàn</option>
                         {dsDiaBanHienThi.map(p => <option key={p} value={p}>{p}</option>)}
                       </select>
                     </div>
                     <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Luồng SPDV</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.luongSPDV} onChange={e => setFilters({...filters, luongSPDV: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(rawData.map(d => d['luong_spdv']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
                     <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Nhóm SPDV</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.nhomSPDV} onChange={e => setFilters({...filters, nhomSPDV: e.target.value, plo: 'ALL'})}><option value="ALL">Tất cả</option>{[...new Set(ploList.map(p => p['nhomspdv_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
-                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Dịch vụ (PLO)</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.plo} onChange={e => setFilters({...filters, plo: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(ploList.filter(p => filters.nhomSPDV === 'ALL' || p['nhomspdv_code'] === filters.nhomSPDV).map(p => p['plo_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
+                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">PLO (theo mô hình mới)</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.plo} onChange={e => setFilters({...filters, plo: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(ploList.filter(p => filters.nhomSPDV === 'ALL' || p['nhomspdv_code'] === filters.nhomSPDV).map(p => p['plo_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
                   </div>
 
                   {loading && <div className="text-center text-vnpt text-sm py-1 font-bold animate-pulse bg-white">Đang đồng bộ dữ liệu...</div>}
@@ -707,7 +707,7 @@
                     </div>
                     <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Luồng SPDV</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.luongSPDV} onChange={e => setFilters({...filters, luongSPDV: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(rawData.map(d => d['luong_spdv']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
                     <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Nhóm SPDV</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.nhomSPDV} onChange={e => setFilters({...filters, nhomSPDV: e.target.value, plo: 'ALL'})}><option value="ALL">Tất cả</option>{[...new Set(ploList.map(p => p['nhomspdv_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
-                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Dịch vụ (PLO)</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.plo} onChange={e => setFilters({...filters, plo: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(ploList.filter(p => filters.nhomSPDV === 'ALL' || p['nhomspdv_code'] === filters.nhomSPDV).map(p => p['plo_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
+                    <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">PLO (theo mô hình mới)</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.plo} onChange={e => setFilters({...filters, plo: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(ploList.filter(p => filters.nhomSPDV === 'ALL' || p['nhomspdv_code'] === filters.nhomSPDV).map(p => p['plo_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
                   </div>
 
                   {loading && <div className="text-center text-vnpt text-sm py-1 font-bold animate-pulse bg-white">Đang đồng bộ dữ liệu...</div>}
@@ -837,13 +837,13 @@
       <div className="flex flex-col flex-1">
         <label className="text-xs font-bold text-navy mb-1">CLO Địa bàn</label>
         <select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.maTinh} onChange={e => setFilters({...filters, maTinh: e.target.value})}>
-          <option value="ALL">Toàn địa bàn</option>
+          <option value="ALL">Toàn bộ địa bàn</option>
           {dsDiaBanHienThi.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
       </div>
       <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Luồng SPDV</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.luongSPDV} onChange={e => setFilters({...filters, luongSPDV: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(rawData.map(d => d['luong_spdv']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
       <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Nhóm SPDV</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.nhomSPDV} onChange={e => setFilters({...filters, nhomSPDV: e.target.value, plo: 'ALL'})}><option value="ALL">Tất cả</option>{[...new Set(ploList.map(p => p['nhomspdv_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
-      <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Dịch vụ (PLO)</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.plo} onChange={e => setFilters({...filters, plo: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(ploList.filter(p => filters.nhomSPDV === 'ALL' || p['nhomspdv_code'] === filters.nhomSPDV).map(p => p['plo_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
+      <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">PLO (theo mô hình mới)</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.plo} onChange={e => setFilters({...filters, plo: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(ploList.filter(p => filters.nhomSPDV === 'ALL' || p['nhomspdv_code'] === filters.nhomSPDV).map(p => p['plo_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
     </div>
 
     {loading && <div className="text-center text-vnpt text-sm py-1 font-bold animate-pulse bg-white">Đang đồng bộ dữ liệu...</div>}
