@@ -507,18 +507,18 @@
                 <p className="font-bold border-b border-gray-600 pb-1 mb-2 uppercase">{label}</p>
                 <div className="flex items-center gap-2 mb-1">
                   <div className="w-3 h-3 bg-[#2563EB]"></div>
-                  <span>Đang mở: {fmtNum(data.dangMoGt)} trVNĐ</span>
+                  <span>Đang mở: {fmtNum(data.dangMoGt)} trĐ</span>
                 </div>
                 <div className="flex items-center gap-2 mb-1">
                   <div className="w-3 h-3 bg-[#10B981]"></div>
-                  <span>Đã chốt: {fmtNum(data.daChotGt)} trVNĐ</span>
+                  <span>Đã chốt: {fmtNum(data.daChotGt)} trĐ</span>
                 </div>
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-3 h-3 bg-[#EF4444]"></div>
-                  <span>Thất bại: {fmtNum(data.thatBaiGt)} trVNĐ</span>
+                  <span>Thất bại: {fmtNum(data.thatBaiGt)} trĐ</span>
                 </div>
                 <p className="font-bold border-t border-gray-600 pt-2 text-xs">
-                  Tổng: {fmtNum(data.tongGt)} trVNĐ - {data.tongSl} CHKD
+                  Tổng: {fmtNum(data.tongGt)} trĐ - {data.tongSl} CHKD
                 </p>
               </div>
             );
@@ -920,23 +920,23 @@
                         <h3 className="text-[11px] font-bold text-gray-200 uppercase tracking-wide">PIPELINE ĐANG MỞ</h3>
                         <div className="text-[2.5rem] font-bold leading-none my-2">{fmtNum(kpiCHKD.moGt)}</div>
                         <div className="text-[11px] text-gray-300">
-                          trVNĐ - {fmtNum(kpiCHKD.moSl)} CHKD - {fmtPct(tyLeMoGt)} giá trị
+                          trĐ - {fmtNum(kpiCHKD.moSl)} CHKD - {fmtPct(tyLeMoGt)} giá trị
                         </div>
                       </div>
                       <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
                         <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">TỔNG GIÁ TRỊ</h3>
                         <div className="text-3xl font-bold text-navy my-2">{fmtNum(kpiCHKD.tongGt)}</div>
-                        <div className="text-[11px] text-gray-500">trVNĐ - {fmtNum(kpiCHKD.tongSl)} CHKD</div>
+                        <div className="text-[11px] text-gray-500">trĐ - {fmtNum(kpiCHKD.tongSl)} CHKD</div>
                       </div>
                       <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
                         <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">ĐÃ CHỐT</h3>
                         <div className="text-3xl font-bold text-navy my-2">{fmtNum(kpiCHKD.chotGt)}</div>
-                        <div className="text-[11px] text-gray-500">trVNĐ - {fmtNum(kpiCHKD.chotSl)} CHKD</div>
+                        <div className="text-[11px] text-gray-500">trĐ - {fmtNum(kpiCHKD.chotSl)} CHKD</div>
                       </div>
                       <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
                         <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">THẤT BẠI</h3>
                         <div className="text-3xl font-bold text-navy my-2">{fmtNum(kpiCHKD.thuaGt)}</div>
-                        <div className="text-[11px] text-gray-500">trVNĐ - {fmtNum(kpiCHKD.thuaSl)} CHKD</div>
+                        <div className="text-[11px] text-gray-500">trĐ - {fmtNum(kpiCHKD.thuaSl)} CHKD</div>
                       </div>
                       <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
                         <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">TỶ LỆ THẮNG</h3>
@@ -980,7 +980,7 @@
                       <div className="bg-white border border-gray-200 rounded shadow-sm p-6 flex-1 flex flex-col">
                         <div className="flex justify-between items-center mb-4">
                           <h2 className="text-navy font-bold text-sm uppercase tracking-wide">PHỄU CƠ HỘI KINH DOANH</h2>
-                          <span className="text-xs text-gray-500">Đơn vị: trVNĐ</span>
+                          <span className="text-xs text-gray-500">Đơn vị: trĐ</span>
                         </div>
                         
                         <div className="flex-1 w-full h-full">
@@ -989,7 +989,7 @@
                               <FunnelChart>
                                 <Tooltip 
                                   formatter={(value, name, props) => [
-                                    `${new Intl.NumberFormat('vi-VN', {maximumFractionDigits: 1}).format(value)} trVNĐ (${props.payload.count} Deal)`, 
+                                    `${new Intl.NumberFormat('vi-VN', {maximumFractionDigits: 1}).format(value)} trĐ (${props.payload.count} Deal)`, 
                                     'Quy mô'
                                   ]} 
                                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
@@ -1013,7 +1013,7 @@
                       <div className="bg-white border border-gray-200 rounded shadow-sm p-6 flex-[2] flex flex-col">
                         <div className="flex justify-between items-center mb-4">
                           <h2 className="text-navy font-bold text-sm uppercase tracking-wide">CỘT XẾP CHỒNG THEO TRẠNG THÁI</h2>
-                          <span className="text-xs text-gray-500">Đơn vị: Tỷ VNĐ</span>
+                          <span className="text-xs text-gray-500">Đơn vị: trĐ</span>
                         </div>
                         
                         <div className="flex-1 w-full h-full">
@@ -1054,7 +1054,7 @@
                                 <th className="p-3 border-b font-semibold">Tên Dự án</th>
                                 <th className="p-3 border-b font-semibold w-48">Khách hàng</th>
                                 <th className="p-3 border-b font-semibold w-32">Giai đoạn</th>
-                                <th className="p-3 border-b font-semibold text-right w-28">Giá trị (trVNĐ)</th>
+                                <th className="p-3 border-b font-semibold text-right w-28">Giá trị (trĐ)</th>
                               </tr>
                             </thead>
                             <tbody>
