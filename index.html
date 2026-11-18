@@ -583,7 +583,7 @@
             </aside>
 
             <main className="flex-1 flex flex-col overflow-hidden bg-gray-50">
-              <header className="bg-white px-8 py-4 flex justify-between items-center shrink-0 border-b">
+              <header className="bg-white px-6 py-4 flex justify-between items-center shrink-0 border-b">
                 <h1 className="text-2xl font-bold uppercase tracking-wide text-navy">{headerTitle}</h1>
                 <div className="flex items-center gap-4 text-sm">
                   <span className="font-semibold text-gray-600">{user.email}</span>
@@ -594,7 +594,7 @@
 
               { activeTab === 'dashboard' ? (
                 <div className="flex-1 flex flex-col overflow-hidden">
-                  <div className="bg-white px-8 py-3 flex gap-4 shrink-0 border-b shadow-sm items-end z-10">
+                  <div className="bg-white px-6 py-3 flex gap-4 shrink-0 border-b shadow-sm items-end z-10">
                     <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Thời gian</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.thoiGian} onChange={e => setFilters({...filters, thoiGian: e.target.value})}><option value="">-- Tất cả --</option>{monthOptions.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
                     <div className="flex flex-col flex-1">
                       <label className="text-xs font-bold text-navy mb-1">CLO Địa bàn</label>
@@ -768,7 +768,7 @@
                 </div>
               ) : activeTab ==='dean' ? (
                 <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
-                  <div className="bg-white px-8 py-3 flex gap-4 shrink-0 border-b shadow-sm items-end z-10">
+                  <div className="bg-white px-6 py-3 flex gap-4 shrink-0 border-b shadow-sm items-end z-10">
                     <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Thời gian</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.thoiGian} onChange={e => setFilters({...filters, thoiGian: e.target.value})}><option value="">-- Tất cả --</option>{monthOptions.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
                     <div className="flex flex-col flex-1">
                       <label className="text-xs font-bold text-navy mb-1">CLO Địa bàn</label>
@@ -785,7 +785,7 @@
                   {loading && <div className="text-center text-vnpt text-sm py-1 font-bold animate-pulse bg-white">Đang đồng bộ dữ liệu...</div>}
                   
                   <div className="flex-1 overflow-auto flex flex-col">
-                    <div className="flex gap-4 px-8 py-6 shrink-0">
+                    <div className="flex gap-4 px-6 py-6 shrink-0">
                       <KpiCard 
                         title="1. TỔNG QUY MÔ (TAM)" 
                         v1={fmtNum(deanKpi.tongSl)} l1="Nhiệm vụ CĐS" 
@@ -828,7 +828,7 @@
                       </div>
                     </div>
 
-                    <div className="px-8 pb-8 flex gap-8 shrink-0 min-h-[450px]">
+                    <div className="px-6 pb-6 flex gap-8 shrink-0 min-h-[450px]">
                       
                       <div className="flex-[1] bg-white border rounded shadow-sm flex flex-col overflow-hidden border-t-4 border-t-vnpt">
                         <div className="px-6 py-4 border-b bg-gray-50 shrink-0">
@@ -903,7 +903,7 @@
               ) : activeTab === 'cohoi' ? (
                 <div className="flex-1 flex flex-col overflow-hidden bg-[#F4F6F8]">
                   {/* 1. THANH ĐIỀU HƯỚNG & BỘ LỌC */}
-                  <div className="bg-white px-8 py-3 flex gap-4 shrink-0 border-b shadow-sm items-end z-10">
+                  <div className="bg-white px-6 py-3 flex gap-4 shrink-0 border-b shadow-sm items-end z-10">
                     <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Thời gian</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.thoiGian} onChange={e => setFilters({...filters, thoiGian: e.target.value})}><option value="">-- Tất cả --</option>{monthOptions.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
                     <div className="flex flex-col flex-1">
                       <label className="text-xs font-bold text-navy mb-1">CLO Địa bàn</label>
@@ -922,7 +922,7 @@
                   {/* 2. KHÔNG GIAN HIỂN THỊ KPI */}
                   <div className="flex-1 overflow-auto flex flex-col">
                     {/* ROW 1: TỔNG QUAN PIPELINE */}
-                    <div className="flex gap-4 px-8 pt-6 pb-2 shrink-0">
+                    <div className="flex gap-4 px-6 pt-6 pb-2 shrink-0">
                       {/* Thẻ Đang Mở (Xanh Navy) */}
                       <div className="bg-navy text-white rounded-lg shadow-sm p-4 flex-[1.2] flex flex-col justify-between">
                         <h3 className="text-[11px] font-bold text-gray-200 uppercase tracking-wide">PIPELINE ĐANG MỞ</h3>
@@ -954,7 +954,7 @@
                     </div>
             
                     {/* ROW 2: THẺ CẢNH BÁO TÁC CHIẾN */}
-                    <div className="grid grid-cols-6 gap-4 px-8 pb-6 shrink-0">
+                    <div className="grid grid-cols-6 gap-4 px-6 pb-6 shrink-0">
                       <div className="bg-[#FEF9E7] border-l-[3px] border-yellow-500 rounded-r-md shadow-sm p-4 flex flex-col justify-center">
                         <div className="text-2xl font-bold text-yellow-700">{fmtNum(kpiCHKD.thieuTiemNang)}</div>
                         <div className="text-xs font-semibold text-yellow-800 mt-1">CHKD mở chưa đánh giá tiềm năng</div>
@@ -983,7 +983,7 @@
                       </div>
                     </div>
                     {/* ROW 3: BIỂU ĐỒ PHỄU, CỘT XẾP CHỒNG THEO TRẠNG THÁI (ĐỊA BÀN) */}
-                    <div className="px-8 pb-6 flex-1 flex gap-6 shrink-0 min-h-[400px]">
+                    <div className="px-6 pb-6 flex-1 flex gap-6 shrink-0 min-h-[400px]">
                       
                       {/* BLOCK 1: BIỂU ĐỒ PHỄU (DẠNG BAR NGANG) */}
                       <div className="bg-white border border-gray-200 rounded shadow-sm p-6 flex-1 flex flex-col">
@@ -1008,13 +1008,13 @@
                                   type="category" 
                                   axisLine={false} 
                                   tickLine={false} 
-                                  width={140}
+                                  width={240}
                                   tick={{fontSize: 11, fill: '#4B5563', fontWeight: 600}} 
                                 />
                                 <Tooltip 
                                   cursor={{fill: '#F3F4F6'}}
                                   formatter={(value, name, props) => [
-                                    `${new Intl.NumberFormat('vi-VN', {maximumFractionDigits: 1}).format(value)} Tỷ (${props.payload.count} Deal)`, 
+                                    `${new Intl.NumberFormat('vi-VN', {maximumFractionDigits: 1}).format(value)} trĐ (${props.payload.count} Cơ hội)`, 
                                     'Quy mô'
                                   ]}
                                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
@@ -1072,7 +1072,7 @@
                     </div>
                     
                     {/* ROW 4: DATA GRID CHI TIẾT DEAL ĐANG MỞ KHẨN CẤP */}
-                    <div className="px-8 pb-8 flex flex-col shrink-0 min-h-[350px]">
+                    <div className="px-6 pb-6 flex flex-col shrink-0 min-h-[350px]">
                       <div className="bg-white border border-gray-200 rounded shadow-sm flex-1 flex flex-col overflow-hidden">
                         <div className="px-6 py-4 border-b bg-gray-50 shrink-0">
                           <h2 className="text-navy font-bold text-sm uppercase tracking-wide">CHI TIẾT DEAL ĐANG MỞ KHẨN CẤP</h2>
