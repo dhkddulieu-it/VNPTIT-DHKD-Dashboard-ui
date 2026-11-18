@@ -504,7 +504,7 @@
         // Sắp xếp giảm dần theo Tổng giá trị và lấy Top 15 để UI không bị quá nát
         const provPipelineChartData = Object.values(provPipelineMap)
           .sort((a, b) => b.tongGt - a.tongGt)
-          .slice(0, 15);
+          //.slice(0, 25);
         
         // Custom Tooltip giao diện Dark Mode (chuẩn hình ảnh yêu cầu)
         const CustomBarTooltip = ({ active, payload, label }) => {
@@ -513,19 +513,19 @@
             return (
               <div className="bg-[#1F2937] text-white p-3 rounded shadow-lg text-sm border border-gray-700 min-w-[160px]">
                 <p className="font-bold border-b border-gray-600 pb-1 mb-2 uppercase">{label}</p>
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-3 h-3 bg-[#2563EB]"></div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <div className="w-2.5 h-2.5 bg-[#2563EB]"></div>
                   <span>Đang mở: {fmtNum(data.dangMoGt)} trĐ</span>
                 </div>
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-3 h-3 bg-[#10B981]"></div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <div className="w-2.5 h-2.5 bg-[#10B981]"></div>
                   <span>Đã chốt: {fmtNum(data.daChotGt)} trĐ</span>
                 </div>
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-3 h-3 bg-[#EF4444]"></div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <div className="w-2.5 h-2.5 bg-[#EF4444]"></div>
                   <span>Thất bại: {fmtNum(data.thatBaiGt)} trĐ</span>
                 </div>
-                <p className="font-bold border-t border-gray-600 pt-2 text-xs">
+                <p className="font-bold border-t border-gray-600 pt-1.5 text-xs">
                   Tổng: {fmtNum(data.tongGt)} trĐ - {data.tongSl} CHKD
                 </p>
               </div>
@@ -998,7 +998,7 @@
                               <BarChart 
                                 layout="vertical" 
                                 data={funnelData} 
-                                margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+                                margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
                               >
                                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#E5E7EB"/>
                                 <XAxis type="number" hide />
@@ -1018,8 +1018,11 @@
                                     'Quy mô'
                                   ]}
                                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                  itemStyle={{ fontSize: '12px', padding: '2px 0' }}
+                                  labelStyle={{ fontSize: '12px', fontWeight: 'bold', color: '#4B5563', marginBottom: '4px' }}
+/>
                                 />
-                                <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={30}>
+                                <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={20}>
                                   {/* Đổ màu Gradient từ Navy -> Blue tùy theo số lượng mảng */}
                                   {funnelData.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={FUNNEL_COLORS[index % FUNNEL_COLORS.length]} />
@@ -1055,7 +1058,13 @@
                             <ResponsiveContainer width="100%" height="100%">
                               <BarChart data={provPipelineChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                <XAxis dataKey="maTinh" tick={{ fontSize: 11, fill: '#6B7280' }} axisLine={false} tickLine={false} />
+                                <XAxis 
+                                  dataKey="maTinh" 
+                                  tick={{ fontSize: 9, fill: '#6B7280' }} 
+                                  interval={0} 
+                                  axisLine={false} 
+                                  tickLine={false} 
+                                />
                                 <YAxis tick={{ fontSize: 11, fill: '#6B7280' }} axisLine={false} tickLine={false} />
                                 <Tooltip content={<CustomBarTooltip />} cursor={{ fill: '#F3F4F6' }} />
                                 <Legend verticalAlign="top" wrapperStyle={{ paddingBottom: '20px', fontSize: '12px' }} iconType="square" />
