@@ -998,7 +998,7 @@
                               <BarChart 
                                 layout="vertical" 
                                 data={funnelData} 
-                                margin={{ top: 10, right: 20, left: 10, bottom: 0 }}
+                                margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
                               >
                                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#E5E7EB"/>
                                 <XAxis type="number" hide />
@@ -1032,6 +1032,7 @@
                                     fill="#003B7A" 
                                     fontSize={12} 
                                     fontWeight="bold" 
+                                    offset={8}
                                   />
                                 </Bar>
                               </BarChart>
