@@ -82,7 +82,8 @@
     }
 
     try {
-      const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = window.Recharts || {};
+      
+      const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, FunnelChart, Funnel, LabelList, Cell } = window.Recharts || {};
       
       const API_URL = 'https://script.google.com/macros/s/AKfycby6E6r6KhZ54J6by2s1PF8MqtOSJu74GcyqO4GsFnSwWd-GmDScZFrS5Brq0IwXlO1N/exec'; 
 
@@ -380,61 +381,86 @@
         // ==========================================
         // ENGINE TÍNH TOÁN KPI CƠ HỘI KINH DOANH
         // ==========================================
-      const kpiCHKD = {
-        tongSl: 0, tongGt: 0,
-        moSl: 0, moGt: 0,
-        chotSl: 0, chotGt: 0,
-        thuaSl: 0, thuaGt: 0,
-        thieuTiemNang: 0, quaHanKy: 0, lauKhongCapNhat: 0, thieuGiaTri: 0
-      };
-
-      // Đặt mốc thời gian chuẩn để so sánh cảnh báo
-      const now = new Date();
-      const ninetyDaysAgo = new Date(now.getTime() - (90 * 24 * 60 * 60 * 1000));
-
-      basePipeline.forEach(d => {
-        const gtTrieu = parseNum(d['ngansach_duan']);
-        const status = (d['trang_thai'] || 'OPEN').toString().trim().toUpperCase();
+        const kpiCHKD = {
+          tongSl: 0, tongGt: 0,
+          moSl: 0, moGt: 0,
+          chotSl: 0, chotGt: 0,
+          thuaSl: 0, thuaGt: 0,
+          thieuTiemNang: 0, quaHanKy: 0, lauKhongCapNhat: 0, thieuGiaTri: 0
+        };
   
-      kpiCHKD.tongSl += 1;
-      kpiCHKD.tongGt += gtTrieu;
-
-      if (status === 'WON' || status === 'CLOSED' || status.includes('THẮNG')) {
-        kpiCHKD.chotSl += 1; kpiCHKD.chotGt += gtTrieu;
-      } else if (status === 'LOST' || status.includes('THUA') || status.includes('THẤT BẠI')) {
-        kpiCHKD.thuaSl += 1; kpiCHKD.thuaGt += gtTrieu;
-      } else {
-        // Nhóm CHKD ĐANG MỞ (OPEN)
-        kpiCHKD.moSl += 1; kpiCHKD.moGt += gtTrieu;
-
-        // Cảnh báo 1: Thiếu tiềm năng
-        if (!d['mucdo_tiemnang'] || d['mucdo_tiemnang'].toString().trim() === '') kpiCHKD.thieuTiemNang += 1;
-        
-        // Cảnh báo 2: Thiếu giá trị ( = 0)
-        if (gtTrieu === 0) kpiCHKD.thieuGiaTri += 1;
-        
-        // Cảnh báo 3: Quá hạn ký HĐ
-        if (d['ngay_dukienchot']) {
-          const ngayKy = new Date(d['ngay_dukienchot']);
-          if (ngayKy < now) kpiCHKD.quaHanKy += 1;
-        }
+        // Đặt mốc thời gian chuẩn để so sánh cảnh báo
+        const now = new Date();
+        const ninetyDaysAgo = new Date(now.getTime() - (90 * 24 * 60 * 60 * 1000));
+  
+        basePipeline.forEach(d => {
+          const gtTrieu = parseNum(d['ngansach_duan']);
+          const status = (d['trang_thai'] || 'OPEN').toString().trim().toUpperCase();
     
-        // Cảnh báo 4: > 90 ngày chưa cập nhật
-        if (d['ngay_cap_nhat_cuoi']) {
-          const ngayCapNhat = new Date(d['ngay_cap_nhat_cuoi']);
-          if (ngayCapNhat < ninetyDaysAgo) kpiCHKD.lauKhongCapNhat += 1;
+        kpiCHKD.tongSl += 1;
+        kpiCHKD.tongGt += gtTrieu;
+  
+        if (status === 'WON' || status === 'CLOSED' || status.includes('THẮNG')) {
+          kpiCHKD.chotSl += 1; kpiCHKD.chotGt += gtTrieu;
+        } else if (status === 'LOST' || status.includes('THUA') || status.includes('THẤT BẠI')) {
+          kpiCHKD.thuaSl += 1; kpiCHKD.thuaGt += gtTrieu;
+        } else {
+          // Nhóm CHKD ĐANG MỞ (OPEN)
+          kpiCHKD.moSl += 1; kpiCHKD.moGt += gtTrieu;
+  
+          // Cảnh báo 1: Thiếu tiềm năng
+          if (!d['mucdo_tiemnang'] || d['mucdo_tiemnang'].toString().trim() === '') kpiCHKD.thieuTiemNang += 1;
+          
+          // Cảnh báo 2: Thiếu giá trị ( = 0)
+          if (gtTrieu === 0) kpiCHKD.thieuGiaTri += 1;
+          
+          // Cảnh báo 3: Quá hạn ký HĐ
+          if (d['ngay_dukienchot']) {
+            const ngayKy = new Date(d['ngay_dukienchot']);
+            if (ngayKy < now) kpiCHKD.quaHanKy += 1;
+          }
+      
+          // Cảnh báo 4: > 90 ngày chưa cập nhật
+          if (d['ngay_cap_nhat_cuoi']) {
+            const ngayCapNhat = new Date(d['ngay_cap_nhat_cuoi']);
+            if (ngayCapNhat < ninetyDaysAgo) kpiCHKD.lauKhongCapNhat += 1;
+          }
         }
-      }
-    });
+      });
         
-    // Chỉ số phái sinh
-    const tyLeMoGt = kpiCHKD.tongGt ? (kpiCHKD.moGt / kpiCHKD.tongGt) : 0;
-    const closedTotalSl = kpiCHKD.chotSl + kpiCHKD.thuaSl;
-    const closedTotalGt = kpiCHKD.chotGt + kpiCHKD.thuaGt;
-    const winRateSl = closedTotalSl ? (kpiCHKD.chotSl / closedTotalSl) : 0;
-    const winRateGt = closedTotalGt ? (kpiCHKD.chotGt / closedTotalGt) : 0;
+        // Chỉ số phái sinh
+        const tyLeMoGt = kpiCHKD.tongGt ? (kpiCHKD.moGt / kpiCHKD.tongGt) : 0;
+        const closedTotalSl = kpiCHKD.chotSl + kpiCHKD.thuaSl;
+        const closedTotalGt = kpiCHKD.chotGt + kpiCHKD.thuaGt;
+        const winRateSl = closedTotalSl ? (kpiCHKD.chotSl / closedTotalSl) : 0;
+        const winRateGt = closedTotalGt ? (kpiCHKD.chotGt / closedTotalGt) : 0;
 
-
+        // ==========================================
+        // ENGINE: TỔNG HỢP DỮ LIỆU PHỄU PIPELINE
+        // ==========================================
+        const funnelDataMap = {};
+        
+        basePipeline.forEach(d => {
+          // Bỏ qua các deal đã Thua/Thất bại để phễu phản ánh đúng dòng chảy cơ hội hiện hành
+          const status = (d['trang_thai'] || '').toString().trim().toUpperCase();
+          if (status === 'LOST' || status.includes('THUA')) return;
+        
+          // Gom nhóm theo trạng thái Pipeline
+          const stage = (d['trangthai_pipeline'] || 'Chưa xác định').toString().trim();
+          const valTy = parseNum(d['gia_tri_du_kien']) / 1000; 
+        
+          if (!funnelDataMap[stage]) {
+            funnelDataMap[stage] = { name: stage, value: 0, count: 0 };
+          }
+          funnelDataMap[stage].value += valTy;
+          funnelDataMap[stage].count += 1;
+        });
+        
+        // Chuyển object thành array và sắp xếp theo tên giai đoạn (A-Z hoặc 1-9)
+        const funnelData = Object.values(funnelDataMap).sort((a, b) => a.name.localeCompare(b.name));
+        
+        // Bảng màu gradient từ VNPT Navy xuống VNPT Blue cho phễu
+        const FUNNEL_COLORS = ['#003B7A', '#004c9e', '#0062c3', '#007ad9', '#0094D9', '#33aae0', '#66bfe8'];
         
         const activeMenuItem = MENU_ITEMS.find(m => m.id === activeTab);
         const headerTitle = activeMenuItem ? activeMenuItem.label : 'DASHBOARD';
@@ -883,6 +909,82 @@
           <div className="text-xs font-semibold text-yellow-800 mt-1">CHKD thiếu giá trị dự kiến</div>
         </div>
       </div>
+      {/* KHÔNG GIAN BÊN DƯỚI: BIỂU ĐỒ PHỄU & BẢNG CHI TIẾT */}
+<div className="px-8 pb-6 flex-1 flex gap-6">
+  
+  {/* BLOCK 1: BIỂU ĐỒ PHỄU PIPELINE */}
+  <div className="bg-white border border-gray-200 rounded shadow-sm p-6 flex-[1.5] flex flex-col">
+    <div className="flex justify-between items-center mb-4">
+      <h2 className="text-navy font-bold text-sm uppercase tracking-wide">PHỄU CƠ HỘI KINH DOANH</h2>
+      <span className="text-xs text-gray-500">Đơn vị: Tỷ VNĐ</span>
+    </div>
+    
+    <div className="flex-1 w-full min-h-[300px]">
+      {ResponsiveContainer && FunnelChart ? (
+        <ResponsiveContainer width="100%" height="100%">
+          <FunnelChart>
+            <Tooltip 
+              formatter={(value, name, props) => [
+                `${new Intl.NumberFormat('vi-VN', {maximumFractionDigits: 1}).format(value)} Tỷ (${props.payload.count} Deal)`, 
+                'Quy mô'
+              ]} 
+              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+            />
+            <Funnel dataKey="value" data={funnelData} isAnimationActive>
+              <LabelList position="right" fill="#4B5563" stroke="none" dataKey="name" fontSize={12} fontWeight="bold" />
+              <LabelList position="center" fill="#fff" stroke="none" dataKey="value" formatter={(val) => fmtNum(val)} fontSize={14} fontWeight="bold" />
+              {funnelData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={FUNNEL_COLORS[index % FUNNEL_COLORS.length]} />
+              ))}
+            </Funnel>
+          </FunnelChart>
+        </ResponsiveContainer>
+      ) : (
+        <div className="flex items-center justify-center h-full text-gray-400 text-sm">Đang tải biểu đồ...</div>
+      )}
+    </div>
+  </div>
+
+  {/* BLOCK 2: DATA GRID CHI TIẾT (Có thể cuộn) */}
+  <div className="bg-white border border-gray-200 rounded shadow-sm flex-[2] flex flex-col overflow-hidden">
+    <div className="px-6 py-4 border-b bg-gray-50 shrink-0">
+      <h2 className="text-navy font-bold text-sm uppercase tracking-wide">CHI TIẾT DEAL ĐANG MỞ KHẨN CẤP</h2>
+    </div>
+    <div className="overflow-auto flex-1 p-2">
+      <table className="w-full text-left text-sm">
+        <thead className="bg-white text-navy sticky top-0 shadow-sm z-10">
+          <tr>
+            <th className="p-3 border-b font-semibold">Mã CHKD</th>
+            <th className="p-3 border-b font-semibold">Mã PLO</th>
+            <th className="p-3 border-b font-semibold">Tên dự án</th>
+            <th className="p-3 border-b font-semibold">Khách hàng</th>
+            <th className="p-3 border-b font-semibold">Giai đoạn</th>
+            <th className="p-3 border-b font-semibold text-right">Giá trị (trVNĐ)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {basePipeline
+            .filter(d => (d['trang_thai'] || '').toString().toUpperCase() === 'OPEN')
+            .sort((a, b) => parseNum(b['ngansach_duan']) - parseNum(a['ngansach_duan']))
+            .slice(0, 15) // Lấy Top 15 Deal lớn nhất
+            .map((p, i) => (
+              <tr key={i} className="border-b hover:bg-blue-50 transition">
+                <td className="p-3 font-bold text-navy">{p['ma_chkd'] || '-'}</td>
+                <td className="p-3 font-medium text-gray-700 truncate max-w-[200px]" title={p['plo_code']}>{p['plo_code'] || 'Chưa gán PLO'}</td>
+                <td className="p-3 font-medium text-gray-700 truncate max-w-[200px]" title={p['ten_duan']}>{p['ten_duan'] || 'Chưa cập nhật'}</td>
+                <td className="p-3 font-medium text-gray-700 truncate max-w-[200px]" title={p['ten_khachhang']}>{p['ten_khachhang'] || 'Chưa cập nhật'}</td>
+                <td className="p-3 text-gray-600">
+                  <span className="px-2 py-1 bg-gray-100 rounded text-xs">{p['trangthai_pipeline'] || '-'}</span>
+                </td>
+                <td className="p-3 text-right font-bold text-vnpt">{fmtTy(parseNum(p['ngansach_duan']))}</td>
+              </tr>
+            ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+</div>
     </div>
   </div>
 
