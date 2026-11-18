@@ -82,7 +82,6 @@
     }
 
     try {
-      
       const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, FunnelChart, Funnel, LabelList, Cell } = window.Recharts || {};
       
       const API_URL = 'https://script.google.com/macros/s/AKfycby6E6r6KhZ54J6by2s1PF8MqtOSJu74GcyqO4GsFnSwWd-GmDScZFrS5Brq0IwXlO1N/exec'; 
@@ -185,6 +184,7 @@
         const isAllTime = !filters.thoiGian || filters.thoiGian === 'ALL' || filters.thoiGian === '';
         const filterMonthVal = isAllTime ? 999912 : getMonthVal(filters.thoiGian);
 
+        // ================= ENGINE TỔNG HỢP DASHBOARD =================
         const kpi = { dtThucHien: 0, dtKeHoach: 0, pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeMoSl: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0 };
 
         const baseData = (rawData || []).filter(d => 
@@ -343,7 +343,7 @@
            thieuHut: Math.max(p.dtKeHoach - p.dtThucHien - p.duBaoDt, 0)
         })).sort((a, b) => b.dtThucHien - a.dtThucHien);
 
-        //DE AN KE HOACH
+        // ================= ENGINE TỔNG HỢP ĐỀ ÁN =================
         const baseDean = (deanRaw || []).filter(d => 
           (filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh)
         );
@@ -354,19 +354,18 @@
           vnptSl: 0, vnptNs: 0,       
           trangSl: 0, trangNs: 0,     
           doiThuSl: 0, doiThuNs: 0,
-          chuyenHoaSl: 0, chuyenHoaNs: 0  // KPI Mới: Đã chuyển hóa thành Phễu
+          chuyenHoaSl: 0, chuyenHoaNs: 0
         };
 
         baseDean.forEach(d => {
           const ns = parseNum(d['ngansach']);
           const trangThai = (d['trangthai_trienkhai'] || '').toString().trim().toUpperCase();
           const donVi = (d['donvi_donghanh'] || '').toString().trim().toUpperCase();
-          const maChkd = (d['ma_CHKD'] || d['chkd_id'] || '').toString().trim(); // Hỗ trợ cả 2 định dạng mã Header
+          const maChkd = (d['ma_CHKD'] || d['chkd_id'] || '').toString().trim(); 
 
           deanKpi.tongSl += 1;
           deanKpi.tongNs += ns;
 
-          // Tính KPI Chuyển hóa CHKD (Độc lập với trạng thái triển khai)
           if (maChkd !== '') {
               deanKpi.chuyenHoaSl += 1;
               deanKpi.chuyenHoaNs += ns;
@@ -386,19 +385,16 @@
           }
         });
 
-        // ==========================================
-        // ENGINE TÍNH TOÁN KPI CƠ HỘI KINH DOANH
-        // ==========================================
+        // ================= ENGINE TÍNH TOÁN KPI CƠ HỘI KINH DOANH =================
         const kpiCHKD = {
           tongSl: 0, tongGt: 0,
           moSl: 0, moGt: 0,
           chotSl: 0, chotGt: 0,
           thuaSl: 0, thuaGt: 0,
           thieuTiemNang: 0, quaHanKy: 0, lauKhongCapNhat: 0, thieuGiaTri: 0,
-          thieuHinhThuc: 0, thieuPLO: 0 // <--- NEW: Bổ sung 2 biến mới
+          thieuHinhThuc: 0, thieuPLO: 0
         };
   
-        // Đặt mốc thời gian chuẩn để so sánh cảnh báo
         const now = new Date();
         const ninetyDaysAgo = new Date(now.getTime() - (90 * 24 * 60 * 60 * 1000));
   
@@ -406,60 +402,47 @@
           const gtTrieu = parseNum(d['ngansach_duan']);
           const status = (d['trang_thai'] || 'OPEN').toString().trim().toUpperCase();
     
-        kpiCHKD.tongSl += 1;
-        kpiCHKD.tongGt += gtTrieu;
-  
-        if (status === 'WON' || status === 'CLOSED' || status.includes('THẮNG')) {
-          kpiCHKD.chotSl += 1; kpiCHKD.chotGt += gtTrieu;
-        } else if (status === 'LOST' || status.includes('THUA') || status.includes('THẤT BẠI')) {
-          kpiCHKD.thuaSl += 1; kpiCHKD.thuaGt += gtTrieu;
-        } else {
-          // Nhóm CHKD ĐANG MỞ (OPEN)
-          kpiCHKD.moSl += 1; kpiCHKD.moGt += gtTrieu;
-  
-          // Cảnh báo 1: Thiếu tiềm năng
-          if (!d['mucdo_tiemnang'] || d['mucdo_tiemnang'].toString().trim() === '') kpiCHKD.thieuTiemNang += 1;
-          
-          // Cảnh báo 2: Thiếu giá trị ( = 0)
-          if (gtTrieu === 0) kpiCHKD.thieuGiaTri += 1;
-          
-          // Cảnh báo 3: Quá hạn ký HĐ
-          if (d['ngay_dukienchot']) {
-            const ngayKy = new Date(d['ngay_dukienchot']);
-            if (ngayKy < now) kpiCHKD.quaHanKy += 1;
-          }
-      
-          // Cảnh báo 4: > 90 ngày chưa cập nhật
-          if (d['ngay_cap_nhat_cuoi']) {
-            const ngayCapNhat = new Date(d['ngay_cap_nhat_cuoi']);
-            if (ngayCapNhat < ninetyDaysAgo) kpiCHKD.lauKhongCapNhat += 1;
-          }
-          // <--- NEW: Cảnh báo 5 & 6
-          if (!d['hinhthuc_cungcap'] || d['hinhthuc_cungcap'].toString().trim() === '') kpiCHKD.thieuHinhThuc += 1;
-          if (!d['plo_code'] || d['plo_code'].toString().trim() === '') kpiCHKD.thieuPLO += 1;
-        }
-      });
+          kpiCHKD.tongSl += 1;
+          kpiCHKD.tongGt += gtTrieu;
+    
+          if (status === 'WON' || status === 'CLOSED' || status.includes('THẮNG')) {
+            kpiCHKD.chotSl += 1; kpiCHKD.chotGt += gtTrieu;
+          } else if (status === 'LOST' || status.includes('THUA') || status.includes('THẤT BẠI')) {
+            kpiCHKD.thuaSl += 1; kpiCHKD.thuaGt += gtTrieu;
+          } else {
+            kpiCHKD.moSl += 1; kpiCHKD.moGt += gtTrieu;
+    
+            if (!d['mucdo_tiemnang'] || d['mucdo_tiemnang'].toString().trim() === '') kpiCHKD.thieuTiemNang += 1;
+            if (gtTrieu === 0) kpiCHKD.thieuGiaTri += 1;
+            
+            if (d['ngay_dukienchot']) {
+              const ngayKy = new Date(d['ngay_dukienchot']);
+              if (ngayKy < now) kpiCHKD.quaHanKy += 1;
+            }
         
-        // Chỉ số phái sinh
+            if (d['ngay_cap_nhat_cuoi']) {
+              const ngayCapNhat = new Date(d['ngay_cap_nhat_cuoi']);
+              if (ngayCapNhat < ninetyDaysAgo) kpiCHKD.lauKhongCapNhat += 1;
+            }
+            if (!d['hinhthuc_cungcap'] || d['hinhthuc_cungcap'].toString().trim() === '') kpiCHKD.thieuHinhThuc += 1;
+            if (!d['plo_code'] || d['plo_code'].toString().trim() === '') kpiCHKD.thieuPLO += 1;
+          }
+        });
+        
         const tyLeMoGt = kpiCHKD.tongGt ? (kpiCHKD.moGt / kpiCHKD.tongGt) : 0;
         const closedTotalSl = kpiCHKD.chotSl + kpiCHKD.thuaSl;
         const closedTotalGt = kpiCHKD.chotGt + kpiCHKD.thuaGt;
         const winRateSl = closedTotalSl ? (kpiCHKD.chotSl / closedTotalSl) : 0;
         const winRateGt = closedTotalGt ? (kpiCHKD.chotGt / closedTotalGt) : 0;
 
-        // ==========================================
-        // ENGINE: TỔNG HỢP DỮ LIỆU PHỄU PIPELINE
-        // ==========================================
+        // ================= ENGINE TỔNG HỢP DỮ LIỆU PHỄU PIPELINE =================
         const funnelDataMap = {};
         
         basePipeline.forEach(d => {
-          // Bỏ qua các deal đã Thua/Thất bại để phễu phản ánh đúng dòng chảy cơ hội hiện hành
           const status = (d['trang_thai'] || '').toString().trim().toUpperCase();
           if (status === 'LOST' || status.includes('THUA')) return;
         
-          // Gom nhóm theo trạng thái Pipeline
           const stage = (d['trangthai_pipeline'] || 'Chưa xác định').toString().trim();
-          
           const valTy = parseNum(d['ngansach_duan']); 
         
           if (!funnelDataMap[stage]) {
@@ -469,23 +452,17 @@
           funnelDataMap[stage].count += 1;
         });
         
-        // Chuyển object thành array và sắp xếp theo số thứ tự ở đầu chuỗi (1 đến 12)
         const funnelData = Object.values(funnelDataMap).sort((a, b) => {
-          // Trích xuất số từ chuỗi, VD: "1. Khởi tạo CHKD" -> 1
           const getStageNumber = (name) => {
             const match = name.match(/^(\d+)\./); 
-            return match ? parseInt(match[1], 10) : 99; // Các chuỗi rác không có số sẽ đẩy xuống cuối (số 99)
+            return match ? parseInt(match[1], 10) : 99;
           };
-          
           return getStageNumber(a.name) - getStageNumber(b.name);
         });
         
-        // Bảng màu gradient từ VNPT Navy xuống VNPT Blue cho phễu
         const FUNNEL_COLORS = ['#003B7A', '#004c9e', '#0062c3', '#007ad9', '#0094D9', '#33aae0', '#66bfe8'];
 
-        // ==========================================
-        // ENGINE: TỔNG HỢP BIỂU ĐỒ CỘT XẾP CHỒNG THEO TỈNH
-        // ==========================================
+        // ================= ENGINE TỔNG HỢP BIỂU ĐỒ CỘT XẾP CHỒNG THEO TỈNH =================
         const provPipelineMap = {};
         
         basePipeline.forEach(d => {
@@ -505,16 +482,12 @@
           } else if (status === 'LOST' || status.includes('THUA') || status.includes('THẤT BẠI')) {
             provPipelineMap[maTinh].thatBaiGt += gtTy;
           } else {
-            provPipelineMap[maTinh].dangMoGt += gtTy; // Nhóm ĐANG MỞ
+            provPipelineMap[maTinh].dangMoGt += gtTy;
           }
         });
         
-        // Sắp xếp giảm dần theo Tổng giá trị và lấy Top 15 để UI không bị quá nát
-        const provPipelineChartData = Object.values(provPipelineMap)
-          .sort((a, b) => b.tongGt - a.tongGt)
-          //.slice(0, 25);
+        const provPipelineChartData = Object.values(provPipelineMap).sort((a, b) => b.tongGt - a.tongGt);
         
-        // Custom Tooltip giao diện Dark Mode (chuẩn hình ảnh yêu cầu)
         const CustomBarTooltip = ({ active, payload, label }) => {
           if (active && payload && payload.length) {
             const data = payload[0].payload;
@@ -545,13 +518,13 @@
         const activeMenuItem = MENU_ITEMS.find(m => m.id === activeTab);
         const headerTitle = activeMenuItem ? activeMenuItem.label : 'DASHBOARD';
 
-        // Lấy danh sách Địa Bàn cấp cho user, nếu là ALL (CEO) thì trích xuất từ dữ liệu
         const dsDiaBanHienThi = (user.provinces && user.provinces.includes('ALL')) 
           ? [...new Set(rawData.map(d => d['ma_tinh']).filter(Boolean))].sort()
           : (user.provinces || []);
 
         return (
           <div className="flex h-screen w-full">
+            {/* ================= SIDEBAR ================= */}
             <aside className="w-[200px] bg-navy text-white flex flex-col shadow-2xl z-20 shrink-0">
               <div className="p-4 border-b border-white/20 flex flex-col items-center">
                 <div className="text-2xl font-extrabold tracking-widest text-vnpt bg-white px-3 py-1 rounded shadow mb-2">VNPT</div>
@@ -600,6 +573,7 @@
                 </div>
               </header>
 
+              {/* ================= TAB 1: DASHBOARD ================= */}
               { activeTab === 'dashboard' ? (
                 <div className="flex-1 flex flex-col overflow-hidden">
                   <div className="bg-white px-6 py-3 flex gap-4 shrink-0 border-b shadow-sm items-end z-10">
@@ -679,6 +653,7 @@
                         </div>
                       </div>
                     </div>
+                    
                     <div className="px-6 pb-6 flex shrink-0">
                       <div className="w-full bg-white border rounded shadow-sm p-6 flex flex-col overflow-hidden">
                         <h2 className="text-navy font-bold text-base mb-4 uppercase">Bảng KPIS Chi Tiết Địa Bàn</h2>
@@ -712,13 +687,13 @@
                                   <td className="p-2 text-right text-gray-700">{fmtNum(p.pipeTongGt)}</td>
                                   <td className="p-2 text-right text-gray-700">{fmtNum(p.pipeMoGt)}</td>
                                   <td className="p-2 text-right text-gray-700">{fmtNum(p.pipeDongGt)}</td>
-                                  <td className="p-2 text-right text-gray-700">{fmtPct(p.winrate)}</td>
+                                  <td className="p-2 text-right text-gray-700">{fmtPct(p.winRate)}</td>
                                   <td className="p-2 text-right text-vnpt font-semibold">{fmtNum(p.duBaoDt)}</td>
                                   <td className={`p-2 text-right font-bold ${p.thieuHut > 0 ? 'text-risk' : 'text-good'}`}>{fmtNum(p.thieuHut)}</td>
                                 </tr>
                               ))}
                               {provStatsArray.length === 0 && (
-                                <tr><td colSpan="9" className="p-6 text-center text-gray-400">Không có dữ liệu</td></tr>
+                                <tr><td colSpan="11" className="p-6 text-center text-gray-400">Không có dữ liệu</td></tr>
                               )}
                             </tbody>
                           </table>
@@ -741,7 +716,6 @@
                                 <th className="p-2 border-b font-semibold text-right">Pipeline Tổng</th>
                                 <th className="p-2 border-b font-semibold text-right">Pipeline Mở</th>
                                 <th className="p-2 border-b font-semibold text-right">Pipeline Chốt</th>
-                                <th className="p-2 border-b font-semibold text-right">Winrate</th>
                                 <th className="p-2 border-b font-semibold text-right">Dự báo DT</th>
                                 <th className="p-2 border-b font-semibold text-right">Khoảng trống</th>
                               </tr>
@@ -759,13 +733,12 @@
                                   <td className="p-2 text-right text-gray-700">{fmtNum(p.pipeTongGt)}</td>
                                   <td className="p-2 text-right text-gray-700">{fmtNum(p.pipeMoGt)}</td>
                                   <td className="p-2 text-right text-gray-700">{fmtNum(p.pipeDongGt)}</td>
-                                  <td className="p-2 text-right text-gray-700">{fmtNum(p.winrate)}</td>
                                   <td className="p-2 text-right text-vnpt font-semibold">{fmtNum(p.duBaoDt)}</td>
                                   <td className={`p-2 text-right font-bold ${p.thieuHut > 0 ? 'text-risk' : 'text-good'}`}>{fmtNum(p.thieuHut)}</td>
                                 </tr>
                               ))}
                               {ploStatsArray.length === 0 && (
-                                <tr><td colSpan="9" className="p-6 text-center text-gray-400">Không có dữ liệu</td></tr>
+                                <tr><td colSpan="10" className="p-6 text-center text-gray-400">Không có dữ liệu</td></tr>
                               )}
                             </tbody>
                           </table>
@@ -774,6 +747,8 @@
                     </div>
                   </div>
                 </div>
+
+              {/* ================= TAB 2: ĐỀ ÁN, KẾ HOẠCH ================= */}
               ) : activeTab ==='dean' ? (
                 <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
                   <div className="bg-white px-6 py-3 flex gap-4 shrink-0 border-b shadow-sm items-end z-10">
@@ -792,57 +767,60 @@
 
                   {loading && <div className="text-center text-vnpt text-sm py-1 font-bold animate-pulse bg-white">Đang đồng bộ dữ liệu...</div>}
                   
-                  <div className="grid grid-cols-6 gap-4 px-6 py-6 shrink-0">
-                    <KpiCard 
-                      title="1. TỔNG QUY MÔ" 
-                      v1={fmtNum(deanKpi.tongSl)} l1="Nhiệm vụ CĐS" 
-                      v2={fmtNum(deanKpi.tongNs)} l2="Tổng Ngân sách (trĐ)" 
-                      st="neutral" 
-                    />
-                    <KpiCard 
-                      title="2. ĐÃ TRIỂN KHAI" 
-                      v1={fmtNum(deanKpi.daTrienKhaiSl)} l1="Đang thực hiện" 
-                      v2={fmtNum(deanKpi.daTrienKhaiNs)} l2="Ngân sách (trĐ)" 
-                      st="neutral" 
-                    />
-                    <div className="bg-white border-2 border-vnpt rounded p-4 shadow-sm flex flex-col justify-between">
-                      <h3 className="text-vnpt font-bold text-xs mb-3 uppercase">3. VNPT ĐANG BÁM</h3>
-                      <div>
-                        <div className="text-3xl font-bold mb-1 text-vnpt">{fmtNum(deanKpi.vnptSl)}</div>
-                        <div className="text-xs text-gray-500 mb-3">Nhiệm vụ tiềm năng</div>
-                        <div className="text-base font-bold text-gray-700 border-t pt-2">{fmtNum(deanKpi.vnptNs)}</div>
-                        <div className="text-xs text-gray-500">Ngân sách (trĐ)</div>
+                  {/* SỬA LỖI 1: BỔ SUNG THẺ DIV MỞ Ở ĐÂY ĐỂ BỌC NỘI DUNG CUỘN */}
+                  <div className="flex-1 overflow-auto flex flex-col">
+                  
+                    <div className="grid grid-cols-6 gap-4 px-6 py-6 shrink-0">
+                      <KpiCard 
+                        title="1. TỔNG QUY MÔ" 
+                        v1={fmtNum(deanKpi.tongSl)} l1="Nhiệm vụ CĐS" 
+                        v2={fmtNum(deanKpi.tongNs)} l2="Tổng Ngân sách (trĐ)" 
+                        st="neutral" 
+                      />
+                      <KpiCard 
+                        title="2. ĐÃ TRIỂN KHAI" 
+                        v1={fmtNum(deanKpi.daTrienKhaiSl)} l1="Đang thực hiện" 
+                        v2={fmtNum(deanKpi.daTrienKhaiNs)} l2="Ngân sách (trĐ)" 
+                        st="neutral" 
+                      />
+                      <div className="bg-white border-2 border-vnpt rounded p-4 shadow-sm flex flex-col justify-between">
+                        <h3 className="text-vnpt font-bold text-xs mb-3 uppercase">3. VNPT ĐANG BÁM</h3>
+                        <div>
+                          <div className="text-3xl font-bold mb-1 text-vnpt">{fmtNum(deanKpi.vnptSl)}</div>
+                          <div className="text-xs text-gray-500 mb-3">Nhiệm vụ tiềm năng</div>
+                          <div className="text-base font-bold text-gray-700 border-t pt-2">{fmtNum(deanKpi.vnptNs)}</div>
+                          <div className="text-xs text-gray-500">Ngân sách (trĐ)</div>
+                        </div>
+                      </div>
+                      <div className="bg-white border-2 border-orange-400 rounded p-4 shadow-sm flex flex-col justify-between">
+                        <h3 className="text-orange-500 font-bold text-xs mb-3 uppercase">4. KHOẢNG TRỐNG (CHƯA CÓ)</h3>
+                        <div>
+                          <div className="text-3xl font-bold mb-1 text-orange-500">{fmtNum(deanKpi.trangSl)}</div>
+                          <div className="text-xs text-gray-500 mb-3">Chưa ai tiếp cận</div>
+                          <div className="text-base font-bold text-gray-700 border-t pt-2">{fmtNum(deanKpi.trangNs)}</div>
+                          <div className="text-xs text-gray-500">Ngân sách bỏ ngỏ (trĐ)</div>
+                        </div>
+                      </div>
+                      <div className="bg-white border-2 border-risk rounded p-4 shadow-sm flex flex-col justify-between relative overflow-hidden">
+                        <div className="absolute top-0 right-0 bg-risk text-white text-[9px] font-bold px-2 py-1 rounded-bl">CẢNH BÁO</div>
+                        <h3 className="text-risk font-bold text-xs mb-3 uppercase">5. ĐỐI THỦ ĐANG BÁM</h3>
+                        <div>
+                          <div className="text-3xl font-bold mb-1 text-risk">{fmtNum(deanKpi.doiThuSl)}</div>
+                          <div className="text-xs text-gray-500 mb-3">Nguy cơ mất thị phần</div>
+                          <div className="text-base font-bold text-gray-700 border-t pt-2">{fmtNum(deanKpi.doiThuNs)}</div>
+                          <div className="text-xs text-gray-500">Ngân sách rủi ro (trĐ)</div>
+                        </div>
+                      </div>
+                      <div className="bg-white border-2 border-good rounded p-4 shadow-sm flex flex-col justify-between">
+                        <h3 className="text-good font-bold text-xs mb-3 uppercase">6. ĐÃ CHUYỂN HÓA</h3>
+                        <div>
+                          <div className="text-3xl font-bold mb-1 text-good">{fmtNum(deanKpi.chuyenHoaSl)}</div>
+                          <div className="text-xs text-gray-500 mb-3 truncate">Chuyển CHKD thành công</div>
+                          <div className="text-base font-bold text-gray-700 border-t pt-2">{fmtNum(deanKpi.chuyenHoaNs)}</div>
+                          <div className="text-xs text-gray-500">Ngân sách Phễu (trĐ)</div>
+                        </div>
                       </div>
                     </div>
-                    <div className="bg-white border-2 border-orange-400 rounded p-4 shadow-sm flex flex-col justify-between">
-                      <h3 className="text-orange-500 font-bold text-xs mb-3 uppercase">4. KHOẢNG TRỐNG (CHƯA CÓ)</h3>
-                      <div>
-                        <div className="text-3xl font-bold mb-1 text-orange-500">{fmtNum(deanKpi.trangSl)}</div>
-                        <div className="text-xs text-gray-500 mb-3">Chưa ai tiếp cận</div>
-                        <div className="text-base font-bold text-gray-700 border-t pt-2">{fmtNum(deanKpi.trangNs)}</div>
-                        <div className="text-xs text-gray-500">Ngân sách bỏ ngỏ (trĐ)</div>
-                      </div>
-                    </div>
-                    <div className="bg-white border-2 border-risk rounded p-4 shadow-sm flex flex-col justify-between relative overflow-hidden">
-                      <div className="absolute top-0 right-0 bg-risk text-white text-[9px] font-bold px-2 py-1 rounded-bl">CẢNH BÁO</div>
-                      <h3 className="text-risk font-bold text-xs mb-3 uppercase">5. ĐỐI THỦ ĐANG BÁM</h3>
-                      <div>
-                        <div className="text-3xl font-bold mb-1 text-risk">{fmtNum(deanKpi.doiThuSl)}</div>
-                        <div className="text-xs text-gray-500 mb-3">Nguy cơ mất thị phần</div>
-                        <div className="text-base font-bold text-gray-700 border-t pt-2">{fmtNum(deanKpi.doiThuNs)}</div>
-                        <div className="text-xs text-gray-500">Ngân sách rủi ro (trĐ)</div>
-                      </div>
-                    </div>
-                    <div className="bg-white border-2 border-good rounded p-4 shadow-sm flex flex-col justify-between">
-                      <h3 className="text-good font-bold text-xs mb-3 uppercase">6. ĐÃ CHUYỂN HÓA</h3>
-                      <div>
-                        <div className="text-3xl font-bold mb-1 text-good">{fmtNum(deanKpi.chuyenHoaSl)}</div>
-                        <div className="text-xs text-gray-500 mb-3 truncate">Chuyển CHKD thành công</div>
-                        <div className="text-base font-bold text-gray-700 border-t pt-2">{fmtNum(deanKpi.chuyenHoaNs)}</div>
-                        <div className="text-xs text-gray-500">Ngân sách Phễu (trĐ)</div>
-                      </div>
-                    </div>
-                  </div>
 
                     <div className="px-6 pb-6 flex gap-8 shrink-0 min-h-[450px]">
                       
@@ -913,14 +891,13 @@
                           </table>
                         </div>
                       </div>
-
                     </div>
-                    
                   </div>
                 </div>
+
+              {/* ================= TAB 3: CƠ HỘI KINH DOANH ================= */}
               ) : activeTab === 'cohoi' ? (
                 <div className="flex-1 flex flex-col overflow-hidden bg-[#F4F6F8]">
-                  {/* 1. THANH ĐIỀU HƯỚNG & BỘ LỌC */}
                   <div className="bg-white px-6 py-3 flex gap-4 shrink-0 border-b shadow-sm items-end z-10">
                     <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Thời gian</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.thoiGian} onChange={e => setFilters({...filters, thoiGian: e.target.value})}><option value="">-- Tất cả --</option>{monthOptions.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
                     <div className="flex flex-col flex-1">
@@ -937,11 +914,8 @@
 
                   {loading && <div className="text-center text-vnpt text-sm py-1 font-bold animate-pulse bg-white">Đang đồng bộ dữ liệu...</div>}
         
-                  {/* 2. KHÔNG GIAN HIỂN THỊ KPI */}
                   <div className="flex-1 overflow-auto flex flex-col">
-                    {/* ROW 1: TỔNG QUAN PIPELINE */}
                     <div className="flex gap-4 px-6 pt-6 pb-2 shrink-0">
-                      {/* Thẻ Đang Mở (Xanh Navy) */}
                       <div className="bg-navy text-white rounded-lg shadow-sm p-4 flex-[1.2] flex flex-col justify-between">
                         <h3 className="text-[11px] font-bold text-gray-200 uppercase tracking-wide">PIPELINE ĐANG MỞ</h3>
                         <div className="text-[2.5rem] font-bold leading-none my-2">{fmtNum(kpiCHKD.moGt)}</div>
@@ -971,7 +945,6 @@
                       </div>
                     </div>
             
-                    {/* ROW 2: THẺ CẢNH BÁO TÁC CHIẾN */}
                     <div className="grid grid-cols-6 gap-4 px-6 pb-6 shrink-0">
                       <div className="bg-[#FEF9E7] border-l-[3px] border-yellow-500 rounded-r-md shadow-sm p-4 flex flex-col justify-center">
                         <div className="text-2xl font-bold text-yellow-700">{fmtNum(kpiCHKD.thieuTiemNang)}</div>
@@ -981,12 +954,10 @@
                         <div className="text-2xl font-bold text-yellow-700">{fmtNum(kpiCHKD.thieuGiaTri)}</div>
                         <div className="text-xs font-semibold text-yellow-800 mt-1">CHKD thiếu giá trị ngân sách</div>
                       </div>
-                      {/* NEW: Thẻ 5 - Thiếu Hình thức */}
                       <div className="bg-[#FEF9E7] border-l-[3px] border-yellow-500 rounded-r-md shadow-sm p-4 flex flex-col justify-center">
                         <div className="text-2xl font-bold text-yellow-700 leading-none mb-1">{fmtNum(kpiCHKD.thieuHinhThuc)}</div>
                         <div className="text-xs font-semibold text-yellow-800 leading-snug">CHKD thiếu Hình thức cung cấp</div>
                       </div>
-                      {/* NEW: Thẻ 6 - Thiếu PLO */}
                       <div className="bg-[#FEF9E7] border-l-[3px] border-yellow-500 rounded-r-md shadow-sm p-4 flex flex-col justify-center">
                         <div className="text-2xl font-bold text-yellow-700 leading-none mb-1">{fmtNum(kpiCHKD.thieuPLO)}</div>
                         <div className="text-xs font-semibold text-yellow-800 leading-snug">CHKD chưa gán PLO</div>
@@ -1000,10 +971,9 @@
                         <div className="text-xs font-semibold text-red-800 mt-1">CHKD mở &gt; 90 ngày chưa cập nhật</div>
                       </div>
                     </div>
-                    {/* ROW 3: BIỂU ĐỒ PHỄU, CỘT XẾP CHỒNG THEO TRẠNG THÁI (ĐỊA BÀN) */}
+
                     <div className="px-6 pb-6 flex-1 flex gap-6 shrink-0 min-h-[400px]">
                       
-                      {/* BLOCK 1: BIỂU ĐỒ PHỄU (DẠNG BAR NGANG) */}
                       <div className="bg-white border border-gray-200 rounded shadow-sm p-6 flex-1 flex flex-col">
                         <div className="flex justify-between items-center mb-4">
                           <h2 className="text-navy font-bold text-sm uppercase tracking-wide">PHỄU CƠ HỘI KINH DOANH</h2>
@@ -1020,16 +990,16 @@
                               >
                                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#E5E7EB"/>
                                 <XAxis type="number" hide />
-                                {/* Custom trục Y để hiện text bên trái cột */}
                                 <YAxis 
                                   dataKey="name" 
                                   type="category" 
                                   axisLine={false} 
                                   tickLine={false} 
                                   width={220}
-                                  interval={0} /* <--- BỔ SUNG THUỘC TÍNH NÀY CHỐNG ẨN DÒNG */
+                                  interval={0} 
                                   tick={{fontSize: 11, fill: '#4B5563', fontWeight: 600}} 
                                 />
+                                {/* SỬA LỖI 2: ĐÃ XÓA KÝ TỰ DƯ /> Ở ĐÂY */}
                                 <Tooltip 
                                   cursor={{fill: '#F3F4F6'}}
                                   formatter={(value, name, props) => [
@@ -1041,11 +1011,9 @@
                                   labelStyle={{ fontSize: '12px', fontWeight: 'bold', color: '#4B5563', marginBottom: '4px' }}
                                 />
                                 <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={20}>
-                                  {/* Đổ màu Gradient từ Navy -> Blue tùy theo số lượng mảng */}
                                   {funnelData.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={FUNNEL_COLORS[index % FUNNEL_COLORS.length]} />
                                   ))}
-                                  {/* Hiển thị số Tỷ ngay bên trong/cạnh thanh Bar */}
                                   <LabelList 
                                     dataKey="value" 
                                     position="right" 
@@ -1064,7 +1032,6 @@
                         </div>
                       </div>
                       
-                      {/* BLOCK 2: BIỂU ĐỒ CỘT XẾP CHỒNG THEO TRẠNG THÁI (ĐỊA BÀN) */}
                       <div className="bg-white border border-gray-200 rounded shadow-sm p-6 flex-[2] flex flex-col">
                         <div className="flex justify-between items-center mb-4">
                           <h2 className="text-navy font-bold text-sm uppercase tracking-wide">CỘT XẾP CHỒNG THEO TRẠNG THÁI</h2>
@@ -1099,7 +1066,6 @@
                       </div>
                     </div>
                     
-                    {/* ROW 4: DATA GRID CHI TIẾT DEAL ĐANG MỞ KHẨN CẤP */}
                     <div className="px-6 pb-6 flex flex-col shrink-0 min-h-[350px]">
                       <div className="bg-white border border-gray-200 rounded shadow-sm flex-1 flex flex-col overflow-hidden">
                         <div className="px-6 py-4 border-b bg-gray-50 shrink-0">
@@ -1124,7 +1090,7 @@
                               {basePipeline
                                 .filter(d => (d['trang_thai'] || '').toString().toUpperCase() === 'OPEN')
                                 .sort((a, b) => parseNum(b['ngansach_duan']) - parseNum(a['ngansach_duan']))
-                                .slice(0, 50) // Top 15
+                                .slice(0, 50) 
                                 .map((p, i) => (
                                   <tr key={i} className="border-b hover:bg-blue-50 transition">
                                     <td className="p-3 font-bold text-navy truncate" title={p['ma_tinh']}>{p['ma_tinh'] || '-'}</td>
@@ -1149,7 +1115,17 @@
                     </div>
                   </div>
                 </div>
-              )  : (
+              
+              {/* ================= TAB 4 & 5: HỢP ĐỒNG / KHÁCH HÀNG ================= */}
+              ) : activeTab === 'hopdong' || activeTab === 'khachhang' ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-gray-50">
+                  <div className="text-6xl mb-4 text-vnpt">⏳</div>
+                  <h2 className="text-2xl font-bold text-navy mb-2">Đang cập nhật, chờ nhé!</h2>
+                  <p>Module này đang trong quá trình xây dựng kiến trúc Data Engine.</p>
+                </div>
+              
+              {/* ================= CÁC TAB KHÁC ================= */}
+              ) : (
                 <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-gray-50">
                   <div className="text-6xl mb-4">🚧</div>
                   <h2 className="text-2xl font-bold text-navy mb-2">Tính năng đang phát triển</h2>
