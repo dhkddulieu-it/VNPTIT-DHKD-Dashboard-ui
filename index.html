@@ -984,7 +984,8 @@
                     </div>
                     {/* ROW 3: BIỂU ĐỒ PHỄU, CỘT XẾP CHỒNG THEO TRẠNG THÁI (ĐỊA BÀN) */}
                     <div className="px-8 pb-6 flex-1 flex gap-6 shrink-0 min-h-[400px]">
-                      {/* BLOCK 1: BIỂU ĐỒ PHỄU PIPELINE */}
+                      
+                      {/* BLOCK 1: BIỂU ĐỒ PHỄU (DẠNG BAR NGANG) */}
                       <div className="bg-white border border-gray-200 rounded shadow-sm p-6 flex-1 flex flex-col">
                         <div className="flex justify-between items-center mb-4">
                           <h2 className="text-navy font-bold text-sm uppercase tracking-wide">PHỄU CƠ HỘI KINH DOANH</h2>
@@ -992,24 +993,48 @@
                         </div>
                         
                         <div className="flex-1 w-full h-full">
-                          {ResponsiveContainer && FunnelChart ? (
+                          {ResponsiveContainer && BarChart ? (
                             <ResponsiveContainer width="100%" height="100%">
-                              <FunnelChart>
+                              <BarChart 
+                                layout="vertical" 
+                                data={funnelData} 
+                                margin={{ top: 10, right: 30, left: 10, bottom: 0 }}
+                              >
+                                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#E5E7EB"/>
+                                <XAxis type="number" hide />
+                                {/* Custom trục Y để hiện text bên trái cột */}
+                                <YAxis 
+                                  dataKey="name" 
+                                  type="category" 
+                                  axisLine={false} 
+                                  tickLine={false} 
+                                  width={140}
+                                  tick={{fontSize: 11, fill: '#4B5563', fontWeight: 600}} 
+                                />
                                 <Tooltip 
+                                  cursor={{fill: '#F3F4F6'}}
                                   formatter={(value, name, props) => [
-                                    `${new Intl.NumberFormat('vi-VN', {maximumFractionDigits: 1}).format(value)} trĐ (${props.payload.count} Deal)`, 
+                                    `${new Intl.NumberFormat('vi-VN', {maximumFractionDigits: 1}).format(value)} Tỷ (${props.payload.count} Deal)`, 
                                     'Quy mô'
-                                  ]} 
+                                  ]}
                                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                                 />
-                                <Funnel dataKey="value" data={funnelData} isAnimationActive>
-                                  <LabelList position="right" fill="#4B5563" stroke="none" dataKey="name" fontSize={12} fontWeight="bold" />
-                                  <LabelList position="center" fill="#fff" stroke="none" dataKey="value" formatter={(val) => fmtNum(val)} fontSize={14} fontWeight="bold" />
+                                <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={35}>
+                                  {/* Đổ màu Gradient từ Navy -> Blue tùy theo số lượng mảng */}
                                   {funnelData.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={FUNNEL_COLORS[index % FUNNEL_COLORS.length]} />
                                   ))}
-                                </Funnel>
-                              </FunnelChart>
+                                  {/* Hiển thị số Tỷ ngay bên trong/cạnh thanh Bar */}
+                                  <LabelList 
+                                    dataKey="value" 
+                                    position="right" 
+                                    formatter={(val) => fmtNum(val)} 
+                                    fill="#003B7A" 
+                                    fontSize={12} 
+                                    fontWeight="bold" 
+                                  />
+                                </Bar>
+                              </BarChart>
                             </ResponsiveContainer>
                           ) : (
                             <div className="flex items-center justify-center h-full text-gray-400 text-sm">Đang tải biểu đồ...</div>
