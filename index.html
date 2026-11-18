@@ -361,6 +361,7 @@
           const ns = parseNum(d['ngansach']);
           const trangThai = (d['trangthai_trienkhai'] || '').toString().trim().toUpperCase();
           const donVi = (d['donvi_donghanh'] || '').toString().trim().toUpperCase();
+          const maChkd = (d['ma_CHKD'] || d['chkd_id'] || '').toString().trim(); // Hỗ trợ cả 2 định dạng mã Header
 
           deanKpi.tongSl += 1;
           deanKpi.tongNs += ns;
