@@ -1,212 +1,98 @@
 <!DOCTYPE html>
-
 <html lang="vi">
-
 <head>
+  <meta charset="UTF-8">
+  <title>Executive Dashboard - VNPT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@17.0.2/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.23.6/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
+  <script src="https://unpkg.com/recharts@2.1.12/umd/Recharts.js"></script>
 
-<meta charset="UTF-8">
-
-<title>Executive Dashboard - VNPT</title>
-
-
-<link rel="preconnect" href="https://fonts.googleapis.com">
-
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-
-<script src="https://unpkg.com/react@17.0.2/umd/react.production.min.js"></script>
-
-<script src="https://unpkg.com/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
-
-<script src="https://unpkg.com/@babel/standalone@7.23.6/babel.min.js"></script>
-
-<script src="https://cdn.tailwindcss.com"></script>
-
-<script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
-
-<script src="https://unpkg.com/recharts@2.1.12/umd/Recharts.js"></script>
-
-
-
-<script>
-
-tailwind.config = {
-
-theme: {
-
-extend: {
-
-fontFamily: { sans: ['Nunito', 'sans-serif'] },
-
-colors: { vnpt: '#0094D9', navy: '#003B7A', good: '#22c55e', risk: '#ef4444', hoverbg: '#004c9e' }
-
-}
-
-}
-
-}
-
-</script>
-
+  <script>
+    tailwind.config = { theme: { extend: { fontFamily: { sans: ['Nunito', 'sans-serif'] }, colors: { vnpt: '#0094D9', navy: '#003B7A', good: '#22c55e', risk: '#ef4444', hoverbg: '#004c9e' }}}}
+  </script>
 </head>
 
 <body class="bg-gray-100 text-gray-800 min-h-screen flex font-sans overflow-hidden">
+  <div id="root" class="w-full h-screen flex">
+    <div class="m-auto text-center text-risk font-bold text-xl">Đang khởi tạo hệ thống...</div>
+  </div>
+  <script>
+    window.onerror = function(message, source, lineno, colno, error) {
+    if (message.includes('ResizeObserver loop limit exceeded') || message.includes('ResizeObserver loop completed with undelivered notifications')) {
+      return true;
+    }
+    document.getElementById('root').innerHTML = '<div style="padding: 40px; text-align: center;"><h2 style="color: #ef4444; font-size: 24px; font-weight: bold;">HỆ THỐNG GẶP SỰ CỐ</h2><p style="color: #333; margin-top: 10px;">Chi tiết lỗi: ' + message + '</p></div>';
+    return false;
+    };
+  </script>
 
+  <script type="text/babel">
+    const parseNum = (val) => {
+      if (val === null || val === undefined || val === '') return 0;
+      if (typeof val === 'number') return val;
+      return parseFloat(val.toString().replace(/,/g, '')) || 0;
+    };
 
-<div id="root" class="w-full h-screen flex">
+    const normalizeThang = (val) => {
+      if (!val) return '';
+      const str = val.toString().trim();
+      if (str.match(/^\d{4}-\d{2}-\d{2}/)) {
+        const parts = str.split('T')[0].split('-');
+        return `${parseInt(parts[1], 10)}/${parts[0]}`;
+      }
 
-<div class="m-auto text-center text-risk font-bold text-xl">Đang khởi tạo hệ thống...</div>
+      if (str.includes('/')) {
+        const parts = str.split('/');
+        return `${parseInt(parts[0], 10)}/${parts[1]}`;
+      }
+      return str;
+    };
 
-</div>
-
-
-
-<script>
-
-window.onerror = function(message, source, lineno, colno, error) {
-
-if (message.includes('ResizeObserver loop limit exceeded') ||
-
-message.includes('ResizeObserver loop completed with undelivered notifications')) {
-
-return true;
-
-}
-
-document.getElementById('root').innerHTML = '<div style="padding: 40px; text-align: center;"><h2 style="color: #ef4444; font-size: 24px; font-weight: bold;">HỆ THỐNG GẶP SỰ CỐ</h2><p style="color: #333; margin-top: 10px;">Chi tiết lỗi: ' + message + '</p></div>';
-
-return false;
-
-};
-
-</script>
-
-
-
-<script type="text/babel">
-
-const parseNum = (val) => {
-
-if (val === null || val === undefined || val === '') return 0;
-
-if (typeof val === 'number') return val;
-
-return parseFloat(val.toString().replace(/,/g, '')) || 0;
-
-};
-
-
-
-const normalizeThang = (val) => {
-
-if (!val) return '';
-
-const str = val.toString().trim();
-
-if (str.match(/^\d{4}-\d{2}-\d{2}/)) {
-
-const parts = str.split('T')[0].split('-');
-
-return `${parseInt(parts[1], 10)}/${parts[0]}`;
-
-}
-
-if (str.includes('/')) {
-
-const parts = str.split('/');
-
-return `${parseInt(parts[0], 10)}/${parts[1]}`;
-
-}
-
-return str;
-
-};
-
-
-
-const fmtNum = (num) => new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num || 0);
-
-const fmtPct = (num) => `${(num * 100).toFixed(1)}%`;
-
-
+    const fmtNum = (num) => new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num || 0);
+    const fmtPct = (num) => `${(num * 100).toFixed(1)}%`;
 
 function KpiCard({ title, v1, l1, v2, l2, st }) {
 
 return (
 
 <div className="bg-white border rounded flex-1 p-4 shadow-sm flex flex-col justify-between hover:border-vnpt transition min-w-[160px]">
-
 <h3 className="text-navy font-bold text-xs mb-3 uppercase truncate">{title}</h3>
-
 <div>
-
 <div className={`text-3xl font-bold mb-1 ${st === 'good' ? 'text-good' : st === 'risk' ? 'text-risk' : 'text-vnpt'}`}>{v1}</div>
-
 <div className="text-xs text-gray-500 mb-3 truncate">{l1}</div>
-
 <div className="text-base font-bold text-gray-700 border-t pt-2">{v2}</div>
-
 <div className="text-xs text-gray-500 truncate">{l2}</div>
-
 </div>
-
 </div>
-
 );
-
 }
-
-
 
 try {
+  const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, FunnelChart, Funnel, LabelList, Cell } = window.Recharts || {};
+  const API_URL = 'https://script.google.com/macros/s/AKfycby6E6r6KhZ54J6by2s1PF8MqtOSJu74GcyqO4GsFnSwWd-GmDScZFrS5Brq0IwXlO1N/exec';
+  const currentYear = new Date().getFullYear();
+  const monthOptions = Array.from({length: 12}, (_, i) => `${i + 1}/${currentYear}`);
+  const MENU_ITEMS = [
+    { id: 'dashboard', label: 'DASHBOARD', href: '#' },
+    { id: 'dean', label: 'ĐỀ ÁN, KẾ HOẠCH', href: '#' },
+    { id: 'cohoi', label: 'CƠ HỘI KINH DOANH', href: '#' },
+    { id: 'hopdong', label: 'HỢP ĐỒNG', href: '#' },
+    { id: 'khachhang', label: 'KHÁCH HÀNG', href: '#' },
+    { id: 'danhmuc', label: 'DANH MỤC',
+      subItems: [
+        { id: 'dm_spdv', label: 'Danh mục SPDV', href: 'dmspdv.html' },
+        { id: 'dm_plo', label: 'Danh mục PLO', href: '#' }
+      ]
+    }
+  ];
 
-
-const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, FunnelChart, Funnel, LabelList, Cell } = window.Recharts || {};
-
-
-const API_URL = 'https://script.google.com/macros/s/AKfycby6E6r6KhZ54J6by2s1PF8MqtOSJu74GcyqO4GsFnSwWd-GmDScZFrS5Brq0IwXlO1N/exec';
-
-
-
-const currentYear = new Date().getFullYear();
-
-const monthOptions = Array.from({length: 12}, (_, i) => `${i + 1}/${currentYear}`);
-
-
-const MENU_ITEMS = [
-
-{ id: 'dashboard', label: 'DASHBOARD', href: '#' },
-
-{ id: 'dean', label: 'ĐỀ ÁN, KẾ HOẠCH', href: '#' },
-
-{ id: 'cohoi', label: 'CƠ HỘI KINH DOANH', href: '#' },
-
-{ id: 'hopdong', label: 'HỢP ĐỒNG', href: '#' },
-
-{ id: 'khachhang', label: 'KHÁCH HÀNG', href: '#' },
-
-{
-
-id: 'danhmuc', label: 'DANH MỤC',
-
-subItems: [
-
-{ id: 'dm_spdv', label: 'Danh mục SPDV', href: 'dmspdv.html' },
-
-{ id: 'dm_plo', label: 'Danh mục PLO', href: '#' }
-
-]
-
-}
-
-];
-
-
-
-function App() {
+  function App() {
 
 const [user, setUser] = React.useState(() => {
 
