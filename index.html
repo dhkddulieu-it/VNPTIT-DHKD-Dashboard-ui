@@ -532,9 +532,8 @@
                       <KpiCard title="8.KHOẢNG TRỐNG CẦN BÙ" v1={fmtNum(thieuHut)} l1="Thiếu hụt sau Dự báo (trĐ)" v2={fmtPct(kpi.dtKeHoach ? thieuHut/kpi.dtKeHoach : 0)} l2="Tỷ lệ thiếu hụt" st={thieuHut > 0 ? 'risk' : 'good'} />
                     </div>
 
-                    {/* Đổi sang grid 2 cột đều nhau (50/50) */}
-                    <div className="px-6 pb-6 grid grid-cols-1 lg:grid-cols-2 gap-6 shrink-0 min-h-[360px]">
-                      
+                    {/* Biểu đồ gồm cột đều nhau (50/50) */}
+                    <div className="px-6 pb-6 grid grid-cols-1 lg:grid-cols-2 gap-6 shrink-0 min-h-[360px]">  
                       {/* BIỂU ĐỒ 1: DOANH THU HÀNG THÁNG (50%) */}
                       <div className="min-w-0 bg-white border rounded shadow-sm p-5 flex flex-col">
                         <h2 className="text-[#003B7A] font-bold text-sm mb-4 uppercase">
@@ -591,9 +590,9 @@
                           )}
                         </div>
                       </div>
-                    
                     </div>
                     
+                    {/* Bảng KPIs chi tiết theo địa bàn */}
                     <div className="px-6 pb-6 flex shrink-0">
                       <div className="w-full bg-white border rounded shadow-sm p-6 flex flex-col overflow-hidden">
                         <h2 className="text-navy font-bold text-base mb-4 uppercase">Bảng KPIS Chi Tiết Địa Bàn</h2>
@@ -614,6 +613,7 @@
                       </div>
                     </div>
 
+                    {/* Bảng KPIs chi tiết theo PLO */}
                     <div className="px-6 pb-6 flex shrink-0">
                       <div className="w-full bg-white border rounded shadow-sm p-6 flex flex-col overflow-hidden">
                         <h2 className="text-navy font-bold text-base mb-4 uppercase">Bảng KPIs Chi Tiết Từng PLO</h2>
@@ -633,13 +633,18 @@
                         </div>
                       </div>
                     </div>
+
+                    {/* Bảng danh sách các cơ hội cần thúc đẩy */}
                     <div className="px-6 pb-6 flex shrink-0">
                       <div className="flex-[1] bg-white border rounded shadow-sm p-6 flex flex-col overflow-hidden">
                           <h2 className="text-navy font-bold text-base mb-6 uppercase">Cơ hội Trọng điểm (Cần thúc đẩy)</h2>
                           <div className="overflow-auto flex-1 pr-2">
                             <table className="w-full text-left text-sm">
                               <thead className="bg-gray-100 text-navy sticky top-0">
-                                <tr><th className="p-2">Mã CHKD</th><th className="p-2">Mã TTP</th><th className="p-2 text-right">Dự báo</th><th className="p-2 text-center">Trạng thái</th></tr>
+                                <tr><th className="p-2">Mã CHKD</th>
+                                    <th className="p-2">Mã TTP</th>
+                                    <th className="p-2 text-right">Dự báo</th>
+                                    <th className="p-2 text-center">Trạng thái</th></tr>
                               </thead>
                               <tbody>
                                 {basePipeline.slice(0, 10).map((p, i) => {
@@ -648,7 +653,7 @@
                                   return (
                                     <tr key={i} className="border-b hover:bg-gray-50">
                                       <td className="p-2 font-medium text-gray-700 truncate max-w-[120px]" title={p['ten_duan'] || p['ma_chkd']}>{p['ma_chkd'] || `Deal-${i+1}`}</td>
-                                      <td className="p-2 text-right font-bold text-vnpt">{fmtNum(parseNum(p['ma_tinh']))}</td>
+                                      <td className="p-2 text-right font-bold text-vnpt">{p['ma_tinh']}</td>
                                       <td className="p-2 text-right font-bold text-vnpt">{fmtNum(parseNum(p['doanhthu_dubao']))}</td>
                                       <td className="p-2 text-center"><span className={`text-[10px] px-2 py-1 rounded-full font-bold ${colorClass}`}>{statusRaw}</span></td>
                                     </tr>
