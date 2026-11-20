@@ -511,7 +511,7 @@
                   <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">CLO Địa bàn</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.maTinh} onChange={e => setFilters({...filters, maTinh: e.target.value})}><option value="ALL">Toàn bộ địa bàn</option>{dsDiaBanHienThi.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
                   <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Luồng SPDV</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.luongSPDV} onChange={e => setFilters({...filters, luongSPDV: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(rawData.map(d => d['luong_spdv']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
                   <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Nhóm SPDV</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.nhomSPDV} onChange={e => setFilters({...filters, nhomSPDV: e.target.value, plo: 'ALL'})}><option value="ALL">Tất cả</option>{[...new Set(ploList.map(p => p['nhomspdv_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
-                  <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">PLO (theo mô hình mới)</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.plo} onChange={e => setFilters({...filters, plo: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(ploList.filter(p => filters.nhomSPDV === 'ALL' || p['nhomspdv_code'] === filters.nhomSPDV).map(p => p['plo_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
+                  <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">PLO (Product Line Owner)</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.plo} onChange={e => setFilters({...filters, plo: e.target.value})}><option value="ALL">Tất cả</option>{[...new Set(ploList.filter(p => filters.nhomSPDV === 'ALL' || p['nhomspdv_code'] === filters.nhomSPDV).map(p => p['plo_code']).filter(Boolean))].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
                 </div>
               )}
               {loading && <div className="text-center text-vnpt text-sm py-1 font-bold animate-pulse bg-white">Đang đồng bộ dữ liệu...</div>}
@@ -533,6 +533,7 @@
                     </div>
 
                     <div className="px-6 pb-6 flex gap-8 shrink-0 min-h-[350px]">
+                      {/* BIỂU ĐỒ 1: DOANH THU HÀNG THÁNG */}
                       <div className="flex-[2] bg-white border rounded shadow-sm p-6 flex flex-col">
                         <h2 className="text-navy font-bold text-base mb-6 uppercase">THEO DÕI DOANH THU HÀNG THÁNG (ĐVT: trĐ)</h2>
                         <div className="flex-1 w-full min-h-[250px]">
@@ -551,27 +552,39 @@
                           )}
                         </div>
                       </div>
-                      <div className="flex-[1] bg-white border rounded shadow-sm p-6 flex flex-col overflow-hidden">
-                        <h2 className="text-navy font-bold text-base mb-6 uppercase">Cơ hội Trọng điểm (Cần thúc đẩy)</h2>
-                        <div className="overflow-auto flex-1 pr-2">
-                          <table className="w-full text-left text-sm">
-                            <thead className="bg-gray-100 text-navy sticky top-0">
-                              <tr><th className="p-2">Mã CHKD</th><th className="p-2 text-right">Dự báo</th><th className="p-2 text-center">Trạng thái</th></tr>
-                            </thead>
-                            <tbody>
-                              {basePipeline.slice(0, 10).map((p, i) => {
-                                const statusRaw = (p['trang_thai'] || 'OPEN').toString().toUpperCase();
-                                const colorClass = (statusRaw === 'CLOSED' || statusRaw.includes('ĐÓNG')) ? 'bg-green-100 text-good' : 'bg-yellow-100 text-yellow-700';
-                                return (
-                                  <tr key={i} className="border-b hover:bg-gray-50">
-                                    <td className="p-2 font-medium text-gray-700 truncate max-w-[120px]" title={p['ten_duan'] || p['CHKD_ID']}>{p['CHKD_ID'] || `Deal-${i+1}`}</td>
-                                    <td className="p-2 text-right font-bold text-vnpt">{fmtNum(parseNum(p['doanhthu_dubao']))}</td>
-                                    <td className="p-2 text-center"><span className={`text-[10px] px-2 py-1 rounded-full font-bold ${colorClass}`}>{statusRaw}</span></td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
+                      {/* BIỂU ĐỒ 2: THỰC HIỆN & KẾ HOẠCH 34 TTP XẾP CHỒNG  */}
+                      <div className="lg:col-span-7 bg-white border rounded shadow-sm p-5 flex flex-col">
+                        <div className="flex items-center justify-between mb-4">
+                          <h2 className="text-[#003B7A] font-bold text-sm uppercase">
+                            THỰC HIỆN & KẾ HOẠCH 34 TTP (XẾP CHỒNG - ĐVT: trĐ)
+                          </h2>
+                          <span className="text-xs font-semibold text-slate-500">{provStatsArray.length} Địa bàn</span>
+                        </div>
+                        <div className="flex-1 w-full min-h-[280px]">
+                          {ResponsiveContainer && BarChart && (
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={provStatsArray} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis
+                                  dataKey="maTinh"
+                                  interval={0}
+                                  angle={-55}
+                                  textAnchor="end"
+                                  height={45}
+                                  tick={{ fontSize: 10, fontWeight: 600 }}
+                                />
+                                <YAxis tick={{ fontSize: 11 }} />
+                                <Tooltip
+                                  cursor={{ fill: '#f3f4f6' }}
+                                  formatter={(value) => new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(value) + ' trĐ'}
+                                />
+                                <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '4px' }} />
+                                {/* stackId="ttp" giúp xếp chồng Thực hiện và Kế hoạch trên cùng 1 cột cho mỗi TTP */}
+                                <Bar dataKey="dtThucHien" name="Thực hiện" stackId="ttp" fill="#0094D9" />
+                                <Bar dataKey="dtKeHoach" name="Kế hoạch" stackId="ttp" fill="#003B7A" radius={[3, 3, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -615,6 +628,30 @@
                         </div>
                       </div>
                     </div>
+                    <div className="flex-[1] bg-white border rounded shadow-sm p-6 flex flex-col overflow-hidden">
+                        <h2 className="text-navy font-bold text-base mb-6 uppercase">Cơ hội Trọng điểm (Cần thúc đẩy)</h2>
+                        <div className="overflow-auto flex-1 pr-2">
+                          <table className="w-full text-left text-sm">
+                            <thead className="bg-gray-100 text-navy sticky top-0">
+                              <tr><th className="p-2">Mã CHKD</th><th className="p-2">Mã TTP</th><th className="p-2 text-right">Dự báo</th><th className="p-2 text-center">Trạng thái</th></tr>
+                            </thead>
+                            <tbody>
+                              {basePipeline.slice(0, 10).map((p, i) => {
+                                const statusRaw = (p['trang_thai'] || 'OPEN').toString().toUpperCase();
+                                const colorClass = (statusRaw === 'CLOSED' || statusRaw.includes('ĐÓNG')) ? 'bg-green-100 text-good' : 'bg-yellow-100 text-yellow-700';
+                                return (
+                                  <tr key={i} className="border-b hover:bg-gray-50">
+                                    <td className="p-2 font-medium text-gray-700 truncate max-w-[120px]" title={p['ten_duan'] || p['ma_chkd']}>{p['ma_chkd'] || `Deal-${i+1}`}</td>
+                                    <td className="p-2 text-right font-bold text-vnpt">{fmtNum(parseNum(p['ma_tinh']))}</td>
+                                    <td className="p-2 text-right font-bold text-vnpt">{fmtNum(parseNum(p['doanhthu_dubao']))}</td>
+                                    <td className="p-2 text-center"><span className={`text-[10px] px-2 py-1 rounded-full font-bold ${colorClass}`}>{statusRaw}</span></td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
                   </>
                 )}
 
