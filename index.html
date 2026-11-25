@@ -159,6 +159,7 @@
         const [expandedMenu, setExpandedMenu] = React.useState('');
         const [filters, setFilters] = React.useState({ thoiGian: '', maTinh: 'ALL', luongSPDV: 'ALL', nhomSPDV: 'ALL', plo: 'ALL' });
         const [hdQuickFilter, setHdQuickFilter] = React.useState('ALL'); // Lọc nhanh tab Hợp đồng
+        const [chkdQuickFilter, setChkdQuickFilter] = React.useState('ALL'); // Lọc nhanh 6 KPI phái sinh CHKD
 
         React.useEffect(() => { if (user) fetchDashboardData(); }, [user]);
 
@@ -385,26 +386,57 @@
         };
         const now = new Date();
         const ninetyDaysAgo = new Date(now.getTime() - (90 * 24 * 60 * 60 * 1000));
-
+        const openPipelineList = []; // Lưu danh sách Deal mở kèm cờ phái sinh để lọc nhanh
+        
         basePipeline.forEach(d => {
           const gtTrieu = parseNum(d['ngansach_duan']);
           const status = (d['trang_thai'] || 'OPEN').toString().trim().toUpperCase();
           kpiCHKD.tongSl += 1; kpiCHKD.tongGt += gtTrieu;
-
+        
           if (status === 'WON' || status === 'CLOSED' || status.includes('THẮNG')) {
             kpiCHKD.chotSl += 1; kpiCHKD.chotGt += gtTrieu;
           } else if (status === 'LOST' || status.includes('THUA') || status.includes('THẤT BẠI')) {
             kpiCHKD.thuaSl += 1; kpiCHKD.thuaGt += gtTrieu;
           } else {
             kpiCHKD.moSl += 1; kpiCHKD.moGt += gtTrieu;
-            if (!d['mucdo_tiemnang'] || d['mucdo_tiemnang'].toString().trim() === '') kpiCHKD.thieuTiemNang += 1;
-            if (gtTrieu === 0) kpiCHKD.thieuGiaTri += 1;
-            if (d['ngay_dukienchot'] && new Date(d['ngay_dukienchot']) < now) kpiCHKD.quaHanKy += 1;
-            if (d['ngay_cap_nhat_cuoi'] && new Date(d['ngay_cap_nhat_cuoi']) < ninetyDaysAgo) kpiCHKD.lauKhongCapNhat += 1;
-            if (!d['hinhthuc_cungcap'] || d['hinhthuc_cungcap'].toString().trim() === '') kpiCHKD.thieuHinhThuc += 1;
-            if (!d['plo_code'] || d['plo_code'].toString().trim() === '') kpiCHKD.thieuPLO += 1;
+        
+            // Tính cờ phái sinh dùng chung cho cả KPI và Bảng lọc
+            const ngayKy = parseDateVN(d['ngay_dukienchot']);
+            const ngayCapNhat = parseDateVN(d['ngay_cap_nhat_cuoi']);
+            const flags = {
+              NO_POTENTIAL: !d['mucdo_tiemnang'] || d['mucdo_tiemnang'].toString().trim() === '',
+              NO_VALUE: gtTrieu <= 0,
+              NO_TYPE: !d['hinhthuc_cungcap'] || d['hinhthuc_cungcap'].toString().trim() === '',
+              NO_PLO: !d['plo_code'] || d['plo_code'].toString().trim() === '',
+              OVERDUE_SIGN: Boolean(ngayKy && ngayKy < now),
+              STALE_90: Boolean(ngayCapNhat && ngayCapNhat < ninetyDaysAgo)
+            };
+        
+            if (flags.NO_POTENTIAL) kpiCHKD.thieuTiemNang += 1;
+            if (flags.NO_VALUE) kpiCHKD.thieuGiaTri += 1;
+            if (flags.NO_TYPE) kpiCHKD.thieuHinhThuc += 1;
+            if (flags.NO_PLO) kpiCHKD.thieuPLO += 1;
+            if (flags.OVERDUE_SIGN) kpiCHKD.quaHanKy += 1;
+            if (flags.STALE_90) kpiCHKD.lauKhongCapNhat += 1;
+        
+            openPipelineList.push({ ...d, _flags: flags, _gt: gtTrieu });
           }
         });
+        
+        // Nhãn tiêu đề & danh sách bảng sau khi bấm thẻ KPI phái sinh
+        const CHKD_FILTER_LABELS = {
+          ALL: 'Tất cả Deal đang mở',
+          NO_POTENTIAL: 'Chưa đánh giá tiềm năng',
+          NO_VALUE: 'Thiếu giá trị ngân sách',
+          NO_TYPE: 'Thiếu hình thức cung cấp',
+          NO_PLO: 'Chưa gán PLO',
+          OVERDUE_SIGN: 'Quá ngày dự kiến ký HĐ',
+          STALE_90: '> 90 ngày chưa cập nhật'
+        };
+        
+        const filteredChkdTable = openPipelineList
+          .filter(d => chkdQuickFilter === 'ALL' || d._flags[chkdQuickFilter])
+          .sort((a, b) => b._gt - a._gt);
 
         const tyLeMoGt = kpiCHKD.tongGt ? (kpiCHKD.moGt / kpiCHKD.tongGt) : 0;
         const closedTotalSl = kpiCHKD.chotSl + kpiCHKD.thuaSl;
@@ -926,12 +958,41 @@
                       <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between"><h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">TỶ LỆ THẮNG</h3><div className="text-3xl font-bold text-navy my-2">{fmtPct(winRateSl)}</div><div className="text-[11px] text-gray-500">theo số lượng - {fmtPct(winRateGt)} theo giá trị</div></div>
                     </div>
                     <div className="grid grid-cols-6 gap-4 px-6 pb-6 shrink-0">
-                      <div className="bg-[#FEF9E7] border-l-[3px] border-yellow-500 rounded-r-md shadow-sm p-4 flex flex-col justify-center"><div className="text-2xl font-bold text-yellow-700">{fmtNum(kpiCHKD.thieuTiemNang)}</div><div className="text-xs font-semibold text-yellow-800 mt-1">CHKD chưa đánh giá tiềm năng</div></div>
-                      <div className="bg-[#FEF9E7] border-l-[3px] border-yellow-500 rounded-r-md shadow-sm p-4 flex flex-col justify-center"><div className="text-2xl font-bold text-yellow-700">{fmtNum(kpiCHKD.thieuGiaTri)}</div><div className="text-xs font-semibold text-yellow-800 mt-1">CHKD thiếu giá trị ngân sách</div></div>
-                      <div className="bg-[#FEF9E7] border-l-[3px] border-yellow-500 rounded-r-md shadow-sm p-4 flex flex-col justify-center"><div className="text-2xl font-bold text-yellow-700 leading-none mb-1">{fmtNum(kpiCHKD.thieuHinhThuc)}</div><div className="text-xs font-semibold text-yellow-800 leading-snug">CHKD thiếu Hình thức cung cấp</div></div>
-                      <div className="bg-[#FEF9E7] border-l-[3px] border-yellow-500 rounded-r-md shadow-sm p-4 flex flex-col justify-center"><div className="text-2xl font-bold text-yellow-700 leading-none mb-1">{fmtNum(kpiCHKD.thieuPLO)}</div><div className="text-xs font-semibold text-yellow-800 leading-snug">CHKD chưa gán PLO</div></div>
-                      <div className="bg-[#FDEDEC] border-l-[3px] border-red-500 rounded-r-md shadow-sm p-4 flex flex-col justify-center"><div className="text-2xl font-bold text-red-700">{fmtNum(kpiCHKD.quaHanKy)}</div><div className="text-xs font-semibold text-red-800 mt-1">CHKD quá ngày dự kiến ký HĐ</div></div>
-                      <div className="bg-[#FDEDEC] border-l-[3px] border-red-500 rounded-r-md shadow-sm p-4 flex flex-col justify-center"><div className="text-2xl font-bold text-red-700">{fmtNum(kpiCHKD.lauKhongCapNhat)}</div><div className="text-xs font-semibold text-red-800 mt-1">CHKD &gt; 90 ngày chưa cập nhật</div></div>
+                      <div onClick={() => setChkdQuickFilter(chkdQuickFilter === 'NO_POTENTIAL' ? 'ALL' : 'NO_POTENTIAL')}
+                        className={`cursor-pointer bg-[#FEF9E7] border-l-[3px] border-yellow-500 rounded-r-md shadow-sm p-4 flex flex-col justify-center hover:shadow transition ${chkdQuickFilter === 'NO_POTENTIAL' ? 'ring-2 ring-yellow-500' : ''}`}>
+                        <div className="text-2xl font-bold text-yellow-700">{fmtInt(kpiCHKD.thieuTiemNang)}</div>
+                        <div className="text-xs font-semibold text-yellow-800 mt-1">CHKD chưa đánh giá tiềm năng</div>
+                      </div>
+                    
+                      <div onClick={() => setChkdQuickFilter(chkdQuickFilter === 'NO_VALUE' ? 'ALL' : 'NO_VALUE')}
+                        className={`cursor-pointer bg-[#FEF9E7] border-l-[3px] border-yellow-500 rounded-r-md shadow-sm p-4 flex flex-col justify-center hover:shadow transition ${chkdQuickFilter === 'NO_VALUE' ? 'ring-2 ring-yellow-500' : ''}`}>
+                        <div className="text-2xl font-bold text-yellow-700">{fmtInt(kpiCHKD.thieuGiaTri)}</div>
+                        <div className="text-xs font-semibold text-yellow-800 mt-1">CHKD thiếu giá trị ngân sách</div>
+                      </div>
+                    
+                      <div onClick={() => setChkdQuickFilter(chkdQuickFilter === 'NO_TYPE' ? 'ALL' : 'NO_TYPE')}
+                        className={`cursor-pointer bg-[#FEF9E7] border-l-[3px] border-yellow-500 rounded-r-md shadow-sm p-4 flex flex-col justify-center hover:shadow transition ${chkdQuickFilter === 'NO_TYPE' ? 'ring-2 ring-yellow-500' : ''}`}>
+                        <div className="text-2xl font-bold text-yellow-700 leading-none mb-1">{fmtInt(kpiCHKD.thieuHinhThuc)}</div>
+                        <div className="text-xs font-semibold text-yellow-800 leading-snug">CHKD thiếu Hình thức cung cấp</div>
+                      </div>
+                    
+                      <div onClick={() => setChkdQuickFilter(chkdQuickFilter === 'NO_PLO' ? 'ALL' : 'NO_PLO')}
+                        className={`cursor-pointer bg-[#FEF9E7] border-l-[3px] border-yellow-500 rounded-r-md shadow-sm p-4 flex flex-col justify-center hover:shadow transition ${chkdQuickFilter === 'NO_PLO' ? 'ring-2 ring-yellow-500' : ''}`}>
+                        <div className="text-2xl font-bold text-yellow-700 leading-none mb-1">{fmtInt(kpiCHKD.thieuPLO)}</div>
+                        <div className="text-xs font-semibold text-yellow-800 leading-snug">CHKD chưa gán PLO</div>
+                      </div>
+                    
+                      <div onClick={() => setChkdQuickFilter(chkdQuickFilter === 'OVERDUE_SIGN' ? 'ALL' : 'OVERDUE_SIGN')}
+                        className={`cursor-pointer bg-[#FDEDEC] border-l-[3px] border-red-500 rounded-r-md shadow-sm p-4 flex flex-col justify-center hover:shadow transition ${chkdQuickFilter === 'OVERDUE_SIGN' ? 'ring-2 ring-red-500' : ''}`}>
+                        <div className="text-2xl font-bold text-red-700">{fmtInt(kpiCHKD.quaHanKy)}</div>
+                        <div className="text-xs font-semibold text-red-800 mt-1">CHKD quá ngày dự kiến ký HĐ</div>
+                      </div>
+                    
+                      <div onClick={() => setChkdQuickFilter(chkdQuickFilter === 'STALE_90' ? 'ALL' : 'STALE_90')}
+                        className={`cursor-pointer bg-[#FDEDEC] border-l-[3px] border-red-500 rounded-r-md shadow-sm p-4 flex flex-col justify-center hover:shadow transition ${chkdQuickFilter === 'STALE_90' ? 'ring-2 ring-red-500' : ''}`}>
+                        <div className="text-2xl font-bold text-red-700">{fmtInt(kpiCHKD.lauKhongCapNhat)}</div>
+                        <div className="text-xs font-semibold text-red-800 mt-1">CHKD &gt; 90 ngày chưa cập nhật</div>
+                      </div>
                     </div>
                     <div className="px-6 pb-6 flex-1 flex gap-6 shrink-0 min-h-[400px]">
                       <div className="bg-white border border-gray-200 rounded shadow-sm p-6 flex-1 flex flex-col">
@@ -975,14 +1036,32 @@
                     </div>
                     <div className="px-6 pb-6 flex flex-col shrink-0 min-h-[350px]">
                       <div className="bg-white border border-gray-200 rounded shadow-sm flex-1 flex flex-col overflow-hidden">
-                        <div className="px-6 py-4 border-b bg-gray-50 shrink-0"><h2 className="text-navy font-bold text-sm uppercase tracking-wide">CHI TIẾT DEAL ĐANG MỞ KHẨN CẤP</h2></div>
+                        <div className="px-6 py-4 border-b bg-gray-50 flex justify-between items-center shrink-0">
+                          <h2 className="text-navy font-bold text-sm uppercase tracking-wide">
+                            CHI TIẾT DEAL ĐANG MỞ — {CHKD_FILTER_LABELS[chkdQuickFilter]} ({filteredChkdTable.length} CHKD)
+                          </h2>
+                          {chkdQuickFilter !== 'ALL' && (
+                            <button onClick={() => setChkdQuickFilter('ALL')} className="text-xs font-bold text-vnpt hover:underline">
+                              ✕ Bỏ lọc nhanh
+                            </button>
+                          )}
+                        </div>
                         <div className="overflow-auto flex-1 p-2">
                           <table className="w-full text-left text-sm">
                             <thead className="bg-white text-navy sticky top-0 shadow-sm z-10">
-                              <tr><th className="p-3 border-b w-16">Mã TTP</th><th className="p-3 border-b w-20">Mã CHKD</th><th className="p-3 border-b w-32">Mã PLO</th><th className="p-3 border-b">Tên Dự án</th><th className="p-3 border-b">Khách hàng</th><th className="p-3 border-b">Mức độ tiềm năng</th><th className="p-3 border-b">Giai đoạn</th><th className="p-3 border-b text-right w-28">Giá trị (trĐ)</th></tr>
+                              <tr>
+                                <th className="p-3 border-b w-16">Mã TTP</th>
+                                <th className="p-3 border-b w-20">Mã CHKD</th>
+                                <th className="p-3 border-b w-32">Mã PLO</th>
+                                <th className="p-3 border-b">Tên Dự án</th>
+                                <th className="p-3 border-b">Khách hàng</th>
+                                <th className="p-3 border-b">Mức độ tiềm năng</th>
+                                <th className="p-3 border-b">Giai đoạn</th>
+                                <th className="p-3 border-b text-right w-28">Giá trị (trĐ)</th>
+                              </tr>
                             </thead>
                             <tbody>
-                              {basePipeline.filter(d => (d['trang_thai'] || '').toString().toUpperCase() === 'OPEN').sort((a, b) => parseNum(b['ngansach_duan']) - parseNum(a['ngansach_duan'])).slice(0, 50).map((p, i) => (
+                              {filteredChkdTable.slice(0, 100).map((p, i) => (
                                 <tr key={i} className="border-b hover:bg-blue-50 transition">
                                   <td className="p-3 font-bold text-navy truncate">{p['ma_tinh'] || '-'}</td>
                                   <td className="p-3 font-bold text-navy truncate">{p['ma_chkd'] || '-'}</td>
@@ -991,15 +1070,17 @@
                                   <td className="p-3 font-medium text-gray-700 truncate">{p['ten_khachhang'] || 'Chưa cập nhật'}</td>
                                   <td className="p-3 font-medium text-gray-700 truncate">{p['mucdo_tiemnang'] || 'Chưa cập nhật'}</td>
                                   <td className="p-3 text-gray-600"><span className="px-2 py-1 bg-gray-100 rounded text-[11px] uppercase whitespace-nowrap">{p['trangthai_pipeline'] || '-'}</span></td>
-                                  <td className="p-3 text-right font-bold text-vnpt">{fmtNum(parseNum(p['ngansach_duan']))}</td>
+                                  <td className="p-3 text-right font-bold text-vnpt">{fmtNum(p._gt)}</td>
                                 </tr>
                               ))}
+                              {filteredChkdTable.length === 0 && (
+                                <tr><td colSpan="8" className="p-6 text-center text-gray-400">Không có cơ hội nào thuộc nhóm cảnh báo này.</td></tr>
+                              )}
                             </tbody>
                           </table>
                         </div>
                       </div>
                     </div>
-                  </div>
                 )}
 
                 {/* =========================================================== */}
