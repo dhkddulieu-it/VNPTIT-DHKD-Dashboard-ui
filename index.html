@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <title>Executive Dashboard - VNPT</title>
-  <link rel="icon" href="data:,">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -200,7 +199,7 @@
           setRawData([]);
         };
 
-        f (!user) {
+        if (!user) {
           return (
             <div className="flex h-screen w-full items-center justify-center bg-gray-200">
               <form onSubmit={handleLogin} className="bg-white p-10 border-t-4 border-vnpt shadow-xl w-96 rounded">
@@ -457,7 +456,7 @@
           }
           return null;
         };
-        
+
         // =====================================================================
         // [PHẦN 2.4 - ENGINE] QUẢN LÝ HỢP ĐỒNG (07_QUAN_LY_HOPDONG)
         // =====================================================================
