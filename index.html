@@ -14,7 +14,14 @@
   <script src="https://unpkg.com/recharts@2.1.12/umd/Recharts.js"></script>
 
   <script>
-    tailwind.config = { theme: { extend: { fontFamily: { sans: ['Nunito', 'sans-serif'] }, colors: { vnpt: '#0094D9', navy: '#003B7A', good: '#22c55e', risk: '#ef4444', hoverbg: '#004c9e' }}}}
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Nunito', 'sans-serif'] },
+          colors: { vnpt: '#0094D9', navy: '#003B7A', good: '#22c55e', risk: '#ef4444', hoverbg: '#004c9e' }
+        }
+      }
+    }
   </script>
 </head>
 
@@ -22,21 +29,50 @@
   <div id="root" class="w-full h-screen flex">
     <div class="m-auto text-center text-risk font-bold text-xl">Đang khởi tạo hệ thống...</div>
   </div>
+
+  <!-- BẮT LỖI TOÀN CỤC -->
   <script>
-    window.onerror = function(message, source, lineno, colno, error) {
-      if (message.includes('ResizeObserver loop') || message.includes('Script error.')) {
-        return true; // Phớt lờ lỗi nhiễu từ ResizeObserver và lỗi CORS CDN Babel
-      }
-      document.getElementById('root').innerHTML = '<div style="padding: 40px; text-align: center;"><h2 style="color: #ef4444; font-size: 24px; font-weight: bold;">HỆ THỐNG GẶP SỰ CỐ</h2><p style="color: #333; margin-top: 10px;">Chi tiết lỗi: ' + message + '</p></div>';
+    window.onerror = function(message) {
+      if (message.includes('ResizeObserver loop') || message.includes('Script error.')) return true;
+      document.getElementById('root').innerHTML = '<div style="padding:40px;text-align:center;"><h2 style="color:#ef4444;font-size:24px;font-weight:bold;">HỆ THỐNG GẶP SỰ CỐ</h2><p style="color:#333;margin-top:10px;">Chi tiết lỗi: ' + message + '</p></div>';
       return false;
     };
   </script>
 
   <script type="text/babel">
+    // =========================================================================
+    // [PHẦN 0] CẤU HÌNH, HÀM TIỆN ÍCH (HELPERS) & COMPONENT DÙNG CHUNG
+    // =========================================================================
     const parseNum = (val) => {
       if (val === null || val === undefined || val === '') return 0;
       if (typeof val === 'number') return val;
       return parseFloat(val.toString().replace(/,/g, '')) || 0;
+    };
+
+    // Quy đổi các cột đơn vị VND (COGS/Thực chi) sang trĐ để đồng nhất
+    const vndToTr = (val) => {
+      const n = parseNum(val);
+      return Math.abs(n) >= 1000000 ? n / 1000000 : n;
+    };
+
+    // Đọc Dual-Key: ưu tiên mã trường dòng 5, fallback tên cột tiếng Việt
+    const getField = (obj, keys, fallback = '') => {
+      for (const k of keys) {
+        if (obj && obj[k] !== undefined && obj[k] !== null && obj[k] !== '') return obj[k];
+      }
+      return fallback;
+    };
+
+    // Parse ngày chuẩn VN (dd/MM/yyyy) hoặc ISO (yyyy-MM-dd)
+    const parseDateVN = (val) => {
+      if (!val) return null;
+      if (val instanceof Date && !isNaN(val)) return val;
+      const s = val.toString().trim();
+      if (/^\d{4}-\d{2}-\d{2}/.test(s)) return new Date(s);
+      const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (m) return new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10));
+      const d = new Date(s);
+      return isNaN(d) ? null : d;
     };
 
     const normalizeThang = (val) => {
@@ -53,7 +89,15 @@
       return str;
     };
 
+    const getMonthVal = (mStr) => {
+      if (!mStr) return null;
+      const parts = mStr.toString().trim().split('/');
+      if (parts.length === 2) return parseInt(parts[1], 10) * 100 + parseInt(parts[0], 10);
+      return 0;
+    };
+
     const fmtNum = (num) => new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num || 0);
+    const fmtInt = (num) => new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(num || 0);
     const fmtPct = (num) => `${(num * 100).toFixed(1)}%`;
 
     function KpiCard({ title, v1, l1, v2, l2, st }) {
@@ -74,7 +118,8 @@
       const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList, Cell } = window.Recharts || {};
       const API_URL = 'https://script.google.com/macros/s/AKfycby6E6r6KhZ54J6by2s1PF8MqtOSJu74GcyqO4GsFnSwWd-GmDScZFrS5Brq0IwXlO1N/exec';
       const currentYear = new Date().getFullYear();
-      const monthOptions = Array.from({length: 12}, (_, i) => `${i + 1}/${currentYear}`);
+      const monthOptions = Array.from({ length: 12 }, (_, i) => `${i + 1}/${currentYear}`);
+
       const MENU_ITEMS = [
         { id: 'dashboard', label: 'DASHBOARD', href: '#' },
         { id: 'dean', label: 'CÁC KHUNG PHÁP LÝ', href: '#' },
@@ -83,7 +128,8 @@
         { id: 'dauthau', label: 'ĐẤU THẦU', href: '#' },
         { id: 'hopdong', label: 'HỢP ĐỒNG', href: '#' },
         { id: 'khachhang', label: 'KHÁCH HÀNG', href: '#' },
-        { id: 'danhmuc', label: 'DANH MỤC',
+        {
+          id: 'danhmuc', label: 'DANH MỤC',
           subItems: [
             { id: 'dm_spdv', label: 'Danh mục SPDV', href: 'dmspdv.html' },
             { id: 'dm_plo', label: 'Danh mục PLO', href: '#' }
@@ -92,21 +138,27 @@
       ];
 
       function App() {
+        // =====================================================================
+        // [PHẦN 1] STATE, ĐĂNG NHẬP & ĐỒNG BỘ DỮ LIỆU API
+        // =====================================================================
         const [user, setUser] = React.useState(() => {
           try { return JSON.parse(localStorage.getItem('vnpt_user')); } catch { return null; }
         });
-        
         const [email, setEmail] = React.useState('');
         const [loading, setLoading] = React.useState(false);
+
+        // Dữ liệu thô từ Backend
         const [rawData, setRawData] = React.useState([]);
         const [pipelineRaw, setPipelineRaw] = React.useState([]);
-        const [ploList, setPloList] = React.useState([]);
         const [deanRaw, setDeanRaw] = React.useState([]);
         const [hopDongRaw, setHopDongRaw] = React.useState([]);
-        
+        const [ploList, setPloList] = React.useState([]);
+
+        // Điều hướng & Bộ lọc
         const [activeTab, setActiveTab] = React.useState('dashboard');
         const [expandedMenu, setExpandedMenu] = React.useState('');
         const [filters, setFilters] = React.useState({ thoiGian: '', maTinh: 'ALL', luongSPDV: 'ALL', nhomSPDV: 'ALL', plo: 'ALL' });
+        const [hdQuickFilter, setHdQuickFilter] = React.useState('ALL'); // Lọc nhanh tab Hợp đồng
 
         React.useEffect(() => { if (user) fetchDashboardData(); }, [user]);
 
@@ -131,12 +183,10 @@
           try {
             const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'getData', provinces: user.provinces }) }).then(r => r.json());
             if (res.status === 'success') {
-              const normalizedData = (res.data || []).map(d => ({ ...d, thang: normalizeThang(d['thang'] || '') }));
-              setRawData(normalizedData);
-              const normalizedPipeline = (res.pipelineData || []).map(d => ({ ...d, thang: normalizeThang(d['thang'] || '') }));
-              setPipelineRaw(normalizedPipeline);
+              setRawData((res.data || []).map(d => ({ ...d, thang: normalizeThang(d['thang'] || '') })));
+              setPipelineRaw((res.pipelineData || []).map(d => ({ ...d, thang: normalizeThang(d['thang'] || '') })));
               setDeanRaw(res.deanData || []);
-              setHopDongRaw(res.hopdongData || []);
+              setHopDongRaw(res.hopDongData || res.hopdongData || []); // Khớp chính xác key hopDongData từ Backend
               setPloList(res.ploData || []);
             }
           } catch (err) { console.warn("Lỗi đồng bộ dữ liệu API"); }
@@ -149,7 +199,7 @@
           setRawData([]);
         };
 
-        if (!user) {
+        f (!user) {
           return (
             <div className="flex h-screen w-full items-center justify-center bg-gray-200">
               <form onSubmit={handleLogin} className="bg-white p-10 border-t-4 border-vnpt shadow-xl w-96 rounded">
@@ -163,19 +213,12 @@
           );
         }
 
-        const getMonthVal = (mStr) => {
-          if (!mStr) return null;
-          const parts = mStr.toString().trim().split('/');
-          if (parts.length === 2) return parseInt(parts[1]) * 100 + parseInt(parts[0]);
-          return 0;
-        };
-
         const isAllTime = !filters.thoiGian || filters.thoiGian === 'ALL' || filters.thoiGian === '';
         const filterMonthVal = isAllTime ? 999912 : getMonthVal(filters.thoiGian);
 
-        // ===============================================
-        // DATA ENGINE 1: DASHBOARD DOANH THU
-        // ===============================================
+        // =====================================================================
+        // [PHẦN 2.1 - ENGINE] DASHBOARD TỔNG QUAN DOANH THU
+        // =====================================================================
         const kpi = { dtThucHien: 0, dtKeHoach: 0, pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeMoSl: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0 };
         const baseData = (rawData || []).filter(d =>
           (filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh) &&
@@ -200,23 +243,16 @@
 
         basePipeline.forEach(curr => {
           const mVal = getMonthVal(curr['thang']);
-          const isMatchTime = isAllTime ? true : (mVal === filterMonthVal);
-          if (isMatchTime) {
+          if (isAllTime || mVal === filterMonthVal) {
             const nganSach = parseNum(curr['ngansach_duan']);
             const dtDuBao = parseNum(curr['doanhthu_dubao']);
             const statusStr = (curr['trang_thai'] || '').toString().trim().toUpperCase();
-
             kpi.pipeTongSl += 1;
             kpi.pipeTongGt += nganSach;
-
             if (statusStr === 'CLOSED' || statusStr.includes('THẮNG') || statusStr.includes('ĐÓNG') || statusStr.includes('THÀNH CÔNG')) {
-              kpi.pipeDongSl += 1;
-              kpi.pipeDongGt += nganSach;
-              kpi.duBaoDt += dtDuBao;
+              kpi.pipeDongSl += 1; kpi.pipeDongGt += nganSach; kpi.duBaoDt += dtDuBao;
             } else if (statusStr === 'OPEN' || statusStr.includes('MỞ') || statusStr.includes('ĐANG')) {
-              kpi.pipeMoSl += 1;
-              kpi.pipeMoGt += nganSach;
-              kpi.duBaoDt += dtDuBao;
+              kpi.pipeMoSl += 1; kpi.pipeMoGt += nganSach; kpi.duBaoDt += dtDuBao;
             }
           }
         });
@@ -245,8 +281,7 @@
           if (!provStats[p]) provStats[p] = { maTinh: p, dtThucHien: 0, dtKeHoach: 0, pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0 };
         };
         baseData.forEach(curr => {
-          const p = curr['ma_tinh'] || 'N/A';
-          initProv(p);
+          const p = curr['ma_tinh'] || 'N/A'; initProv(p);
           const mVal = getMonthVal(curr['thang']);
           if (mVal !== null && mVal > 0 && mVal <= filterMonthVal) {
             provStats[p].dtThucHien += parseNum(curr['dt_th_thang']);
@@ -254,22 +289,17 @@
           }
         });
         basePipeline.forEach(curr => {
-          const p = curr['ma_tinh'] || 'N/A';
-          initProv(p);
+          const p = curr['ma_tinh'] || 'N/A'; initProv(p);
           const mVal = getMonthVal(curr['thang']);
           if (isAllTime || mVal === filterMonthVal) {
             const nganSach = parseNum(curr['ngansach_duan']);
             const dtDuBao = parseNum(curr['doanhthu_dubao']);
             const statusStr = (curr['trang_thai'] || '').toString().trim().toUpperCase();
-            provStats[p].pipeTongSl += 1;
-            provStats[p].pipeTongGt += nganSach;
+            provStats[p].pipeTongSl += 1; provStats[p].pipeTongGt += nganSach;
             if (statusStr === 'CLOSED' || statusStr.includes('ĐÓNG') || statusStr.includes('THÀNH CÔNG')) {
-              provStats[p].pipeDongSl += 1;
-              provStats[p].pipeDongGt += nganSach;
-              provStats[p].duBaoDt += dtDuBao;
-            } else if (statusStr === 'OPEN' || statusStr.includes('MỞ') ) {
-              provStats[p].pipeMoGt += nganSach;
-              provStats[p].duBaoDt += dtDuBao;
+              provStats[p].pipeDongSl += 1; provStats[p].pipeDongGt += nganSach; provStats[p].duBaoDt += dtDuBao;
+            } else if (statusStr === 'OPEN' || statusStr.includes('MỞ')) {
+              provStats[p].pipeMoGt += nganSach; provStats[p].duBaoDt += dtDuBao;
             }
           }
         });
@@ -282,11 +312,8 @@
 
         const ploStats = {};
         const initPlo = (p) => {
-          const key = p ? p.toString().trim() : '';
-          const finalKey = key === '' ? 'Chưa gán PLO' : key;
-          if (!ploStats[finalKey]) {
-            ploStats[finalKey] = { ploCode: finalKey, dtThucHien: 0, dtKeHoach: 0, pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0 };
-          }
+          const finalKey = (p ? p.toString().trim() : '') || 'Chưa gán PLO';
+          if (!ploStats[finalKey]) ploStats[finalKey] = { ploCode: finalKey, dtThucHien: 0, dtKeHoach: 0, pipeTongGt: 0, pipeTongSl: 0, pipeMoGt: 0, pipeDongGt: 0, pipeDongSl: 0, duBaoDt: 0 };
           return finalKey;
         };
         baseData.forEach(curr => {
@@ -304,15 +331,11 @@
             const nganSach = parseNum(curr['ngansach_duan']);
             const dtDuBao = parseNum(curr['doanhthu_dubao']);
             const statusStr = (curr['trang_thai'] || '').toString().trim().toUpperCase();
-            ploStats[key].pipeTongSl += 1;
-            ploStats[key].pipeTongGt += nganSach;
+            ploStats[key].pipeTongSl += 1; ploStats[key].pipeTongGt += nganSach;
             if (statusStr === 'CLOSED' || statusStr.includes('THẮNG') || statusStr.includes('ĐÓNG') || statusStr.includes('THÀNH CÔNG')) {
-              ploStats[key].pipeDongSl += 1;
-              ploStats[key].pipeDongGt += nganSach;
-              ploStats[key].duBaoDt += dtDuBao;
+              ploStats[key].pipeDongSl += 1; ploStats[key].pipeDongGt += nganSach; ploStats[key].duBaoDt += dtDuBao;
             } else if (statusStr === 'OPEN' || statusStr.includes('MỞ') || statusStr.includes('ĐANG')) {
-              ploStats[key].pipeMoGt += nganSach;
-              ploStats[key].duBaoDt += dtDuBao;
+              ploStats[key].pipeMoGt += nganSach; ploStats[key].duBaoDt += dtDuBao;
             }
           }
         });
@@ -322,80 +345,40 @@
           thieuHut: Math.max(p.dtKeHoach - p.dtThucHien - p.duBaoDt, 0)
         })).sort((a, b) => b.dtThucHien - a.dtThucHien);
 
-
-        // ===============================================
-        // DATA ENGINE 2: ĐỀ ÁN & KẾ HOẠCH
-        // ===============================================
-        const baseDean = (deanRaw || []).filter(d =>
-          (filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh)
-        );
-        
-        const deanKpi = {
-          tongSl: 0, tongNs: 0,
-          daTrienKhaiSl: 0, daTrienKhaiNs: 0,
-          vnptSl: 0, vnptNs: 0,
-          trangSl: 0, trangNs: 0,
-          doiThuSl: 0, doiThuNs: 0,
-          chuyenHoaSl: 0, chuyenHoaNs: 0
-        };
-        
-        // Object gom nhóm theo mã tỉnh
+        // =====================================================================
+        // [PHẦN 2.2 - ENGINE] ĐỀ ÁN & KẾ HOẠCH (CÁC KHUNG PHÁP LÝ)
+        // =====================================================================
+        const baseDean = (deanRaw || []).filter(d => filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh);
+        const deanKpi = { tongSl: 0, tongNs: 0, daTrienKhaiSl: 0, daTrienKhaiNs: 0, vnptSl: 0, vnptNs: 0, trangSl: 0, trangNs: 0, doiThuSl: 0, doiThuNs: 0, chuyenHoaSl: 0, chuyenHoaNs: 0 };
         const deanByTinhMap = {};
-        
+
         baseDean.forEach(d => {
           const maTinh = (d['ma_tinh'] || 'CHƯA RÕ').toString().trim().toUpperCase();
           const ns = parseNum(d['ngansach']);
           const trangThai = (d['trangthai_trienkhai'] || '').toString().trim().toUpperCase();
           const donVi = (d['donvi_donghanh'] || '').toString().trim().toUpperCase();
           const maChkd = (d['ma_CHKD'] || d['chkd_id'] || '').toString().trim();
-        
-          // Khởi tạo dòng tỉnh nếu chưa có
+
           if (!deanByTinhMap[maTinh]) {
-            deanByTinhMap[maTinh] = {
-              maTinh,
-              tongSl: 0, tongNs: 0,
-              daTrienKhaiSl: 0, daTrienKhaiNs: 0,
-              vnptSl: 0, vnptNs: 0,
-              chuyenHoaSl: 0, chuyenHoaNs: 0,
-              trangSl: 0, trangNs: 0
-            };
+            deanByTinhMap[maTinh] = { maTinh, tongSl: 0, tongNs: 0, daTrienKhaiSl: 0, daTrienKhaiNs: 0, vnptSl: 0, vnptNs: 0, chuyenHoaSl: 0, chuyenHoaNs: 0, trangSl: 0, trangNs: 0 };
           }
           const t = deanByTinhMap[maTinh];
-        
-          // 1. Tổng quy mô
-          deanKpi.tongSl += 1; deanKpi.tongNs += ns;
-          t.tongSl += 1; t.tongNs += ns;
-        
-          // 2. Đã chuyển hóa CHKD
-          if (maChkd !== '') {
-            deanKpi.chuyenHoaSl += 1; deanKpi.chuyenHoaNs += ns;
-            t.chuyenHoaSl += 1; t.chuyenHoaNs += ns;
-          }
-        
-          // 3. Phân loại trạng thái & đơn vị đồng hành
+
+          deanKpi.tongSl += 1; deanKpi.tongNs += ns; t.tongSl += 1; t.tongNs += ns;
+          if (maChkd !== '') { deanKpi.chuyenHoaSl += 1; deanKpi.chuyenHoaNs += ns; t.chuyenHoaSl += 1; t.chuyenHoaNs += ns; }
           if (trangThai === 'ĐÃ TRIỂN KHAI') {
-            deanKpi.daTrienKhaiSl += 1; deanKpi.daTrienKhaiNs += ns;
-            t.daTrienKhaiSl += 1; t.daTrienKhaiNs += ns;
+            deanKpi.daTrienKhaiSl += 1; deanKpi.daTrienKhaiNs += ns; t.daTrienKhaiSl += 1; t.daTrienKhaiNs += ns;
           } else {
-            if (donVi === 'VNPT') {
-              deanKpi.vnptSl += 1; deanKpi.vnptNs += ns;
-              t.vnptSl += 1; t.vnptNs += ns;
-            } else if (donVi === 'ĐỐI THỦ') {
-              deanKpi.doiThuSl += 1; deanKpi.doiThuNs += ns;
-            } else {
-              deanKpi.trangSl += 1; deanKpi.trangNs += ns;
-              t.trangSl += 1; t.trangNs += ns;
-            }
+            if (donVi === 'VNPT') { deanKpi.vnptSl += 1; deanKpi.vnptNs += ns; t.vnptSl += 1; t.vnptNs += ns; }
+            else if (donVi === 'ĐỐI THỦ') { deanKpi.doiThuSl += 1; deanKpi.doiThuNs += ns; }
+            else { deanKpi.trangSl += 1; deanKpi.trangNs += ns; t.trangSl += 1; t.trangNs += ns; }
           }
         });
-        
-        // Chuyển sang mảng & sắp xếp giảm dần theo Tổng Ngân sách
         const deanByTinhList = Object.values(deanByTinhMap).sort((a, b) => b.tongNs - a.tongNs);
 
-
-        // ===============================================
-        // DATA ENGINE 3: CƠ HỘI KINH DOANH (PIPELINE)
-        // ===============================================
+        // =====================================================================
+        // [PHẦN 2.3 - ENGINE] CƠ HỘI KINH DOANH (PIPELINE)
+        // =====================================================================
         const kpiCHKD = {
           tongSl: 0, tongGt: 0, moSl: 0, moGt: 0, chotSl: 0, chotGt: 0, thuaSl: 0, thuaGt: 0,
           thieuTiemNang: 0, quaHanKy: 0, lauKhongCapNhat: 0, thieuGiaTri: 0, thieuHinhThuc: 0, thieuPLO: 0
@@ -406,9 +389,7 @@
         basePipeline.forEach(d => {
           const gtTrieu = parseNum(d['ngansach_duan']);
           const status = (d['trang_thai'] || 'OPEN').toString().trim().toUpperCase();
-
-          kpiCHKD.tongSl += 1;
-          kpiCHKD.tongGt += gtTrieu;
+          kpiCHKD.tongSl += 1; kpiCHKD.tongGt += gtTrieu;
 
           if (status === 'WON' || status === 'CLOSED' || status.includes('THẮNG')) {
             kpiCHKD.chotSl += 1; kpiCHKD.chotGt += gtTrieu;
@@ -418,14 +399,8 @@
             kpiCHKD.moSl += 1; kpiCHKD.moGt += gtTrieu;
             if (!d['mucdo_tiemnang'] || d['mucdo_tiemnang'].toString().trim() === '') kpiCHKD.thieuTiemNang += 1;
             if (gtTrieu === 0) kpiCHKD.thieuGiaTri += 1;
-            if (d['ngay_dukienchot']) {
-              const ngayKy = new Date(d['ngay_dukienchot']);
-              if (ngayKy < now) kpiCHKD.quaHanKy += 1;
-            }
-            if (d['ngay_cap_nhat_cuoi']) {
-              const ngayCapNhat = new Date(d['ngay_cap_nhat_cuoi']);
-              if (ngayCapNhat < ninetyDaysAgo) kpiCHKD.lauKhongCapNhat += 1;
-            }
+            if (d['ngay_dukienchot'] && new Date(d['ngay_dukienchot']) < now) kpiCHKD.quaHanKy += 1;
+            if (d['ngay_cap_nhat_cuoi'] && new Date(d['ngay_cap_nhat_cuoi']) < ninetyDaysAgo) kpiCHKD.lauKhongCapNhat += 1;
             if (!d['hinhthuc_cungcap'] || d['hinhthuc_cungcap'].toString().trim() === '') kpiCHKD.thieuHinhThuc += 1;
             if (!d['plo_code'] || d['plo_code'].toString().trim() === '') kpiCHKD.thieuPLO += 1;
           }
@@ -436,83 +411,7 @@
         const closedTotalGt = kpiCHKD.chotGt + kpiCHKD.thuaGt;
         const winRateSl = closedTotalSl ? (kpiCHKD.chotSl / closedTotalSl) : 0;
         const winRateGt = closedTotalGt ? (kpiCHKD.chotGt / closedTotalGt) : 0;
-        
-        // ===============================================
-        // DATA ENGINE 4: QUẢN LÝ HỢP ĐỒNG
-        // ===============================================
-        const baseHopDong = (hopDongRaw || []).filter(d =>
-          (filters.maTinh === 'ALL' || d['ma_tinh'] == filters.maTinh) &&
-          (filters.nhomSPDV === 'ALL' || !d['nhomspdv_code'] || d['nhomspdv_code'] == filters.nhomSPDV) &&
-          (filters.plo === 'ALL' || !d['plo_code'] || d['plo_code'] == filters.plo)
-        );
 
-        const kpiHD = {
-          tongSl: 0, tongGt: 0, trungVi: 0,
-          hieuLucSl: 0, hieuLucGt: 0,
-          thueDvSl: 0, thueDvGt: 0,
-          dauTuSl: 0, dauTuGt: 0,
-          top5Gt: 0, top5Pct: 0,
-          quaHanSl: 0, sapHetHan90Sl: 0, thieuNgayHetHanSl: 0, thieuGiaTriSl: 0
-        };
-
-        const hdValues = [];
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const next90Days = new Date(today.getTime() + (90 * 24 * 60 * 60 * 1000));
-
-        baseHopDong.forEach(d => {
-          const gtTy = parseNum(d['giatri_hd']); 
-          const status = (d['trang_thai'] || '').toString().trim().toUpperCase();
-          const loai = (d['loai_hd'] || '').toString().trim().toUpperCase();
-          const isHieuLuc = status.includes('CÒN HIỆU LỰC') || status.includes('ĐANG THỰC HIỆN') || status === 'ACTIVE';
-
-          kpiHD.tongSl += 1;
-          kpiHD.tongGt += gtTy;
-          hdValues.push(gtTy);
-
-          if (gtTy <= 0) kpiHD.thieuGiaTriSl += 1;
-
-          // Phân loại Hình thức HĐ
-          if (loai.includes('THUÊ')) {
-            kpiHD.thueDvSl += 1; kpiHD.thueDvGt += gtTy;
-          } else if (loai.includes('ĐẦU TƯ') || loai.includes('MUA SẮM')) {
-            kpiHD.dauTuSl += 1; kpiHD.dauTuGt += gtTy;
-          }
-
-          // Kiểm tra ngày hết hạn
-          const rawDate = d['ngay_hethan'];
-          const expDate = rawDate ? new Date(rawDate) : null;
-          const isValidDate = expDate && !isNaN(expDate.getTime());
-
-          if (!isValidDate) kpiHD.thieuNgayHetHanSl += 1;
-
-          // Nhóm HĐ còn hiệu lực & Cảnh báo hạn
-          if (isHieuLuc) {
-            kpiHD.hieuLucSl += 1;
-            kpiHD.hieuLucGt += gtTy;
-            if (isValidDate) {
-              if (expDate < today) kpiHD.quaHanSl += 1;
-              else if (expDate <= next90Days) kpiHD.sapHetHan90Sl += 1;
-            }
-          }
-        });
-
-        // Tính Trung vị (Median) & Top 5 HĐ lớn nhất
-        if (hdValues.length > 0) {
-          hdValues.sort((a, b) => b - a); // Sắp xếp giảm dần
-          kpiHD.top5Gt = hdValues.slice(0, 5).reduce((sum, val) => sum + val, 0);
-          kpiHD.top5Pct = kpiHD.tongGt ? (kpiHD.top5Gt / kpiHD.tongGt) : 0;
-
-          const mid = Math.floor(hdValues.length / 2);
-          kpiHD.trungVi = hdValues.length % 2 !== 0 ? hdValues[mid] : (hdValues[mid - 1] + hdValues[mid]) / 2;
-        }
-
-        const hdHieuLucPct = kpiHD.tongGt ? (kpiHD.hieuLucGt / kpiHD.tongGt) : 0;
-        const hdThueDvPct = kpiHD.tongGt ? (kpiHD.thueDvGt / kpiHD.tongGt) : 0;
-        const hdDauTuPct = kpiHD.tongGt ? (kpiHD.dauTuGt / kpiHD.tongGt) : 0;
-        const fmtInt = (n) => new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(n || 0);
-        
-        
         const funnelDataMap = {};
         basePipeline.forEach(d => {
           const status = (d['trang_thai'] || '').toString().trim().toUpperCase();
@@ -520,15 +419,11 @@
           const stage = (d['trangthai_pipeline'] || 'Chưa xác định').toString().trim();
           const valTy = parseNum(d['ngansach_duan']);
           if (!funnelDataMap[stage]) funnelDataMap[stage] = { name: stage, value: 0, count: 0 };
-          funnelDataMap[stage].value += valTy;
-          funnelDataMap[stage].count += 1;
+          funnelDataMap[stage].value += valTy; funnelDataMap[stage].count += 1;
         });
-
         const funnelData = Object.values(funnelDataMap).sort((a, b) => {
-          const matchA = a.name.match(/^(\d+)\./);
-          const matchB = b.name.match(/^(\d+)\./);
-          const numA = matchA ? parseInt(matchA[1], 10) : 99;
-          const numB = matchB ? parseInt(matchB[1], 10) : 99;
+          const numA = a.name.match(/^(\d+)\./) ? parseInt(a.name.match(/^(\d+)\./)[1], 10) : 99;
+          const numB = b.name.match(/^(\d+)\./) ? parseInt(b.name.match(/^(\d+)\./)[1], 10) : 99;
           return numA - numB;
         });
         const FUNNEL_COLORS = ['#003B7A', '#004c9e', '#0062c3', '#007ad9', '#0094D9', '#33aae0', '#66bfe8'];
@@ -536,18 +431,13 @@
         const provPipelineMap = {};
         basePipeline.forEach(d => {
           const maTinh = (d['ma_tinh'] || 'Khác').toString().trim();
-          const gtTy = parseNum(d['ngansach_duan']) ;
+          const gtTy = parseNum(d['ngansach_duan']);
           const status = (d['trang_thai'] || '').toString().trim().toUpperCase();
-          if (!provPipelineMap[maTinh]) provPipelineMap[maTinh] = { maTinh: maTinh, dangMoGt: 0, daChotGt: 0, thatBaiGt: 0, tongGt: 0, tongSl: 0 };
-          provPipelineMap[maTinh].tongGt += gtTy;
-          provPipelineMap[maTinh].tongSl += 1;
-          if (status === 'WON' || status === 'CLOSED' || status.includes('THẮNG') || status.includes('CHỐT')) {
-            provPipelineMap[maTinh].daChotGt += gtTy;
-          } else if (status === 'LOST' || status.includes('THUA') || status.includes('THẤT BẠI')) {
-            provPipelineMap[maTinh].thatBaiGt += gtTy;
-          } else {
-            provPipelineMap[maTinh].dangMoGt += gtTy;
-          }
+          if (!provPipelineMap[maTinh]) provPipelineMap[maTinh] = { maTinh, dangMoGt: 0, daChotGt: 0, thatBaiGt: 0, tongGt: 0, tongSl: 0 };
+          provPipelineMap[maTinh].tongGt += gtTy; provPipelineMap[maTinh].tongSl += 1;
+          if (status === 'WON' || status === 'CLOSED' || status.includes('THẮNG') || status.includes('CHỐT')) provPipelineMap[maTinh].daChotGt += gtTy;
+          else if (status === 'LOST' || status.includes('THUA') || status.includes('THẤT BẠI')) provPipelineMap[maTinh].thatBaiGt += gtTy;
+          else provPipelineMap[maTinh].dangMoGt += gtTy;
         });
         const provPipelineChartData = Object.values(provPipelineMap).sort((a, b) => b.tongGt - a.tongGt);
 
@@ -566,14 +456,167 @@
           }
           return null;
         };
+        
+        // =====================================================================
+        // [PHẦN 2.4 - ENGINE] QUẢN LÝ HỢP ĐỒNG (07_QUAN_LY_HOPDONG)
+        // =====================================================================
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const next90Days = new Date(today.getTime() + (90 * 24 * 60 * 60 * 1000));
 
+        // 1. Lọc dòng rác & Chuẩn hóa trường + Phái sinh
+        const normalizedHopDong = (hopDongRaw || [])
+          .filter(d => getField(d, ['ma_hopdong', 'ma_hd', 'Mã Hợp Đồng', 'so_hopdong', 'so_hd', 'Số hợp đồng']) !== '')
+          .map(d => {
+            const maHD = getField(d, ['ma_hopdong', 'ma_hd', 'Mã Hợp Đồng']).toString().trim();
+            const maDeal = getField(d, ['ma_chkd', 'ma_deal', 'Mã Deal']).toString().trim();
+            const maTinh = getField(d, ['ma_tinh', 'Mã tỉnh', 'Địa bàn'], maHD.includes('-') ? maHD.split('-')[1] : 'N/A').toString().trim().toUpperCase();
+            const tenHD = getField(d, ['ten_hopdong', 'ten_hd', 'Tên Hợp đồng']);
+            const tenSPDV = getField(d, ['ten_spdv', 'Tên SPDV']);
+            const hinhThuc = getField(d, ['hinhthuc_cungcap', 'loai_hd', 'Hình thức cung cấp'], 'Chưa phân loại').toString().trim();
+            const trangThai = getField(d, ['trangthai_thicong', 'trang_thai', 'Trạng Thái Thi Công'], 'Chưa cập nhật').toString().trim();
+            const diemRoi = normalizeThang(getField(d, ['diem_roi_doanhthu', 'thang', 'ĐIỂM RƠI DOANH THU (MM/YYYY)']));
+            const ploCode = getField(d, ['plo_code', 'PLO']);
+            const nhomCode = getField(d, ['nhomspdv_code', 'Nhóm SPDV']);
+            const luongSPDV = getField(d, ['luong_spdv', 'Luồng SPDV']);
+
+            // Giá trị HĐ & Phái sinh VNPT hưởng (ĐVT: trĐ)
+            const giaTriHD = parseNum(getField(d, ['giatri_hd', 'gia_tri_hd', 'Giá trị hợp đồng (trVND)'], 0));
+            const giaTriLienDanh = parseNum(getField(d, ['giatri_liendanh', 'Giá trị Liên danh hưởng'], 0));
+            const giaTriVNPT = Math.max(giaTriHD - giaTriLienDanh, 0);
+
+            // Chi phí COGS & Thực chi (quy đổi VND -> trĐ)
+            const duToanCogs = vndToTr(getField(d, ['dutoan_cogs', 'Dự Toán COGS Ban Đầu (VND)'], 0));
+            const thucChiNoiBo = vndToTr(getField(d, ['thucchi_noibo', 'Thực Chi Nội Bộ (VND)'], 0));
+            const thucChiThauPhu = vndToTr(getField(d, ['thucchi_thauphu', 'Thực Chi Thầu Phụ (VND)'], 0));
+            const rawTongChi = vndToTr(getField(d, ['tong_thucchi', 'Tổng Thực Chi (VND)'], 0));
+            const tongThucChi = rawTongChi > 0 ? rawTongChi : (thucChiNoiBo + thucChiThauPhu);
+
+            // Phái sinh tài chính
+            const chenhLechCogs = tongThucChi - duToanCogs;
+            const vuotNganSach = chenhLechCogs > 0 ? chenhLechCogs : 0;
+            const loiNhuanGop = giaTriVNPT - tongThucChi;
+
+            // Phái sinh tiến độ & Hạn HĐ
+            const ngayHetHan = parseDateVN(getField(d, ['ngay_hethan', 'Ngày hết hạn']));
+            const deadline = parseDateVN(getField(d, ['ngay_bangiao_dukien', 'deadline', 'Ngày Bàn Giao Dự Kiến (Deadline)']));
+            const banGiaoThucTe = parseDateVN(getField(d, ['ngay_bangiao_thucte', 'Ngày Bàn Giao Thực Tế']));
+
+            const rawCham = getField(d, ['cham_tiendo', 'so_ngay_cham', 'Chậm Tiến Độ (Ngày)'], '');
+            let chamTienDo = rawCham !== '' ? parseNum(rawCham) : 0;
+            if (rawCham === '' && deadline) {
+              const diffDays = Math.ceil(((banGiaoThucTe || today) - deadline) / (1000 * 60 * 60 * 24));
+              chamTienDo = diffDays > 0 ? diffDays : 0;
+            }
+
+            const stUpper = trangThai.toUpperCase();
+            const isHieuLuc = !stUpper.includes('THANH LÝ') && !stUpper.includes('HẾT HIỆU LỰC') && !stUpper.includes('HỦY');
+            const isTreHan = chamTienDo > 0;
+            const isVuotNS = vuotNganSach > 0;
+            const isQuaHanHD = isHieuLuc && ngayHetHan && ngayHetHan < today;
+            const isSapHetHan90 = isHieuLuc && ngayHetHan && ngayHetHan >= today && ngayHetHan <= next90Days;
+
+            let canhBao = getField(d, ['canhbao_chidao', 'canh_bao', 'Cảnh Báo & Chỉ Đạo Lãnh Đạo'], '').toString().trim();
+            if (!canhBao) {
+              const alerts = [];
+              if (isTreHan) alerts.push(`TRỄ HẠN ${chamTienDo} NGÀY`);
+              if (isVuotNS) alerts.push(`VƯỢT NS ${fmtNum(vuotNganSach)} trĐ`);
+              if (isQuaHanHD) alerts.push('QUÁ HẠN HĐ');
+              else if (isSapHetHan90) alerts.push('SẮP HẾT HẠN ≤90N');
+              canhBao = alerts.length ? alerts.join(' | ') : 'Bình thường';
+            }
+
+            return {
+              maHD, maDeal, maTinh, tenHD, tenSPDV, hinhThuc, trangThai, diemRoi, ploCode, nhomCode, luongSPDV,
+              giaTriHD, giaTriLienDanh, giaTriVNPT, duToanCogs, tongThucChi, vuotNganSach, loiNhuanGop,
+              ngayHetHan, chamTienDo, isHieuLuc, isTreHan, isVuotNS, isQuaHanHD, isSapHetHan90, canhBao
+            };
+          });
+
+        // 2. Áp dụng Bộ lọc chung
+        const baseHopDong = normalizedHopDong.filter(d =>
+          (isAllTime || d.diemRoi === filters.thoiGian) &&
+          (filters.maTinh === 'ALL' || d.maTinh === filters.maTinh) &&
+          (filters.luongSPDV === 'ALL' || !d.luongSPDV || d.luongSPDV === filters.luongSPDV) &&
+          (filters.nhomSPDV === 'ALL' || !d.nhomCode || d.nhomCode === filters.nhomSPDV) &&
+          (filters.plo === 'ALL' || !d.ploCode || d.ploCode === filters.plo)
+        );
+
+        // 3. Tổng hợp KPI & Phái sinh Hợp đồng
+        const kpiHD = {
+          tongSl: 0, tongGt: 0, lienDanhGt: 0, vnptGt: 0, trungVi: 0,
+          hieuLucSl: 0, hieuLucGt: 0, thueDvSl: 0, thueDvGt: 0, dauTuSl: 0, dauTuGt: 0,
+          tongCogs: 0, tongThucChi: 0, tongVuotNS: 0, tongLnGop: 0,
+          treHanSl: 0, tongNgayCham: 0, vuotNsSl: 0, quaHanHdSl: 0, sapHetHan90Sl: 0, thieuGtSl: 0
+        };
+        const hdValues = [];
+
+        baseHopDong.forEach(d => {
+          kpiHD.tongSl += 1;
+          kpiHD.tongGt += d.giaTriHD;
+          kpiHD.lienDanhGt += d.giaTriLienDanh;
+          kpiHD.vnptGt += d.giaTriVNPT;
+          kpiHD.tongCogs += d.duToanCogs;
+          kpiHD.tongThucChi += d.tongThucChi;
+          kpiHD.tongVuotNS += d.vuotNganSach;
+          kpiHD.tongLnGop += d.loiNhuanGop;
+          hdValues.push(d.giaTriVNPT);
+
+          if (d.giaTriHD <= 0) kpiHD.thieuGtSl += 1;
+          if (d.isHieuLuc) { kpiHD.hieuLucSl += 1; kpiHD.hieuLucGt += d.giaTriVNPT; }
+          if (d.hinhThuc.toUpperCase().includes('THUÊ')) { kpiHD.thueDvSl += 1; kpiHD.thueDvGt += d.giaTriVNPT; }
+          else if (d.hinhThuc.toUpperCase().includes('ĐẦU TƯ') || d.hinhThuc.toUpperCase().includes('MUA SẮM')) { kpiHD.dauTuSl += 1; kpiHD.dauTuGt += d.giaTriVNPT; }
+
+          if (d.isTreHan) { kpiHD.treHanSl += 1; kpiHD.tongNgayCham += d.chamTienDo; }
+          if (d.isVuotNS) kpiHD.vuotNsSl += 1;
+          if (d.isQuaHanHD) kpiHD.quaHanHdSl += 1;
+          if (d.isSapHetHan90) kpiHD.sapHetHan90Sl += 1;
+        });
+
+        if (hdValues.length > 0) {
+          hdValues.sort((a, b) => b - a);
+          const mid = Math.floor(hdValues.length / 2);
+          kpiHD.trungVi = hdValues.length % 2 !== 0 ? hdValues[mid] : (hdValues[mid - 1] + hdValues[mid]) / 2;
+        }
+        const hdTyLeTreHan = kpiHD.tongSl ? kpiHD.treHanSl / kpiHD.tongSl : 0;
+        const hdAvgDelay = kpiHD.treHanSl ? (kpiHD.tongNgayCham / kpiHD.treHanSl).toFixed(1) : 0;
+        const hdTySuatLN = kpiHD.vnptGt ? kpiHD.tongLnGop / kpiHD.vnptGt : 0;
+
+        // 4. Dữ liệu Biểu đồ & Bảng chi tiết Hợp đồng
+        const hdDiemRoiMap = {};
+        const hdStatusMap = {};
+        baseHopDong.forEach(d => {
+          const mKey = d.diemRoi || 'Chưa XĐ';
+          if (!hdDiemRoiMap[mKey]) hdDiemRoiMap[mKey] = { thang: mKey, vnptGt: 0, lienDanhGt: 0, count: 0 };
+          hdDiemRoiMap[mKey].vnptGt += d.giaTriVNPT; hdDiemRoiMap[mKey].lienDanhGt += d.giaTriLienDanh; hdDiemRoiMap[mKey].count += 1;
+
+          const stKey = d.trangThai || 'Chưa cập nhật';
+          if (!hdStatusMap[stKey]) hdStatusMap[stKey] = { name: stKey, value: 0, count: 0 };
+          hdStatusMap[stKey].value += d.giaTriVNPT; hdStatusMap[stKey].count += 1;
+        });
+        const hdDiemRoiChart = Object.values(hdDiemRoiMap).sort((a, b) => (getMonthVal(a.thang) || 999999) - (getMonthVal(b.thang) || 999999));
+        const hdStatusChart = Object.values(hdStatusMap).sort((a, b) => b.value - a.value);
+
+        const filteredHopDongTable = baseHopDong.filter(d => {
+          if (hdQuickFilter === 'LATE') return d.isTreHan;
+          if (hdQuickFilter === 'OVER_BUDGET') return d.isVuotNS;
+          if (hdQuickFilter === 'EXPIRING') return d.isQuaHanHD || d.isSapHetHan90;
+          return true;
+        }).sort((a, b) => (b.isTreHan - a.isTreHan) || (b.vuotNganSach - a.vuotNganSach) || (b.giaTriVNPT - a.giaTriVNPT));
+
+        // Biến dùng chung cho Header & Filter
         const activeMenuItem = MENU_ITEMS.find(m => m.id === activeTab);
         const headerTitle = activeMenuItem ? activeMenuItem.label : 'DASHBOARD';
-        const dsDiaBanHienThi = (user.provinces && user.provinces.includes('ALL')) ? [...new Set(rawData.map(d => d['ma_tinh']).filter(Boolean))].sort() : (user.provinces || []);
+        const dsDiaBanHienThi = (user.provinces && user.provinces.includes('ALL'))
+          ? [...new Set([...rawData, ...hopDongRaw].map(d => d['ma_tinh']).filter(Boolean))].sort()
+          : (user.provinces || []);
 
+        // =====================================================================
+        // [PHẦN 3 - UI] HIỂN THỊ GIAO DIỆN (LAYOUT CHUNG + TỪNG MODULE)
+        // =====================================================================
         return (
           <div className="flex h-screen w-full">
-            {/* SIDEBAR */}
+            {/* [3.0] SIDEBAR ĐIỀU HƯỚNG */}
             <aside className="w-[200px] bg-navy text-white flex flex-col shadow-2xl z-20 shrink-0">
               <div className="p-4 border-b border-white/20 flex flex-col items-center">
                 <div className="text-2xl font-extrabold tracking-widest text-vnpt bg-white px-3 py-1 rounded shadow mb-2">VNPT</div>
@@ -599,7 +642,7 @@
               </nav>
             </aside>
 
-            {/* MAIN LAYOUT */}
+            {/* KHUNG NỘI DUNG CHÍNH */}
             <main className="flex-1 flex flex-col overflow-hidden bg-gray-50">
               <header className="bg-white px-6 py-4 flex justify-between items-center shrink-0 border-b">
                 <h1 className="text-2xl font-bold uppercase tracking-wide text-navy">{headerTitle}</h1>
@@ -610,8 +653,8 @@
                 </div>
               </header>
 
-              {/* COMMON FILTER */}
-              {['dashboard', 'dean', 'cohoi','hopdong'].includes(activeTab) && (
+              {/* THANH BỘ LỌC CHUNG */}
+              {['dashboard', 'dean', 'cohoi', 'hopdong'].includes(activeTab) && (
                 <div className="bg-white px-6 py-3 flex gap-4 shrink-0 border-b shadow-sm items-end z-10">
                   <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">Thời gian</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.thoiGian} onChange={e => setFilters({...filters, thoiGian: e.target.value})}><option value="">-- Tất cả --</option>{monthOptions.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
                   <div className="flex flex-col flex-1"><label className="text-xs font-bold text-navy mb-1">CLO Địa bàn</label><select className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt" value={filters.maTinh} onChange={e => setFilters({...filters, maTinh: e.target.value})}><option value="ALL">Toàn bộ địa bàn</option>{dsDiaBanHienThi.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
@@ -622,9 +665,10 @@
               )}
               {loading && <div className="text-center text-vnpt text-sm py-1 font-bold animate-pulse bg-white">Đang đồng bộ dữ liệu...</div>}
 
-              {/* ROUTING RENDER V2 */}
               <div className="flex-1 overflow-auto flex flex-col">
-                
+                {/* =========================================================== */}
+                {/* [PHẦN 3.1 - UI] TAB DASHBOARD                               */}
+                {/* =========================================================== */}
                 {activeTab === 'dashboard' && (
                   <>
                     <div className="flex gap-4 px-6 py-6 shrink-0">
@@ -632,19 +676,15 @@
                       <KpiCard title="2.HIỆU SUẤT NĂM" v1={fmtPct(tyLeHT)} l1="Tỷ lệ HT Kế hoạch YTD" v2="-" l2="Tăng/Giảm (MoM)" st={tyLeHT >= 1 ? 'good' : 'risk'} />
                       <KpiCard title="3.PIPELINE TỔNG" v1={fmtNum(kpi.pipeTongGt)} l1="Ngân sách (trĐ)" v2={fmtNum(kpi.pipeTongSl)} l2="Số lượng Cơ hội" st="neutral" />
                       <KpiCard title="4.PIPELINE MỞ" v1={fmtNum(kpi.pipeMoGt)} l1="Ngân sách (trĐ)" v2={fmtNum(kpi.pipeMoSl)} l2="Số lượng Cơ hội mở" st="neutral" />
-                      <KpiCard title="5.DEAL THÀNH CÔNG" v1={fmtNum(kpi.pipeDongGt)} l1="Ngân sách chốt (trĐ)" v2={fmtNum(kpi.pipeDongSl)} l2="Số lượng Co hội chốt" st="good" />
+                      <KpiCard title="5.DEAL THÀNH CÔNG" v1={fmtNum(kpi.pipeDongGt)} l1="Ngân sách chốt (trĐ)" v2={fmtNum(kpi.pipeDongSl)} l2="Số lượng Cơ hội chốt" st="good" />
                       <KpiCard title="6.TỈ LỆ CHUYỂN ĐỔI" v1={fmtPct(winRate)} l1="Winrate (Tỉ lệ)" v2={fmtNum(kpi.pipeDongSl)} l2="Deal thành công" st={winRate >= 0.3 ? 'good' : 'risk'} />
-                      <KpiCard title="7.DỰ BÁO" v1={fmtNum(kpi.duBaoDt)} l1="Doanh thu kỳ vọng" v2={fmtPct(kpi.dtKeHoach ? kpi.duBaoDt/kpi.dtKeHoach : 0)} l2="Tỷ lệ/Kế hoạch" st={(kpi.dtKeHoach ? kpi.duBaoDt/kpi.dtKeHoach : 0) >= 1 ? 'good' : 'risk'} />
-                      <KpiCard title="8.KHOẢNG TRỐNG CẦN BÙ" v1={fmtNum(thieuHut)} l1="Thiếu hụt sau Dự báo (trĐ)" v2={fmtPct(kpi.dtKeHoach ? thieuHut/kpi.dtKeHoach : 0)} l2="Tỷ lệ thiếu hụt" st={thieuHut > 0 ? 'risk' : 'good'} />
+                      <KpiCard title="7.DỰ BÁO" v1={fmtNum(kpi.duBaoDt)} l1="Doanh thu kỳ vọng" v2={fmtPct(kpi.dtKeHoach ? kpi.duBaoDt / kpi.dtKeHoach : 0)} l2="Tỷ lệ/Kế hoạch" st={(kpi.dtKeHoach ? kpi.duBaoDt / kpi.dtKeHoach : 0) >= 1 ? 'good' : 'risk'} />
+                      <KpiCard title="8.KHOẢNG TRỐNG CẦN BÙ" v1={fmtNum(thieuHut)} l1="Thiếu hụt sau Dự báo (trĐ)" v2={fmtPct(kpi.dtKeHoach ? thieuHut / kpi.dtKeHoach : 0)} l2="Tỷ lệ thiếu hụt" st={thieuHut > 0 ? 'risk' : 'good'} />
                     </div>
 
-                    {/* Biểu đồ gồm cột đều nhau (50/50) */}
-                    <div className="px-6 pb-6 grid grid-cols-1 lg:grid-cols-2 gap-6 shrink-0 min-h-[360px]">  
-                      {/* BIỂU ĐỒ 1: DOANH THU HÀNG THÁNG (50%) */}
+                    <div className="px-6 pb-6 grid grid-cols-1 lg:grid-cols-2 gap-6 shrink-0 min-h-[360px]">
                       <div className="min-w-0 bg-white border rounded shadow-sm p-5 flex flex-col">
-                        <h2 className="text-[#003B7A] font-bold text-sm mb-4 uppercase">
-                          THEO DÕI DOANH THU HÀNG THÁNG (ĐVT: trĐ)
-                        </h2>
+                        <h2 className="text-[#003B7A] font-bold text-sm mb-4 uppercase">THEO DÕI DOANH THU HÀNG THÁNG (ĐVT: trĐ)</h2>
                         <div className="flex-1 w-full min-h-[280px]">
                           {ResponsiveContainer && BarChart && (
                             <ResponsiveContainer width="100%" height="100%">
@@ -661,13 +701,10 @@
                           )}
                         </div>
                       </div>
-                    
-                      {/* BIỂU ĐỒ 2: THỰC HIỆN & KẾ HOẠCH 34 TTP XẾP CHỒNG (50%) */}
+
                       <div className="min-w-0 bg-white border rounded shadow-sm p-5 flex flex-col">
                         <div className="flex items-center justify-between mb-4">
-                          <h2 className="text-[#003B7A] font-bold text-sm uppercase">
-                            THỰC HIỆN & KẾ HOẠCH 34 TTP (SẮP XẾP THEO DOANH THU THỰC HIỆN GIẢM DẦN - ĐVT: trĐ)
-                          </h2>
+                          <h2 className="text-[#003B7A] font-bold text-sm uppercase">THỰC HIỆN & KẾ HOẠCH 34 TTP (SẮP XẾP THEO DOANH THU THỰC HIỆN GIẢM DẦN - ĐVT: trĐ)</h2>
                           <span className="text-xs font-semibold text-slate-500">{provStatsArray.length} Địa bàn</span>
                         </div>
                         <div className="flex-1 w-full min-h-[280px]">
@@ -675,19 +712,9 @@
                             <ResponsiveContainer width="100%" height="100%">
                               <BarChart data={provStatsArray} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                <XAxis
-                                  dataKey="maTinh"
-                                  interval={0}
-                                  angle={-55}
-                                  textAnchor="end"
-                                  height={45}
-                                  tick={{ fontSize: 10, fontWeight: 600 }}
-                                />
+                                <XAxis dataKey="maTinh" interval={0} angle={-55} textAnchor="end" height={45} tick={{ fontSize: 10, fontWeight: 600 }} />
                                 <YAxis tick={{ fontSize: 11 }} />
-                                <Tooltip
-                                  cursor={{ fill: '#f3f4f6' }}
-                                  formatter={(value) => new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(value) + ' trĐ'}
-                                />
+                                <Tooltip cursor={{ fill: '#f3f4f6' }} formatter={(value) => new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(value) + ' trĐ'} />
                                 <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '4px' }} />
                                 <Bar dataKey="dtThucHien" name="Thực hiện" stackId="ttp" fill="#0094D9" />
                                 <Bar dataKey="dtKeHoach" name="Kế hoạch" stackId="ttp" fill="#003B7A" radius={[3, 3, 0, 0]} />
@@ -697,8 +724,7 @@
                         </div>
                       </div>
                     </div>
-                    
-                    {/* Bảng KPIs chi tiết theo địa bàn */}
+
                     <div className="px-6 pb-6 flex shrink-0">
                       <div className="w-full bg-white border rounded shadow-sm p-6 flex flex-col overflow-hidden">
                         <h2 className="text-navy font-bold text-base mb-4 uppercase">Bảng KPIS Chi Tiết Địa Bàn</h2>
@@ -719,7 +745,6 @@
                       </div>
                     </div>
 
-                    {/* Bảng KPIs chi tiết theo PLO */}
                     <div className="px-6 pb-6 flex shrink-0">
                       <div className="w-full bg-white border rounded shadow-sm p-6 flex flex-col overflow-hidden">
                         <h2 className="text-navy font-bold text-base mb-4 uppercase">Bảng KPIs Chi Tiết Từng PLO</h2>
@@ -739,52 +764,44 @@
                         </div>
                       </div>
                     </div>
-                    
-                    {/* Bảng danh sách các cơ hội cần thúc đẩy */}
+
                     <div className="px-6 pb-6 flex shrink-0">
                       <div className="flex-[1] bg-white border rounded shadow-sm p-6 flex flex-col overflow-hidden">
-                          <h2 className="text-navy font-bold text-base mb-6 uppercase">Cơ hội Trọng điểm (Cần thúc đẩy)</h2>
-                          <div className="overflow-auto flex-1 pr-2">
-                            <table className="w-full text-left text-sm">
-                              <thead className="bg-gray-100 text-navy sticky top-0">
-                                <tr><th className="p-2">Mã TTP</th>
-                                    <th className="p-2">Mã CHKD</th>
-                                    <th className="p-2">Tên dự án cơ hội</th>
-                                    <th className="p-2 text-right">Doanh thu dự báo</th>
-                                    <th className="p-2 text-center">Trạng thái</th></tr>
-                              </thead>
-                              <tbody>
-                                {basePipeline.slice(0, 10).map((p, i) => {
-                                   // Chuẩn hóa chuỗi trạng thái (xóa khoảng trắng thừa, viết hoa)
-                                  const statusRaw = (p['trang_thai'] || 'OPEN').toString().trim().toUpperCase();
-                                  let colorClass = 'bg-yellow-100 text-yellow-700'; // Mặc định: OPEN (Đang xử lý)
-                                  if (statusRaw === 'CLOSED' || statusRaw.includes('ĐÓNG')) {
-                                    colorClass = 'bg-green-100 text-good';          // CLOSED: Xanh lá (Thành công)
-                                  } else if (statusRaw === 'LOST' || statusRaw.includes('THẤT BẠI') || statusRaw.includes('HỦY')) {
-                                    colorClass = 'bg-red-100 text-red-700';         // LOST: Đỏ (Cảnh báo/Rủi ro)
-                                  }
-                    
-                                  return (
-                                    <tr key={i} className="border-b hover:bg-gray-50">
-                                      <td className="p-2 font-bold text-navy truncate max-w-[20px">{p['ma_tinh']}</td>
-                                      <td className="p-2 font-bold text-navy truncate max-w-[50px]" title={p['ten_duan'] || p['ma_chkd']}>{p['ma_chkd'] || `Deal-${i+1}`}</td>
-                                      <td className="p-2 font-medium text-gray-700" >{p['ten_duan']}</td>
-                                      <td className="p-2 text-right font-bold text-vnpt">{fmtNum(parseNum(p['doanhthu_dubao']))}</td>
-                                      <td className="p-2 text-center"><span className={`text-[10px] px-2 py-1 rounded-full font-bold ${colorClass}`}>{statusRaw}</span></td>
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
+                        <h2 className="text-navy font-bold text-base mb-6 uppercase">Cơ hội Trọng điểm (Cần thúc đẩy)</h2>
+                        <div className="overflow-auto flex-1 pr-2">
+                          <table className="w-full text-left text-sm">
+                            <thead className="bg-gray-100 text-navy sticky top-0">
+                              <tr><th className="p-2">Mã TTP</th><th className="p-2">Mã CHKD</th><th className="p-2">Tên dự án cơ hội</th><th className="p-2 text-right">Doanh thu dự báo</th><th className="p-2 text-center">Trạng thái</th></tr>
+                            </thead>
+                            <tbody>
+                              {basePipeline.slice(0, 10).map((p, i) => {
+                                const statusRaw = (p['trang_thai'] || 'OPEN').toString().trim().toUpperCase();
+                                let colorClass = 'bg-yellow-100 text-yellow-700';
+                                if (statusRaw === 'CLOSED' || statusRaw.includes('ĐÓNG')) colorClass = 'bg-green-100 text-good';
+                                else if (statusRaw === 'LOST' || statusRaw.includes('THẤT BẠI') || statusRaw.includes('HỦY')) colorClass = 'bg-red-100 text-red-700';
+                                return (
+                                  <tr key={i} className="border-b hover:bg-gray-50">
+                                    <td className="p-2 font-bold text-navy truncate max-w-[60px]">{p['ma_tinh']}</td>
+                                    <td className="p-2 font-bold text-navy truncate max-w-[100px]" title={p['ten_duan'] || p['ma_chkd']}>{p['ma_chkd'] || `Deal-${i+1}`}</td>
+                                    <td className="p-2 font-medium text-gray-700">{p['ten_duan']}</td>
+                                    <td className="p-2 text-right font-bold text-vnpt">{fmtNum(parseNum(p['doanhthu_dubao']))}</td>
+                                    <td className="p-2 text-center"><span className={`text-[10px] px-2 py-1 rounded-full font-bold ${colorClass}`}>{statusRaw}</span></td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
                         </div>
-                    </div> 
+                      </div>
+                    </div>
                   </>
                 )}
 
+                {/* =========================================================== */}
+                {/* [PHẦN 3.2 - UI] TAB ĐỀ ÁN & KẾ HOẠCH                        */}
+                {/* =========================================================== */}
                 {activeTab === 'dean' && (
                   <>
-                    {/* KHỐI 1: 6 THẺ KPI TỔNG QUAN */}
                     <div className="grid grid-cols-6 gap-4 px-6 py-6 shrink-0">
                       <KpiCard title="1.TỔNG QUY MÔ" v1={fmtNum(deanKpi.tongSl)} l1="Nhiệm vụ CĐS" v2={fmtNum(deanKpi.tongNs)} l2="Tổng Ngân sách (trĐ)" st="neutral" />
                       <KpiCard title="2.ĐÃ TRIỂN KHAI" v1={fmtNum(deanKpi.daTrienKhaiSl)} l1="Đang thực hiện" v2={fmtNum(deanKpi.daTrienKhaiNs)} l2="Ngân sách (trĐ)" st="neutral" />
@@ -806,8 +823,7 @@
                         <div><div className="text-3xl font-bold mb-1 text-good">{fmtNum(deanKpi.chuyenHoaSl)}</div><div className="text-xs text-gray-500 mb-3 truncate">Chuyển CHKD thành công</div><div className="text-base font-bold text-gray-700 border-t pt-2">{fmtNum(deanKpi.chuyenHoaNs)}</div><div className="text-xs text-gray-500">Ngân sách Phễu (trĐ)</div></div>
                       </div>
                     </div>
-                
-                    {/* KHỐI 2 (MỚI): BẢNG TỔNG HỢP THEO MÃ TỈNH / TP */}
+
                     <div className="px-6 pb-6 shrink-0">
                       <div className="bg-white border rounded shadow-sm flex flex-col overflow-hidden border-t-4 border-t-navy">
                         <div className="px-6 py-3 border-b bg-gray-50 flex justify-between items-center shrink-0">
@@ -837,52 +853,36 @@
                               {deanByTinhList.map((t, i) => (
                                 <tr key={i} className="hover:bg-blue-50/60 transition">
                                   <td className="p-2.5 text-left font-bold text-navy border-r sticky left-0 bg-white">{t.maTinh}</td>
-                                  <td className="p-2 border-r font-medium">{fmtNum(t.tongSl)}</td>
-                                  <td className="p-2 border-r font-bold text-gray-800">{fmtNum(t.tongNs)}</td>
-                                  <td className="p-2 border-r">{fmtNum(t.daTrienKhaiSl)}</td>
-                                  <td className="p-2 border-r">{fmtNum(t.daTrienKhaiNs)}</td>
-                                  <td className="p-2 border-r font-semibold text-vnpt">{fmtNum(t.vnptSl)}</td>
-                                  <td className="p-2 border-r font-bold text-vnpt">{fmtNum(t.vnptNs)}</td>
-                                  <td className="p-2 border-r font-semibold text-good bg-green-50/40">{fmtNum(t.chuyenHoaSl)}</td>
-                                  <td className="p-2 border-r font-bold text-good bg-green-50/40">{fmtNum(t.chuyenHoaNs)}</td>
-                                  <td className={`p-2 border-r font-semibold ${t.trangSl > 0 ? 'text-orange-600 bg-orange-50/50' : 'text-gray-400'}`}>{fmtNum(t.trangSl)}</td>
-                                  <td className={`p-2 font-bold ${t.trangNs > 0 ? 'text-orange-600 bg-orange-50/50' : 'text-gray-400'}`}>{fmtNum(t.trangNs)}</td>
+                                  <td className="p-2 border-r font-medium">{fmtNum(t.tongSl)}</td><td className="p-2 border-r font-bold text-gray-800">{fmtNum(t.tongNs)}</td>
+                                  <td className="p-2 border-r">{fmtNum(t.daTrienKhaiSl)}</td><td className="p-2 border-r">{fmtNum(t.daTrienKhaiNs)}</td>
+                                  <td className="p-2 border-r font-semibold text-vnpt">{fmtNum(t.vnptSl)}</td><td className="p-2 border-r font-bold text-vnpt">{fmtNum(t.vnptNs)}</td>
+                                  <td className="p-2 border-r font-semibold text-good bg-green-50/40">{fmtNum(t.chuyenHoaSl)}</td><td className="p-2 border-r font-bold text-good bg-green-50/40">{fmtNum(t.chuyenHoaNs)}</td>
+                                  <td className={`p-2 border-r font-semibold ${t.trangSl > 0 ? 'text-orange-600 bg-orange-50/50' : 'text-gray-400'}`}>{fmtNum(t.trangSl)}</td><td className={`p-2 font-bold ${t.trangNs > 0 ? 'text-orange-600 bg-orange-50/50' : 'text-gray-400'}`}>{fmtNum(t.trangNs)}</td>
                                 </tr>
                               ))}
                             </tbody>
-                            {/* Dòng Tổng cộng cố định đáy bảng */}
                             <tfoot className="sticky bottom-0 bg-gray-100 font-bold text-navy border-t-2 border-navy">
                               <tr>
                                 <td className="p-2.5 text-left border-r sticky left-0 bg-gray-100">TỔNG CỘNG</td>
-                                <td className="p-2 border-r">{fmtNum(deanKpi.tongSl)}</td>
-                                <td className="p-2 border-r">{fmtNum(deanKpi.tongNs)}</td>
-                                <td className="p-2 border-r">{fmtNum(deanKpi.daTrienKhaiSl)}</td>
-                                <td className="p-2 border-r">{fmtNum(deanKpi.daTrienKhaiNs)}</td>
-                                <td className="p-2 border-r text-vnpt">{fmtNum(deanKpi.vnptSl)}</td>
-                                <td className="p-2 border-r text-vnpt">{fmtNum(deanKpi.vnptNs)}</td>
-                                <td className="p-2 border-r text-good">{fmtNum(deanKpi.chuyenHoaSl)}</td>
-                                <td className="p-2 border-r text-good">{fmtNum(deanKpi.chuyenHoaNs)}</td>
-                                <td className="p-2 border-r text-orange-600">{fmtNum(deanKpi.trangSl)}</td>
-                                <td className="p-2 text-orange-600">{fmtNum(deanKpi.trangNs)}</td>
+                                <td className="p-2 border-r">{fmtNum(deanKpi.tongSl)}</td><td className="p-2 border-r">{fmtNum(deanKpi.tongNs)}</td>
+                                <td className="p-2 border-r">{fmtNum(deanKpi.daTrienKhaiSl)}</td><td className="p-2 border-r">{fmtNum(deanKpi.daTrienKhaiNs)}</td>
+                                <td className="p-2 border-r text-vnpt">{fmtNum(deanKpi.vnptSl)}</td><td className="p-2 border-r text-vnpt">{fmtNum(deanKpi.vnptNs)}</td>
+                                <td className="p-2 border-r text-good">{fmtNum(deanKpi.chuyenHoaSl)}</td><td className="p-2 border-r text-good">{fmtNum(deanKpi.chuyenHoaNs)}</td>
+                                <td className="p-2 border-r text-orange-600">{fmtNum(deanKpi.trangSl)}</td><td className="p-2 text-orange-600">{fmtNum(deanKpi.trangNs)}</td>
                               </tr>
                             </tfoot>
                           </table>
                         </div>
                       </div>
                     </div>
-                
-                    {/* KHỐI 3: ĐẨY TOP CƠ HỘI & ĐIỂM NÓNG ĐỀ XUẤT XUỐNG DƯỚI */}
+
                     <div className="px-6 pb-6 flex gap-8 shrink-0 min-h-[450px]">
                       <div className="flex-[1] bg-white border rounded shadow-sm flex flex-col overflow-hidden border-t-4 border-t-vnpt">
                         <div className="px-6 py-4 border-b bg-gray-50 shrink-0"><h2 className="text-navy font-bold text-sm uppercase">🔥 Top Cơ Hội Cao (VNPT Ưu Thế)</h2></div>
                         <div className="overflow-auto flex-1 p-2">
                           <table className="w-full text-left text-sm">
                             <thead className="bg-white text-navy sticky top-0 shadow-sm z-10">
-                              <tr>
-                                <th className="p-2 border-b">Tỉnh</th>
-                                <th className="p-2 border-b">Tên Nhiệm vụ</th>
-                                <th className="p-2 border-b text-right">Quy mô (trĐ)</th>
-                              </tr>
+                              <tr><th className="p-2 border-b">Tỉnh</th><th className="p-2 border-b">Tên Nhiệm vụ</th><th className="p-2 border-b text-right">Quy mô (trĐ)</th></tr>
                             </thead>
                             <tbody>
                               {baseDean.filter(d => (d['donvi_donghanh'] || '').toUpperCase() === 'VNPT' && (d['loithe_vnpt'] || '').toUpperCase() === 'CAO').sort((a, b) => parseNum(b['ngansach']) - parseNum(a['ngansach'])).slice(0, 15).map((p, i) => (
@@ -909,6 +909,9 @@
                   </>
                 )}
 
+                {/* =========================================================== */}
+                {/* [PHẦN 3.3 - UI] TAB CƠ HỘI KINH DOANH                       */}
+                {/* =========================================================== */}
                 {activeTab === 'cohoi' && (
                   <div className="bg-[#F4F6F8] flex-1 flex flex-col overflow-auto">
                     <div className="flex gap-4 px-6 pt-6 pb-2 shrink-0">
@@ -976,16 +979,7 @@
                         <div className="overflow-auto flex-1 p-2">
                           <table className="w-full text-left text-sm">
                             <thead className="bg-white text-navy sticky top-0 shadow-sm z-10">
-                              <tr>
-                                <th className="p-3 border-b w-16">Mã TTP</th>
-                                <th className="p-3 border-b w-20">Mã CHKD</th>
-                                <th className="p-3 border-b w-32">Mã PLO</th>
-                                <th className="p-3 border-b">Tên Dự án</th>
-                                <th className="p-3 border-b">Khách hàng</th>
-                                <th className="p-3 border-b">Mức độ tiềm năng</th>
-                                <th className="p-3 border-b">Giai đoạn</th>
-                                <th className="p-3 border-b text-right w-28">Giá trị (trĐ)</th>
-                              </tr>
+                              <tr><th className="p-3 border-b w-16">Mã TTP</th><th className="p-3 border-b w-20">Mã CHKD</th><th className="p-3 border-b w-32">Mã PLO</th><th className="p-3 border-b">Tên Dự án</th><th className="p-3 border-b">Khách hàng</th><th className="p-3 border-b">Mức độ tiềm năng</th><th className="p-3 border-b">Giai đoạn</th><th className="p-3 border-b text-right w-28">Giá trị (trĐ)</th></tr>
                             </thead>
                             <tbody>
                               {basePipeline.filter(d => (d['trang_thai'] || '').toString().toUpperCase() === 'OPEN').sort((a, b) => parseNum(b['ngansach_duan']) - parseNum(a['ngansach_duan'])).slice(0, 50).map((p, i) => (
@@ -996,10 +990,9 @@
                                   <td className="p-3 font-medium text-gray-800 line-clamp-2">{p['ten_duan'] || '-'}</td>
                                   <td className="p-3 font-medium text-gray-700 truncate">{p['ten_khachhang'] || 'Chưa cập nhật'}</td>
                                   <td className="p-3 font-medium text-gray-700 truncate">{p['mucdo_tiemnang'] || 'Chưa cập nhật'}</td>
-                                  <td className="p-3 text-gray-600">
-                                    <span className="px-2 py-1 bg-gray-100 rounded text-[11px] uppercase whitespace-nowrap">{p['trangthai_pipeline'] || '-'}</span>
-                                  </td>
-                                  <td className="p-3 text-right font-bold text-vnpt">{fmtNum(parseNum(p['ngansach_duan']))}</td></tr>
+                                  <td className="p-3 text-gray-600"><span className="px-2 py-1 bg-gray-100 rounded text-[11px] uppercase whitespace-nowrap">{p['trangthai_pipeline'] || '-'}</span></td>
+                                  <td className="p-3 text-right font-bold text-vnpt">{fmtNum(parseNum(p['ngansach_duan']))}</td>
+                                </tr>
                               ))}
                             </tbody>
                           </table>
@@ -1009,81 +1002,197 @@
                   </div>
                 )}
 
+                {/* =========================================================== */}
+                {/* [PHẦN 3.4 - UI] TAB QUẢN LÝ HỢP ĐỒNG (07_QUAN_LY_HOPDONG)   */}
+                {/* =========================================================== */}
                 {activeTab === 'hopdong' && (
                   <div className="bg-[#F4F6F8] flex-1 flex flex-col overflow-auto">
-                    {/* ROW 1: 5 THẺ KPI TỔNG QUAN HỢP ĐỒNG */}
-                    <div className="flex gap-4 px-6 pt-6 pb-4 shrink-0">
-                      {/* Thẻ 1: Tổng giá trị (Nền Xanh Navy) */}
-                      <div className="bg-navy text-white rounded-xl shadow-sm p-5 flex-[1.4] flex flex-col justify-between">
-                        <h3 className="text-[11px] font-bold text-blue-200 uppercase tracking-wider">TỔNG GIÁ TRỊ HỢP ĐỒNG</h3>
-                        <div className="text-4xl font-extrabold my-2 tracking-tight">{fmtInt(kpiHD.tongGt)}</div>
-                        <div className="text-xs text-blue-100">
-                          tỷ đồng · {fmtInt(kpiHD.tongSl)} HĐ · trung vị {fmtInt(kpiHD.trungVi)} tỷ/HĐ
+                    {/* HÀNG 1: 5 THẺ KPI CHÍNH & PHÁI SINH */}
+                    <div className="flex gap-4 px-6 pt-6 pb-3 shrink-0">
+                      <div className="bg-navy text-white rounded-xl shadow-sm p-4 flex-[1.4] flex flex-col justify-between">
+                        <h3 className="text-[11px] font-bold text-blue-200 uppercase tracking-wider">GIÁ TRỊ HĐ VNPT HƯỞNG</h3>
+                        <div className="text-3xl font-extrabold my-2 tracking-tight">{fmtNum(kpiHD.vnptGt)}</div>
+                        <div className="text-[11px] text-blue-100">
+                          trĐ · Tổng HĐ: {fmtNum(kpiHD.tongGt)} (Liên danh: {fmtNum(kpiHD.lienDanhGt)}) · {fmtInt(kpiHD.tongSl)} HĐ · Trung vị {fmtNum(kpiHD.trungVi)}
                         </div>
                       </div>
 
-                      {/* Thẻ 2: HĐ Còn hiệu lực */}
-                      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex-1 flex flex-col justify-between">
-                        <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">HĐ CÒN HIỆU LỰC</h3>
-                        <div className="text-3xl font-extrabold text-navy my-2">{fmtInt(kpiHD.hieuLucSl)}</div>
-                        <div className="text-xs text-gray-500">
-                          {fmtInt(kpiHD.hieuLucGt)} tỷ · {Math.round(hdHieuLucPct * 100)}% giá trị
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
+                        <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">CÒN HIỆU LỰC / THI CÔNG</h3>
+                        <div className="text-3xl font-extrabold text-vnpt my-2">{fmtInt(kpiHD.hieuLucSl)} / {fmtInt(kpiHD.tongSl)}</div>
+                        <div className="text-[11px] text-gray-500">VNPT hưởng: {fmtNum(kpiHD.hieuLucGt)} trĐ</div>
+                      </div>
+
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
+                        <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">TIẾN ĐỘ BÀN GIAO (SLA)</h3>
+                        <div className={`text-3xl font-extrabold my-2 ${kpiHD.treHanSl > 0 ? 'text-risk' : 'text-good'}`}>{fmtPct(hdTyLeTreHan)}</div>
+                        <div className="text-[11px] text-gray-500">{fmtInt(kpiHD.treHanSl)} HĐ trễ hạn · TB chậm {hdAvgDelay} ngày</div>
+                      </div>
+
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
+                        <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">THỰC CHI VS DỰ TOÁN COGS</h3>
+                        <div className={`text-3xl font-extrabold my-2 ${kpiHD.tongVuotNS > 0 ? 'text-risk' : 'text-navy'}`}>{fmtNum(kpiHD.tongThucChi)}</div>
+                        <div className="text-[11px] text-gray-500">Dự toán: {fmtNum(kpiHD.tongCogs)} trĐ · Vượt NS: <b className="text-risk">{fmtNum(kpiHD.tongVuotNS)}</b></div>
+                      </div>
+
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
+                        <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">BIÊN LỢI NHUẬN GỘP</h3>
+                        <div className={`text-3xl font-extrabold my-2 ${hdTySuatLN >= 0.2 ? 'text-good' : 'text-risk'}`}>{fmtPct(hdTySuatLN)}</div>
+                        <div className="text-[11px] text-gray-500">LN gộp ước tính: {fmtNum(kpiHD.tongLnGop)} trĐ</div>
+                      </div>
+                    </div>
+
+                    {/* HÀNG 2: 4 THẺ CẢNH BÁO TÁC CHIẾN (BẤM ĐỂ LỌC NHANH BẢNG) */}
+                    <div className="grid grid-cols-4 gap-4 px-6 pb-5 shrink-0">
+                      <div onClick={() => setHdQuickFilter(hdQuickFilter === 'LATE' ? 'ALL' : 'LATE')}
+                        className={`cursor-pointer bg-[#FDEDEC] border-l-4 border-risk rounded-xl shadow-sm p-3.5 transition ${hdQuickFilter === 'LATE' ? 'ring-2 ring-risk' : ''}`}>
+                        <div className="text-2xl font-extrabold text-red-700">{fmtInt(kpiHD.treHanSl)}</div>
+                        <div className="text-xs font-semibold text-red-800 mt-0.5">HĐ trễ hạn bàn giao (bấm để lọc)</div>
+                      </div>
+
+                      <div onClick={() => setHdQuickFilter(hdQuickFilter === 'OVER_BUDGET' ? 'ALL' : 'OVER_BUDGET')}
+                        className={`cursor-pointer bg-[#FDEDEC] border-l-4 border-risk rounded-xl shadow-sm p-3.5 transition ${hdQuickFilter === 'OVER_BUDGET' ? 'ring-2 ring-risk' : ''}`}>
+                        <div className="text-2xl font-extrabold text-red-700">{fmtInt(kpiHD.vuotNsSl)}</div>
+                        <div className="text-xs font-semibold text-red-800 mt-0.5">HĐ vượt dự toán COGS ({fmtNum(kpiHD.tongVuotNS)} trĐ)</div>
+                      </div>
+
+                      <div onClick={() => setHdQuickFilter(hdQuickFilter === 'EXPIRING' ? 'ALL' : 'EXPIRING')}
+                        className={`cursor-pointer bg-[#FEF5E7] border-l-4 border-amber-500 rounded-xl shadow-sm p-3.5 transition ${hdQuickFilter === 'EXPIRING' ? 'ring-2 ring-amber-500' : ''}`}>
+                        <div className="text-2xl font-extrabold text-[#92400E]">{fmtInt(kpiHD.quaHanHdSl + kpiHD.sapHetHan90Sl)}</div>
+                        <div className="text-xs font-semibold text-[#92400E] mt-0.5">Quá hạn ({kpiHD.quaHanHdSl}) & Sắp hết hạn ≤90N ({kpiHD.sapHetHan90Sl})</div>
+                      </div>
+
+                      <div onClick={() => setHdQuickFilter('ALL')}
+                        className="cursor-pointer bg-[#FEF5E7] border-l-4 border-amber-500 rounded-xl shadow-sm p-3.5">
+                        <div className="text-2xl font-extrabold text-[#92400E]">{fmtInt(kpiHD.thieuGtSl)}</div>
+                        <div className="text-xs font-semibold text-[#92400E] mt-0.5">HĐ thiếu giá trị · Thuê DV: {kpiHD.thueDvSl} | Đầu tư: {kpiHD.dauTuSl}</div>
+                      </div>
+                    </div>
+
+                    {/* HÀNG 3: BIỂU ĐỒ ĐIỂM RƠI DOANH THU & TRẠNG THÁI THI CÔNG */}
+                    <div className="px-6 pb-6 flex gap-6 shrink-0 min-h-[340px]">
+                      <div className="bg-white border border-gray-200 rounded shadow-sm p-5 flex-[1.4] flex flex-col">
+                        <div className="flex justify-between items-center mb-3">
+                          <h2 className="text-navy font-bold text-sm uppercase">ĐIỂM RƠI DOANH THU HỢP ĐỒNG THEO THÁNG</h2>
+                          <span className="text-xs text-gray-500">Đơn vị: trĐ</span>
+                        </div>
+                        <div className="flex-1 w-full min-h-[240px]">
+                          {ResponsiveContainer && BarChart && (
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={hdDiemRoiChart} margin={{ top: 10, right: 15, left: 0, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                                <XAxis dataKey="thang" tick={{ fontSize: 11 }} />
+                                <YAxis tick={{ fontSize: 11 }} />
+                                <Tooltip formatter={(val) => `${fmtNum(val)} trĐ`} />
+                                <Legend wrapperStyle={{ fontSize: '12px' }} />
+                                <Bar dataKey="vnptGt" name="VNPT hưởng" stackId="hd" fill="#0094D9" maxBarSize={42} />
+                                <Bar dataKey="lienDanhGt" name="Liên danh hưởng" stackId="hd" fill="#94A3B8" radius={[4, 4, 0, 0]} maxBarSize={42} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          )}
                         </div>
                       </div>
 
-                      {/* Thẻ 3: Thuê dịch vụ */}
-                      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex-1 flex flex-col justify-between">
-                        <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">THUÊ DỊCH VỤ</h3>
-                        <div className="text-3xl font-extrabold text-navy my-2">{fmtInt(kpiHD.thueDvGt)}</div>
-                        <div className="text-xs text-gray-500">
-                          tỷ đồng · {fmtInt(kpiHD.thueDvSl)} HĐ · {Math.round(hdThueDvPct * 100)}%
+                      <div className="bg-white border border-gray-200 rounded shadow-sm p-5 flex-1 flex flex-col">
+                        <div className="flex justify-between items-center mb-3">
+                          <h2 className="text-navy font-bold text-sm uppercase">GIÁ TRỊ VNPT THEO TRẠNG THÁI THI CÔNG</h2>
+                          <span className="text-xs text-gray-500">Đơn vị: trĐ</span>
                         </div>
-                      </div>
-
-                      {/* Thẻ 4: Dự án đầu tư */}
-                      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex-1 flex flex-col justify-between">
-                        <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">DỰ ÁN ĐẦU TƯ</h3>
-                        <div className="text-3xl font-extrabold text-navy my-2">{fmtInt(kpiHD.dauTuGt)}</div>
-                        <div className="text-xs text-gray-500">
-                          tỷ đồng · {fmtInt(kpiHD.dauTuSl)} HĐ · {Math.round(hdDauTuPct * 100)}%
-                        </div>
-                      </div>
-
-                      {/* Thẻ 5: Top 5 HĐ lớn nhất */}
-                      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex-1 flex flex-col justify-between">
-                        <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">TOP 5 HĐ LỚN NHẤT</h3>
-                        <div className="text-3xl font-extrabold text-navy my-2">{fmtPct(kpiHD.top5Pct)}</div>
-                        <div className="text-xs text-gray-500">
-                          tổng giá trị · {fmtInt(kpiHD.top5Gt)} tỷ
+                        <div className="flex-1 w-full min-h-[240px]">
+                          {ResponsiveContainer && BarChart && (
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart layout="vertical" data={hdStatusChart} margin={{ top: 5, right: 70, left: 10, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#E5E7EB" />
+                                <XAxis type="number" hide />
+                                <YAxis dataKey="name" type="category" width={150} tick={{ fontSize: 11, fill: '#374151', fontWeight: 600 }} axisLine={false} tickLine={false} />
+                                <Tooltip formatter={(val, _, props) => [`${fmtNum(val)} trĐ (${props.payload.count} HĐ)`, 'VNPT hưởng']} />
+                                <Bar dataKey="value" fill="#003B7A" radius={[0, 4, 4, 0]} maxBarSize={22}>
+                                  <LabelList dataKey="value" position="right" formatter={(v) => fmtNum(v)} fill="#003B7A" fontSize={11} fontWeight="bold" />
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          )}
                         </div>
                       </div>
                     </div>
 
-                    {/* ROW 2: 4 THẺ CẢNH BÁO TÁC CHIẾN */}
-                    <div className="grid grid-cols-4 gap-4 px-6 pb-6 shrink-0">
-                      <div className="bg-[#FEF5E7] border-l-4 border-risk rounded-xl shadow-sm p-4 flex flex-col justify-center">
-                        <div className="text-2xl font-extrabold text-[#9A3412]">{fmtInt(kpiHD.quaHanSl)}</div>
-                        <div className="text-xs font-medium text-[#9A3412] mt-1">HĐ còn hiệu lực đã quá ngày hết hạn – cần cập nhật/tái ký</div>
-                      </div>
-
-                      <div className="bg-[#FEF5E7] border-l-4 border-amber-500 rounded-xl shadow-sm p-4 flex flex-col justify-center">
-                        <div className="text-2xl font-extrabold text-[#92400E]">{fmtInt(kpiHD.sapHetHan90Sl)}</div>
-                        <div className="text-xs font-medium text-[#92400E] mt-1">HĐ còn hiệu lực sẽ hết hạn trong 90 ngày tới</div>
-                      </div>
-
-                      <div className="bg-[#FEF5E7] border-l-4 border-amber-500 rounded-xl shadow-sm p-4 flex flex-col justify-center">
-                        <div className="text-2xl font-extrabold text-[#92400E]">{fmtInt(kpiHD.thieuNgayHetHanSl)}</div>
-                        <div className="text-xs font-medium text-[#92400E] mt-1">HĐ thiếu ngày hết hạn</div>
-                      </div>
-
-                      <div className="bg-[#FEF5E7] border-l-4 border-amber-500 rounded-xl shadow-sm p-4 flex flex-col justify-center">
-                        <div className="text-2xl font-extrabold text-[#92400E]">{fmtInt(kpiHD.thieuGiaTriSl)}</div>
-                        <div className="text-xs font-medium text-[#92400E] mt-1">HĐ thiếu giá trị hoặc giá trị = 0</div>
+                    {/* HÀNG 4: BẢNG CHI TIẾT HỢP ĐỒNG & CẢNH BÁO CHỈ ĐẠO */}
+                    <div className="px-6 pb-6 flex flex-col shrink-0 min-h-[380px]">
+                      <div className="bg-white border border-gray-200 rounded shadow-sm flex-1 flex flex-col overflow-hidden">
+                        <div className="px-5 py-3.5 border-b bg-gray-50 flex justify-between items-center shrink-0">
+                          <h2 className="text-navy font-bold text-sm uppercase">
+                            DANH SÁCH HỢP ĐỒNG & CẢNH BÁO ĐIỀU HÀNH ({filteredHopDongTable.length} HĐ)
+                          </h2>
+                          {hdQuickFilter !== 'ALL' && (
+                            <button onClick={() => setHdQuickFilter('ALL')} className="text-xs font-bold text-vnpt hover:underline">✕ Bỏ lọc nhanh</button>
+                          )}
+                        </div>
+                        <div className="overflow-auto flex-1">
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead className="bg-navy text-white sticky top-0 z-10">
+                              <tr>
+                                <th className="p-2.5">Mã HĐ / Tỉnh</th>
+                                <th className="p-2.5">Tên Hợp đồng & SPDV</th>
+                                <th className="p-2.5">Hình thức / Trạng thái</th>
+                                <th className="p-2.5 text-right">GT HĐ (trĐ)</th>
+                                <th className="p-2.5 text-right">VNPT hưởng</th>
+                                <th className="p-2.5 text-right">Thực chi / COGS</th>
+                                <th className="p-2.5 text-center">Điểm rơi DT</th>
+                                <th className="p-2.5 text-center">Tiến độ</th>
+                                <th className="p-2.5">Cảnh báo & Chỉ đạo Lãnh đạo</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {filteredHopDongTable.map((hd, i) => (
+                                <tr key={i} className="border-b hover:bg-blue-50/50 transition">
+                                  <td className="p-2.5 whitespace-nowrap">
+                                    <div className="font-bold text-navy">{hd.maHD || '-'}</div>
+                                    <div className="text-[11px] text-gray-500">{hd.maTinh} • {hd.maDeal || 'Chưa gắn Deal'}</div>
+                                  </td>
+                                  <td className="p-2.5 max-w-[260px]">
+                                    <div className="font-semibold text-gray-800 line-clamp-2" title={hd.tenHD}>{hd.tenHD || '-'}</div>
+                                    <div className="text-[11px] text-vnpt font-medium">{hd.tenSPDV || '-'}</div>
+                                  </td>
+                                  <td className="p-2.5 whitespace-nowrap">
+                                    <div className="font-medium text-gray-700">{hd.hinhThuc}</div>
+                                    <span className="inline-block mt-0.5 px-2 py-0.5 bg-gray-100 rounded text-[10px] font-semibold text-gray-600">{hd.trangThai}</span>
+                                  </td>
+                                  <td className="p-2.5 text-right font-medium text-gray-700 whitespace-nowrap">{fmtNum(hd.giaTriHD)}</td>
+                                  <td className="p-2.5 text-right font-bold text-vnpt whitespace-nowrap">
+                                    {fmtNum(hd.giaTriVNPT)}
+                                    {hd.giaTriLienDanh > 0 && <div className="text-[10px] text-gray-400 font-normal">LD: {fmtNum(hd.giaTriLienDanh)}</div>}
+                                  </td>
+                                  <td className="p-2.5 text-right whitespace-nowrap">
+                                    <div className={`font-bold ${hd.isVuotNS ? 'text-risk' : 'text-gray-700'}`}>{fmtNum(hd.tongThucChi)}</div>
+                                    <div className="text-[10px] text-gray-400">COGS: {fmtNum(hd.duToanCogs)}</div>
+                                  </td>
+                                  <td className="p-2.5 text-center font-bold text-navy whitespace-nowrap">{hd.diemRoi || '-'}</td>
+                                  <td className="p-2.5 text-center whitespace-nowrap">
+                                    {hd.isTreHan ? (
+                                      <span className="px-2 py-1 rounded-full bg-red-100 text-risk font-bold text-[10px]">Trễ {hd.chamTienDo} ngày</span>
+                                    ) : (
+                                      <span className="px-2 py-1 rounded-full bg-green-100 text-good font-bold text-[10px]">Đúng hạn</span>
+                                    )}
+                                  </td>
+                                  <td className="p-2.5 max-w-[220px]">
+                                    <span className={`font-semibold ${(hd.isTreHan || hd.isVuotNS || hd.isQuaHanHD) ? 'text-risk' : 'text-gray-600'}`}>{hd.canhBao}</span>
+                                  </td>
+                                </tr>
+                              ))}
+                              {filteredHopDongTable.length === 0 && (
+                                <tr><td colSpan="9" className="p-6 text-center text-gray-400">Không có dữ liệu hợp đồng khớp bộ lọc.</td></tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     </div>
                   </div>
                 )}
 
+                {/* =========================================================== */}
+                {/* [PHẦN 3.5 - UI] CÁC TAB ĐANG PHÁT TRIỂN                     */}
+                {/* =========================================================== */}
                 {(activeTab === 'poc' || activeTab === 'dauthau' || activeTab === 'khachhang') && (
                   <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-gray-50 h-full">
                     <div className="text-6xl mb-4 text-vnpt">⏳</div>
@@ -1092,7 +1201,6 @@
                   </div>
                 )}
 
-                {/* FALLBACK FOR UNKNOWN TABS */}
                 {!['dashboard', 'dean', 'cohoi', 'poc', 'dauthau', 'hopdong', 'khachhang'].includes(activeTab) && (
                   <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-gray-50 h-full">
                     <div className="text-6xl mb-4">🚧</div>
@@ -1100,12 +1208,12 @@
                     <p>Module hiện tại chưa được thực hiện.</p>
                   </div>
                 )}
-
               </div>
             </main>
           </div>
         );
       }
+
       ReactDOM.render(<App />, document.getElementById('root'));
     } catch (err) {
       document.getElementById('root').innerHTML = `<div style="padding: 40px; text-align: center;"><h2 style="color: #ef4444; font-size: 24px; font-weight: bold;">LỖI BIÊN DỊCH REACT</h2><p style="color: #333; margin-top: 10px;">${err.message}</p></div>`;
