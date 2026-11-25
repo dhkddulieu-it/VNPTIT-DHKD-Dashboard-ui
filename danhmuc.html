@@ -337,7 +337,7 @@
                             const maPlo = getField(row, ['MA_PLO', 'plo_code', 'ma_plo', 'sxkd_plo']);
                             const nhomSpdv = getField(row, ['NHOM_SPDV', 'nhom_spdv', 'nhomspdv_code', 'sxkd_nhomspdv'], '-');
                             const luongSpdv = getField(row, ['LUONG_SPDV', 'luong_spdv'], '-');
-                            const trangThai = getField(row, ['TRANG_THAI', 'trang_thai', 'status'], 'Trạng thái SPDV');
+                            const trangThai = getField(row, ['TRANG_THAI', 'trang_thai', 'status'], '-');
                             return (
                               <tr key={idx} className="hover:bg-blue-50 transition">
                                 <td className="p-3 text-center text-gray-500">{idx + 1}</td>
@@ -351,10 +351,21 @@
                                   )}
                                 </td>
                                 <td className="p-3 text-gray-600">{nhomSpdv}</td>
-                                <td className="p-3 text-gray-300">{luongSpdv}</td>
-                                <td className="p-3">
-                                  <span className="px-2.5 py-0.5 rounded-full bg-green-100 text-good font-bold text-xs">{trangThai}</span>
-                                </td>
+                                <td className="p-3 text-gray-600">{luongSpdv}</td>
+                                {(() => {
+                                  const st = (trangThai || '').trim().toUpperCase();
+                                  let badgeClass = 'bg-gray-100 text-gray-600'; // Mặc định: Grey
+                                  if (st === 'ĐÃ GTM') badgeClass = 'bg-green-100 text-good'; // Đã GTM: Green
+                                  else if (st === 'CHƯA GTM') badgeClass = 'bg-yellow-100 text-yellow-700'; // Chưa GTM: Yellow
+                                
+                                  return (
+                                    <td className="p-3">
+                                      <span className={`px-2.5 py-0.5 rounded-full font-bold text-xs whitespace-nowrap ${badgeClass}`}>
+                                        {trangThai}
+                                      </span>
+                                    </td>
+                                  );
+                                })()}
                               </tr>
                             );
                           })}
