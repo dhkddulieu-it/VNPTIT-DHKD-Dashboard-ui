@@ -136,7 +136,7 @@
               const normalizedPipeline = (res.pipelineData || []).map(d => ({ ...d, thang: normalizeThang(d['thang'] || '') }));
               setPipelineRaw(normalizedPipeline);
               setDeanRaw(res.deanData || []);
-              setHopDongRaw(res.hopDongData || []);
+              setHopDongRaw(res.hopdongData || []);
               setPloList(res.ploData || []);
             }
           } catch (err) { console.warn("Lỗi đồng bộ dữ liệu API"); }
