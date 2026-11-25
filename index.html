@@ -755,8 +755,15 @@
                               </thead>
                               <tbody>
                                 {basePipeline.slice(0, 10).map((p, i) => {
-                                  const statusRaw = (p['trang_thai'] || 'OPEN').toString().toUpperCase();
-                                  const colorClass = (statusRaw === 'CLOSED' || statusRaw.includes('ĐÓNG')) ? 'bg-green-100 text-good' : 'bg-yellow-100 text-yellow-700';
+                                   // Chuẩn hóa chuỗi trạng thái (xóa khoảng trắng thừa, viết hoa)
+                                  const statusRaw = (p['trang_thai'] || 'OPEN').toString().trim().toUpperCase();
+                                  let colorClass = 'bg-yellow-100 text-yellow-700'; // Mặc định: OPEN (Đang xử lý)
+                                  if (statusRaw === 'CLOSED' || statusRaw.includes('ĐÓNG')) {
+                                    colorClass = 'bg-green-100 text-good';          // CLOSED: Xanh lá (Thành công)
+                                  } else if (statusRaw === 'LOST' || statusRaw.includes('THẤT BẠI') || statusRaw.includes('HỦY')) {
+                                    colorClass = 'bg-red-100 text-red-700';         // LOST: Đỏ (Cảnh báo/Rủi ro)
+                                  }
+                    
                                   return (
                                     <tr key={i} className="border-b hover:bg-gray-50">
                                       <td className="p-2 font-bold text-navy truncate max-w-[20px">{p['ma_tinh']}</td>
