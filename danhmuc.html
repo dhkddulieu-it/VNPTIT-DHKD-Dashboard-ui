@@ -18,8 +18,21 @@
   <script type="text/babel">
     const { useState, useEffect, useMemo } = React;
 
-    // Dán URL Web App GAS thật của bạn vào đây (để trống sẽ tự chạy dữ liệu mẫu để test giao diện)
+    // Dán URL Web App GAS thật của bạn vào đây (để trống sẽ chạy dữ liệu mẫu để test giao diện)
     const API_URL = "https://script.google.com/macros/s/AKfycby6E6r6KhZ54J6by2s1PF8MqtOSJu74GcyqO4GsFnSwWd-GmDScZFrS5Brq0IwXlO1N/exec";
+
+    // Cấu hình thanh Menu điều hướng đồng bộ với index.html
+    // Lưu ý: Đổi giá trị `tab` cho khớp chính xác với tên state activeTab trong index.html của bạn
+    const NAV_MENUS = [
+      { label: "Dashboard", href: "index.html?tab=dashboard" },
+      { label: "Khung pháp lý", href: "index.html?tab=dean" },
+      { label: "Cơ hội kinh doanh", href: "index.html?tab=cohoi" },
+      { label: "POC", href: "index.html?tab=poc" },
+      { label: "Đấu thầu", href: "index.html?tab=dauthau" },
+      { label: "Hợp đồng", href: "index.html?tab=hopdong" },
+      { label: "Khách hàng", href: "index.html?tab=khachhang" },
+      { label: "Danh mục", href: "danhmuc.html", active: true }
+    ];
 
     const MOCK_DATA = {
       spdv: [
@@ -59,7 +72,7 @@
     };
 
     function App() {
-      const [activeMenu, setActiveMenu] = useState("SPDV"); // "SPDV" | "PLO"
+      const [activeSubTab, setActiveSubTab] = useState("SPDV"); // "SPDV" | "PLO"
       const [data, setData] = useState({ spdv: [], plo: [] });
       const [loading, setLoading] = useState(true);
       const [error, setError] = useState("");
@@ -88,7 +101,6 @@
 
           setData({ spdv: result.spdv || [], plo: result.plo || [] });
 
-          // Mặc định mở sẵn danh sách SPDV trong từng PLO
           const initExpand = {};
           (result.plo || []).forEach(p => { initExpand[p.MA_PLO] = true; });
           setExpandedPlo(initExpand);
@@ -101,7 +113,6 @@
 
       useEffect(() => { fetchData(); }, []);
 
-      // Chỉ số KPI tổng quan
       const kpi = useMemo(() => {
         const totalSpdv = data.spdv.length;
         const mappedSpdv = data.spdv.filter(r => getVal(r, ["MA_PLO", "plo_code", "ma_plo", "sxkd_plo"]) !== "").length;
@@ -113,7 +124,6 @@
         };
       }, [data]);
 
-      // Lọc sheet DMSPDV
       const filteredSpdv = useMemo(() => {
         const q = search.toLowerCase();
         return data.spdv.filter(row => {
@@ -125,7 +135,6 @@
         });
       }, [data.spdv, search, filterPlo]);
 
-      // Lọc sheet DMPLO (tìm theo mã PLO, tên PLO hoặc SPDV trực thuộc)
       const filteredPlo = useMemo(() => {
         const q = search.toLowerCase();
         if (!q) return data.plo;
@@ -145,22 +154,33 @@
 
       return (
         <div className="min-h-screen flex flex-col">
-          {/* Header chuẩn VNPT Navy */}
-          <header className="bg-[#003B7A] text-white shadow-sm">
-            <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <a href="index.html" className="px-3 py-1.5 rounded bg-white/10 hover:bg-white/20 text-xs font-medium transition">
-                  ← Về Dashboard
-                </a>
-                <div>
-                  <h1 className="text-lg font-bold tracking-tight">DANH MỤC HỆ THỐNG (SPDV & PLO)</h1>
-                  <p className="text-xs text-sky-200">Ban KDGP - VNPT-IT | Đồng bộ trực tiếp từ Google Sheets</p>
-                </div>
+          {/* Header & Thanh Menu chính đồng bộ với index.html */}
+          <header className="bg-[#003B7A] text-white shadow-sm sticky top-0 z-20">
+            <div className="max-w-7xl mx-auto px-4 pt-3 pb-2 flex flex-wrap items-center justify-between gap-3 border-b border-white/10">
+              <div>
+                <h1 className="text-base md:text-lg font-bold tracking-tight">HỆ THỐNG ĐIỀU HÀNH SXKD | BAN KDGP - VNPT-IT</h1>
+                <p className="text-xs text-sky-200">Quản trị Danh mục Hệ thống (DMSPDV & DMPLO)</p>
               </div>
               <button onClick={fetchData} className="px-3 py-1.5 rounded bg-[#0094D9] hover:bg-sky-500 text-xs font-semibold transition">
                 Làm mới dữ liệu
               </button>
             </div>
+
+            {/* Thanh điều hướng chuyển thẳng sang từng phân hệ của index.html */}
+            <nav className="max-w-7xl mx-auto px-4 py-2 flex items-center gap-1 overflow-x-auto">
+              {NAV_MENUS.map(item => (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition ${
+                    item.active
+                      ? "bg-[#0094D9] text-white shadow-sm"
+                      : "text-sky-100 hover:bg-white/15 hover:text-white"
+                  }`}>
+                  {item.label}
+                </a>
+              ))}
+            </nav>
           </header>
 
           <main className="max-w-7xl w-full mx-auto px-4 py-5 flex-1 space-y-4">
@@ -186,20 +206,20 @@
               </div>
             </div>
 
-            {/* Menu chọn Danh mục & Bộ lọc ngang */}
+            {/* Sub-menu chọn Danh mục SPDV / PLO & Bộ lọc ngang */}
             <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
               <div className="flex bg-slate-100 p-1 rounded-lg">
                 <button
-                  onClick={() => { setActiveMenu("SPDV"); setSearch(""); }}
+                  onClick={() => { setActiveSubTab("SPDV"); setSearch(""); }}
                   className={`px-4 py-1.5 rounded-md text-sm font-semibold transition ${
-                    activeMenu === "SPDV" ? "bg-[#0094D9] text-white shadow-sm" : "text-slate-600 hover:text-[#003B7A]"
+                    activeSubTab === "SPDV" ? "bg-[#0094D9] text-white shadow-sm" : "text-slate-600 hover:text-[#003B7A]"
                   }`}>
                   Danh mục SPDV ({data.spdv.length})
                 </button>
                 <button
-                  onClick={() => { setActiveMenu("PLO"); setSearch(""); }}
+                  onClick={() => { setActiveSubTab("PLO"); setSearch(""); }}
                   className={`px-4 py-1.5 rounded-md text-sm font-semibold transition ${
-                    activeMenu === "PLO" ? "bg-[#0094D9] text-white shadow-sm" : "text-slate-600 hover:text-[#003B7A]"
+                    activeSubTab === "PLO" ? "bg-[#0094D9] text-white shadow-sm" : "text-slate-600 hover:text-[#003B7A]"
                   }`}>
                   Danh mục PLO ({data.plo.length})
                 </button>
@@ -210,10 +230,10 @@
                   type="text"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  placeholder={activeMenu === "SPDV" ? "Tìm mã, tên SPDV, mã PLO..." : "Tìm mã/tên PLO hoặc SPDV..."}
+                  placeholder={activeSubTab === "SPDV" ? "Tìm mã, tên SPDV, mã PLO..." : "Tìm mã/tên PLO hoặc SPDV..."}
                   className="px-3 py-1.5 text-sm border border-slate-300 rounded-md w-64 focus:outline-none focus:border-[#0094D9]"
                 />
-                {activeMenu === "SPDV" ? (
+                {activeSubTab === "SPDV" ? (
                   <select
                     value={filterPlo}
                     onChange={e => setFilterPlo(e.target.value)}
@@ -235,13 +255,13 @@
 
             {error && <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">Lỗi: {error}</div>}
 
-            {/* Nội dung theo Menu đang chọn */}
+            {/* Nội dung chính */}
             {loading ? (
               <div className="bg-white p-12 rounded-lg border border-slate-200 text-center text-slate-500 text-sm">
                 Đang tải dữ liệu từ Google Sheets...
               </div>
-            ) : activeMenu === "SPDV" ? (
-              /* MENU 1: DỮ LIỆU SHEET DMSPDV */
+            ) : activeSubTab === "SPDV" ? (
+              /* TAB 1: DỮ LIỆU SHEET DMSPDV */
               <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-x-auto">
                 <table className="w-full text-left border-collapse text-sm">
                   <thead>
@@ -290,7 +310,7 @@
                 </table>
               </div>
             ) : (
-              /* MENU 2: DỮ LIỆU SHEET DMPLO & SPDV TRỰC THUỘC */
+              /* TAB 2: DỮ LIỆU SHEET DMPLO & SPDV TRỰC THUỘC */
               <div className="space-y-3">
                 {filteredPlo.map(plo => {
                   const isOpen = !!expandedPlo[plo.MA_PLO];
