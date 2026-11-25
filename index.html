@@ -155,13 +155,10 @@
         const [ploList, setPloList] = React.useState([]);
 
         // Điều hướng & Bộ lọc
-        // Đọc tham số ?tab=... từ URL; nếu không có thì mặc định mở "dashboard"
-        const getInitialTab = () => {
+        const [activeTab, setActiveTab] = React.useState(() => {
           const params = new URLSearchParams(window.location.search);
           return params.get("tab") || "dashboard";
-        };
-        
-        const [activeTab, setActiveTab] = useState(getInitialTab);
+        });
         const [expandedMenu, setExpandedMenu] = React.useState('');
         const [filters, setFilters] = React.useState({ thoiGian: '', maTinh: 'ALL', luongSPDV: 'ALL', nhomSPDV: 'ALL', plo: 'ALL' });
         const [hdQuickFilter, setHdQuickFilter] = React.useState('ALL'); // Lọc nhanh tab Hợp đồng
