@@ -1,377 +1,438 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Danh mục SPDV & PLO | VNPT-IT SXKD</title>
+  <meta charset="UTF-8">
+  <title>Quản trị Danh mục - VNPT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@17.0.2/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.23.6/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <style>
-    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #F8FAFC; }
-  </style>
-</head>
-<body>
-  <div id="root"></div>
 
-  <script type="text/babel">
-    const { useState, useEffect, useMemo } = React;
-
-    // Dán URL Web App GAS thật của bạn vào đây (để trống sẽ chạy dữ liệu mẫu để test giao diện)
-    const API_URL = "https://script.google.com/macros/s/AKfycby6E6r6KhZ54J6by2s1PF8MqtOSJu74GcyqO4GsFnSwWd-GmDScZFrS5Brq0IwXlO1N/exec";
-
-    // Cấu hình thanh Menu điều hướng đồng bộ với index.html
-    // Lưu ý: Đổi giá trị `tab` cho khớp chính xác với tên state activeTab trong index.html của bạn
-    const NAV_MENUS = [
-      { label: "Dashboard", href: "index.html?tab=dashboard" },
-      { label: "Khung pháp lý", href: "index.html?tab=dean" },
-      { label: "Cơ hội kinh doanh", href: "index.html?tab=cohoi" },
-      { label: "POC", href: "index.html?tab=poc" },
-      { label: "Đấu thầu", href: "index.html?tab=dauthau" },
-      { label: "Hợp đồng", href: "index.html?tab=hopdong" },
-      { label: "Khách hàng", href: "index.html?tab=khachhang" },
-      { label: "Danh mục", href: "danhmuc.html", active: true }
-    ];
-
-    const MOCK_DATA = {
-      spdv: [
-        { ma_spdv: "SP01", ten_spdv: "VNPT iLIS (Quản lý đất đai)", plo_code: "PLO-01", nhom_spdv: "Chính quyền số", trang_thai: "Đang kinh doanh" },
-        { ma_spdv: "SP02", ten_spdv: "Số hóa & XD CSDL Đất đai", plo_code: "PLO-01", nhom_spdv: "Dữ liệu số", trang_thai: "Đang kinh doanh" },
-        { ma_spdv: "SP03", ten_spdv: "VNPT HIS (Quản lý bệnh viện)", plo_code: "PLO-02", nhom_spdv: "Y tế số", trang_thai: "Đang kinh doanh" },
-        { ma_spdv: "SP04", ten_spdv: "VNPT SmartIR / SOC", plo_code: "PLO-03", nhom_spdv: "An toàn thông tin", trang_thai: "Đang kinh doanh" },
-        { ma_spdv: "SP05", ten_spdv: "Cổng Du lịch thông minh", plo_code: "", nhom_spdv: "Du lịch số", trang_thai: "Chờ gán PLO" }
-      ],
-      plo: [
-        {
-          MA_PLO: "PLO-01", TEN_PLO: "PLO Quản lý Đất đai & Tài nguyên",
-          ds_spdv: [
-            { ma_spdv: "SP01", ten_spdv: "VNPT iLIS (Quản lý đất đai)", nhom_spdv: "Chính quyền số" },
-            { ma_spdv: "SP02", ten_spdv: "Số hóa & XD CSDL Đất đai", nhom_spdv: "Dữ liệu số" }
-          ]
-        },
-        {
-          MA_PLO: "PLO-02", TEN_PLO: "PLO Y tế số",
-          ds_spdv: [{ ma_spdv: "SP03", ten_spdv: "VNPT HIS (Quản lý bệnh viện)", nhom_spdv: "Y tế số" }]
-        },
-        {
-          MA_PLO: "PLO-03", TEN_PLO: "PLO An toàn thông tin",
-          ds_spdv: [{ ma_spdv: "SP04", ten_spdv: "VNPT SmartIR / SOC", nhom_spdv: "An toàn thông tin" }]
-        }
-      ]
-    };
-
-    // Helper đọc giá trị cột linh hoạt (không phân biệt hoa/thường & bí danh cột)
-    const getVal = (obj, keys) => {
-      for (const k of keys) {
-        if (obj && obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== "") {
-          return String(obj[k]).trim();
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Nunito', 'sans-serif'] },
+          colors: { vnpt: '#0094D9', navy: '#003B7A', good: '#22c55e', risk: '#ef4444', hoverbg: '#004c9e' }
         }
       }
-      return "";
+    }
+  </script>
+</head>
+
+<body class="bg-gray-100 text-gray-800 min-h-screen flex font-sans overflow-hidden">
+  <div id="root" class="w-full h-screen flex">
+    <div class="m-auto text-center text-vnpt font-bold text-xl">Đang khởi tạo Danh mục...</div>
+  </div>
+
+  <script>
+    window.onerror = function(message) {
+      if (message.includes('ResizeObserver loop') || message.includes('Script error.')) return true;
+      document.getElementById('root').innerHTML = '<div style="padding:40px;text-align:center;"><h2 style="color:#ef4444;font-size:24px;font-weight:bold;">HỆ THỐNG GẶP SỰ CỐ</h2><p style="color:#333;margin-top:10px;">Chi tiết lỗi: ' + message + '</p></div>';
+      return false;
     };
+  </script>
 
-    function App() {
-      const [activeSubTab, setActiveSubTab] = useState("SPDV"); // "SPDV" | "PLO"
-      const [data, setData] = useState({ spdv: [], plo: [] });
-      const [loading, setLoading] = useState(true);
-      const [error, setError] = useState("");
-      const [search, setSearch] = useState("");
-      const [filterPlo, setFilterPlo] = useState("ALL");
-      const [expandedPlo, setExpandedPlo] = useState({});
+  <script type="text/babel">
+    try {
+      const API_URL = 'https://script.google.com/macros/s/AKfycby6E6r6KhZ54J6by2s1PF8MqtOSJu74GcyqO4GsFnSwWd-GmDScZFrS5Brq0IwXlO1N/exec';
 
-      const fetchData = async () => {
-        setLoading(true);
-        setError("");
-        try {
-          let result;
-          if (!API_URL) {
-            result = MOCK_DATA;
-          } else {
-            // Gọi doPost bằng text/plain để tránh lỗi CORS preflight trên GAS
-            const res = await fetch(API_URL, {
-              method: "POST",
-              headers: { "Content-Type": "text/plain;charset=utf-8" },
-              body: JSON.stringify({ action: "getDanhMuc" })
-            });
-            const json = await res.json();
-            if (json.status !== "success") throw new Error(json.message || "Không tải được dữ liệu");
-            result = json.data;
-          }
-
-          setData({ spdv: result.spdv || [], plo: result.plo || [] });
-
-          const initExpand = {};
-          (result.plo || []).forEach(p => { initExpand[p.MA_PLO] = true; });
-          setExpandedPlo(initExpand);
-        } catch (err) {
-          setError(err.message);
-        } finally {
-          setLoading(false);
+      // Menu đồng bộ 100% với index.html: bấm phân hệ nào nhảy thẳng về index.html?tab=...
+      const MENU_ITEMS = [
+        { id: 'dashboard', label: 'DASHBOARD', href: 'index.html?tab=dashboard' },
+        { id: 'dean', label: 'CÁC KHUNG PHÁP LÝ', href: 'index.html?tab=dean' },
+        { id: 'cohoi', label: 'CƠ HỘI KINH DOANH', href: 'index.html?tab=cohoi' },
+        { id: 'poc', label: 'DỰ ÁN POC', href: 'index.html?tab=poc' },
+        { id: 'dauthau', label: 'ĐẤU THẦU', href: 'index.html?tab=dauthau' },
+        { id: 'hopdong', label: 'HỢP ĐỒNG', href: 'index.html?tab=hopdong' },
+        { id: 'khachhang', label: 'KHÁCH HÀNG', href: 'index.html?tab=khachhang' },
+        {
+          id: 'danhmuc', label: 'DANH MỤC',
+          subItems: [
+            { id: 'spdv', label: 'Danh mục SPDV', href: 'danhmuc.html?tab=spdv' },
+            { id: 'plo', label: 'Danh mục PLO', href: 'danhmuc.html?tab=plo' }
+          ]
         }
+      ];
+
+      // Đọc giá trị cột linh hoạt (không phân biệt hoa/thường & bí danh cột)
+      const getField = (obj, keys, fallback = '') => {
+        for (const k of keys) {
+          if (obj && obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== '') {
+            return String(obj[k]).trim();
+          }
+        }
+        return fallback;
       };
 
-      useEffect(() => { fetchData(); }, []);
+      function App() {
+        const [user, setUser] = React.useState(() => {
+          try { return JSON.parse(localStorage.getItem('vnpt_user')); } catch { return null; }
+        });
+        const [email, setEmail] = React.useState('');
+        const [loading, setLoading] = React.useState(false);
+        const [error, setError] = React.useState('');
 
-      const kpi = useMemo(() => {
-        const totalSpdv = data.spdv.length;
-        const mappedSpdv = data.spdv.filter(r => getVal(r, ["MA_PLO", "plo_code", "ma_plo", "sxkd_plo"]) !== "").length;
-        return {
-          totalPlo: data.plo.length,
-          totalSpdv,
-          mappedSpdv,
-          unmappedSpdv: totalSpdv - mappedSpdv
+        // Đọc tab ban đầu từ URL (?tab=spdv hoặc ?tab=plo)
+        const [activeSubTab, setActiveSubTab] = React.useState(() => {
+          const t = (new URLSearchParams(window.location.search).get('tab') || 'spdv').toLowerCase();
+          return t === 'plo' ? 'plo' : 'spdv';
+        });
+        const [expandedMenu, setExpandedMenu] = React.useState('danhmuc'); // Mở sẵn menu Danh mục
+
+        // Dữ liệu từ API getDanhMuc
+        const [spdvList, setSpdvList] = React.useState([]);
+        const [ploList, setPloList] = React.useState([]);
+        const [search, setSearch] = React.useState('');
+        const [filterPlo, setFilterPlo] = React.useState('ALL');
+        const [expandedPlo, setExpandedPlo] = React.useState({});
+
+        React.useEffect(() => { if (user) fetchDanhMucData(); }, [user]);
+
+        const handleLogin = async (e) => {
+          e.preventDefault();
+          setLoading(true);
+          try {
+            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'login', email }) }).then(r => r.json());
+            if (res.status === 'success') {
+              localStorage.setItem('vnpt_user', JSON.stringify(res.user));
+              setUser(res.user);
+            } else { alert(res.message || 'Sai thông tin đăng nhập!'); }
+          } catch (err) {
+            alert('Mất kết nối API.');
+          }
+          setLoading(false);
         };
-      }, [data]);
 
-      const filteredSpdv = useMemo(() => {
+        const handleLogout = () => {
+          setUser(null);
+          localStorage.removeItem('vnpt_user');
+          window.location.href = 'index.html';
+        };
+
+        const switchSubTab = (tab) => {
+          setActiveSubTab(tab);
+          setSearch('');
+          const url = new URL(window.location);
+          url.searchParams.set('tab', tab);
+          window.history.replaceState({}, '', url);
+        };
+
+        const fetchDanhMucData = async () => {
+          setLoading(true);
+          setError('');
+          try {
+            const res = await fetch(API_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({ action: 'getDanhMuc' })
+            }).then(r => r.json());
+
+            if (res.status !== 'success') throw new Error(res.message || 'Không tải được dữ liệu danh mục');
+
+            const spdv = (res.data && res.data.spdv) || [];
+            const plo = (res.data && res.data.plo) || [];
+            setSpdvList(spdv);
+            setPloList(plo);
+
+            // Mặc định mở sẵn danh sách SPDV trực thuộc từng PLO
+            const initExpand = {};
+            plo.forEach(p => { initExpand[p.MA_PLO] = true; });
+            setExpandedPlo(initExpand);
+          } catch (err) {
+            setError(err.message);
+          }
+          setLoading(false);
+        };
+
+        // Nếu chưa đăng nhập -> hiện form đăng nhập giống hệt index.html
+        if (!user) {
+          return (
+            <div className="flex h-screen w-full items-center justify-center bg-gray-200">
+              <form onSubmit={handleLogin} className="bg-white p-10 border-t-4 border-vnpt shadow-xl w-96 rounded">
+                <h2 className="text-2xl font-bold text-navy mb-6 text-center">ĐĂNG NHẬP</h2>
+                <input className="w-full mb-6 p-3 border rounded focus:outline-vnpt text-sm" placeholder="Email đăng nhập" value={email} onChange={e => setEmail(e.target.value)} required />
+                <button disabled={loading} className="w-full bg-vnpt text-white py-3 font-bold rounded hover:bg-navy transition">
+                  {loading ? 'ĐANG KẾT NỐI...' : 'VÀO HỆ THỐNG'}
+                </button>
+              </form>
+            </div>
+          );
+        }
+
+        // KPI tổng quan
+        const totalSpdv = spdvList.length;
+        const mappedSpdv = spdvList.filter(r => getField(r, ['MA_PLO', 'plo_code', 'ma_plo', 'sxkd_plo']) !== '').length;
+        const unmappedSpdv = totalSpdv - mappedSpdv;
+
+        // Lọc SPDV
         const q = search.toLowerCase();
-        return data.spdv.filter(row => {
-          const maPlo = getVal(row, ["MA_PLO", "plo_code", "ma_plo", "sxkd_plo"]).toUpperCase();
-          const matchPlo = filterPlo === "ALL"
-            || (filterPlo === "UNMAPPED" ? !maPlo : maPlo === filterPlo);
+        const filteredSpdv = spdvList.filter(row => {
+          const maPlo = getField(row, ['MA_PLO', 'plo_code', 'ma_plo', 'sxkd_plo']).toUpperCase();
+          const matchPlo = filterPlo === 'ALL' || (filterPlo === 'UNMAPPED' ? !maPlo : maPlo === filterPlo);
           const matchText = !q || Object.values(row).some(v => String(v).toLowerCase().includes(q));
           return matchPlo && matchText;
         });
-      }, [data.spdv, search, filterPlo]);
 
-      const filteredPlo = useMemo(() => {
-        const q = search.toLowerCase();
-        if (!q) return data.plo;
-        return data.plo.filter(p =>
-          (p.MA_PLO || "").toLowerCase().includes(q) ||
-          (p.TEN_PLO || "").toLowerCase().includes(q) ||
+        // Lọc PLO (tìm theo mã PLO, tên PLO hoặc SPDV trực thuộc)
+        const filteredPlo = !q ? ploList : ploList.filter(p =>
+          (p.MA_PLO || '').toLowerCase().includes(q) ||
+          (p.TEN_PLO || '').toLowerCase().includes(q) ||
           (p.ds_spdv || []).some(s => Object.values(s).some(v => String(v).toLowerCase().includes(q)))
         );
-      }, [data.plo, search]);
 
-      const toggleExpand = (maPlo) => setExpandedPlo(prev => ({ ...prev, [maPlo]: !prev[maPlo] }));
-      const toggleAllPlo = (open) => {
-        const next = {};
-        data.plo.forEach(p => { next[p.MA_PLO] = open; });
-        setExpandedPlo(next);
-      };
+        const toggleAllPlo = (open) => {
+          const next = {};
+          ploList.forEach(p => { next[p.MA_PLO] = open; });
+          setExpandedPlo(next);
+        };
 
-      return (
-        <div className="min-h-screen flex flex-col">
-          {/* Header & Thanh Menu chính đồng bộ với index.html */}
-          <header className="bg-[#003B7A] text-white shadow-sm sticky top-0 z-20">
-            <div className="max-w-7xl mx-auto px-4 pt-3 pb-2 flex flex-wrap items-center justify-between gap-3 border-b border-white/10">
-              <div>
-                <h1 className="text-base md:text-lg font-bold tracking-tight">HỆ THỐNG ĐIỀU HÀNH SXKD | BAN KDGP - VNPT-IT</h1>
-                <p className="text-xs text-sky-200">Quản trị Danh mục Hệ thống (DMSPDV & DMPLO)</p>
+        return (
+          <div className="flex h-screen w-full">
+            {/* SIDEBAR ĐIỀU HƯỚNG GIỐNG HỆT INDEX.HTML */}
+            <aside className="w-[200px] bg-navy text-white flex flex-col shadow-2xl z-20 shrink-0">
+              <div className="p-4 border-b border-white/20 flex flex-col items-center">
+                <div className="text-2xl font-extrabold tracking-widest text-vnpt bg-white px-3 py-1 rounded shadow mb-2">VNPT</div>
+                <div className="text-[10px] text-center font-semibold text-gray-300 tracking-wider">HỆ THỐNG ĐIỀU HÀNH</div>
               </div>
-              <button onClick={fetchData} className="px-3 py-1.5 rounded bg-[#0094D9] hover:bg-sky-500 text-xs font-semibold transition">
-                Làm mới dữ liệu
-              </button>
-            </div>
+              <nav className="flex-1 py-3 px-3 space-y-1 overflow-y-auto">
+                {MENU_ITEMS.map(item => (
+                  <div key={item.id}>
+                    <a
+                      href={item.href || '#'}
+                      onClick={(e) => {
+                        if (item.subItems) { e.preventDefault(); setExpandedMenu(expandedMenu === item.id ? '' : item.id); }
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-3 rounded text-left transition font-semibold ${
+                        item.id === 'danhmuc' ? 'bg-vnpt text-white shadow' : 'text-gray-300 hover:bg-hoverbg hover:text-white'
+                      }`}>
+                      <span className="text-sm font-bold tracking-wide">{item.label}</span>
+                      {item.subItems && <span className="text-xs">{expandedMenu === item.id ? '▼' : '▶'}</span>}
+                    </a>
+                    {item.subItems && expandedMenu === item.id && (
+                      <div className="ml-4 mt-1 space-y-1 border-l border-white/20 pl-2">
+                        {item.subItems.map(sub => (
+                          <a
+                            key={sub.id}
+                            href={sub.href}
+                            onClick={(e) => { e.preventDefault(); switchSubTab(sub.id); }}
+                            className={`block w-full text-left px-2 py-2 text-sm rounded transition ${
+                              activeSubTab === sub.id
+                                ? 'bg-white/20 text-white font-bold'
+                                : 'text-gray-300 hover:text-white hover:bg-white/10'
+                            }`}>
+                            {sub.label}
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </nav>
+            </aside>
 
-            {/* Thanh điều hướng chuyển thẳng sang từng phân hệ của index.html */}
-            <nav className="max-w-7xl mx-auto px-4 py-2 flex items-center gap-1 overflow-x-auto">
-              {NAV_MENUS.map(item => (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  className={`px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition ${
-                    item.active
-                      ? "bg-[#0094D9] text-white shadow-sm"
-                      : "text-sky-100 hover:bg-white/15 hover:text-white"
-                  }`}>
-                  {item.label}
-                </a>
-              ))}
-            </nav>
-          </header>
+            {/* KHUNG NỘI DUNG CHÍNH */}
+            <main className="flex-1 flex flex-col overflow-hidden bg-gray-50">
+              {/* HEADER GIỐNG HỆT INDEX.HTML */}
+              <header className="bg-white px-6 py-4 flex justify-between items-center shrink-0 border-b">
+                <h1 className="text-2xl font-bold uppercase tracking-wide text-navy">
+                  {activeSubTab === 'spdv' ? 'DANH MỤC SPDV' : 'DANH MỤC PLO'}
+                </h1>
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="font-semibold text-gray-600">{user.email}</span>
+                  <span className="bg-vnpt/10 text-vnpt border border-vnpt px-3 py-1.5 rounded-full font-bold">Quyền: {user.tenClo}</span>
+                  <button onClick={handleLogout} className="bg-risk text-white px-3 py-1.5 rounded font-bold hover:bg-red-700 transition">Đăng xuất</button>
+                </div>
+              </header>
 
-          <main className="max-w-7xl w-full mx-auto px-4 py-5 flex-1 space-y-4">
-            {/* Thanh KPI */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                <p className="text-xs text-slate-500 font-medium">Tổng số PLO (DMPLO)</p>
-                <p className="text-2xl font-bold text-[#003B7A] mt-1">{kpi.totalPlo}</p>
-              </div>
-              <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                <p className="text-xs text-slate-500 font-medium">Tổng số SPDV (DMSPDV)</p>
-                <p className="text-2xl font-bold text-[#0094D9] mt-1">{kpi.totalSpdv}</p>
-              </div>
-              <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                <p className="text-xs text-slate-500 font-medium">SPDV đã gắn PLO</p>
-                <p className="text-2xl font-bold text-emerald-600 mt-1">{kpi.mappedSpdv}</p>
-              </div>
-              <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                <p className="text-xs text-slate-500 font-medium">SPDV chưa gắn PLO</p>
-                <p className={`text-2xl font-bold mt-1 ${kpi.unmappedSpdv > 0 ? "text-red-600" : "text-emerald-600"}`}>
-                  {kpi.unmappedSpdv}
-                </p>
-              </div>
-            </div>
+              {/* THANH BỘ LỌC NGANG */}
+              <div className="bg-white px-6 py-3 flex flex-wrap gap-4 shrink-0 border-b shadow-sm items-end justify-between z-10">
+                <div className="flex items-end gap-3 flex-1">
+                  <div className="flex flex-col w-72">
+                    <label className="text-xs font-bold text-navy mb-1">Tìm kiếm nhanh</label>
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={e => setSearch(e.target.value)}
+                      placeholder={activeSubTab === 'spdv' ? 'Mã SPDV, tên SPDV, mã PLO...' : 'Mã PLO, tên PLO, SPDV trực thuộc...'}
+                      className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt"
+                    />
+                  </div>
 
-            {/* Sub-menu chọn Danh mục SPDV / PLO & Bộ lọc ngang */}
-            <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
-              <div className="flex bg-slate-100 p-1 rounded-lg">
-                <button
-                  onClick={() => { setActiveSubTab("SPDV"); setSearch(""); }}
-                  className={`px-4 py-1.5 rounded-md text-sm font-semibold transition ${
-                    activeSubTab === "SPDV" ? "bg-[#0094D9] text-white shadow-sm" : "text-slate-600 hover:text-[#003B7A]"
-                  }`}>
-                  Danh mục SPDV ({data.spdv.length})
+                  {activeSubTab === 'spdv' ? (
+                    <div className="flex flex-col w-64">
+                      <label className="text-xs font-bold text-navy mb-1">Lọc theo PLO</label>
+                      <select
+                        value={filterPlo}
+                        onChange={e => setFilterPlo(e.target.value)}
+                        className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt bg-white">
+                        <option value="ALL">Tất cả PLO</option>
+                        <option value="UNMAPPED">⚠ Chưa gắn PLO</option>
+                        {ploList.map(p => (
+                          <option key={p.MA_PLO} value={p.MA_PLO}>{p.MA_PLO} - {p.TEN_PLO}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button onClick={() => toggleAllPlo(true)} className="px-3 py-2 text-xs font-bold border border-gray-300 rounded hover:bg-gray-100 text-navy">Mở tất cả</button>
+                      <button onClick={() => toggleAllPlo(false)} className="px-3 py-2 text-xs font-bold border border-gray-300 rounded hover:bg-gray-100 text-navy">Thu gọn</button>
+                    </div>
+                  )}
+                </div>
+
+                <button onClick={fetchDanhMucData} className="bg-vnpt text-white px-4 py-2 rounded text-xs font-bold hover:bg-navy transition">
+                  Làm mới dữ liệu
                 </button>
-                <button
-                  onClick={() => { setActiveSubTab("PLO"); setSearch(""); }}
-                  className={`px-4 py-1.5 rounded-md text-sm font-semibold transition ${
-                    activeSubTab === "PLO" ? "bg-[#0094D9] text-white shadow-sm" : "text-slate-600 hover:text-[#003B7A]"
-                  }`}>
-                  Danh mục PLO ({data.plo.length})
-                </button>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <input
-                  type="text"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder={activeSubTab === "SPDV" ? "Tìm mã, tên SPDV, mã PLO..." : "Tìm mã/tên PLO hoặc SPDV..."}
-                  className="px-3 py-1.5 text-sm border border-slate-300 rounded-md w-64 focus:outline-none focus:border-[#0094D9]"
-                />
-                {activeSubTab === "SPDV" ? (
-                  <select
-                    value={filterPlo}
-                    onChange={e => setFilterPlo(e.target.value)}
-                    className="px-3 py-1.5 text-sm border border-slate-300 rounded-md bg-white focus:outline-none focus:border-[#0094D9]">
-                    <option value="ALL">Tất cả PLO</option>
-                    <option value="UNMAPPED">⚠ Chưa gắn PLO</option>
-                    {data.plo.map(p => (
-                      <option key={p.MA_PLO} value={p.MA_PLO}>{p.MA_PLO} - {p.TEN_PLO}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <div className="flex gap-1">
-                    <button onClick={() => toggleAllPlo(true)} className="px-2.5 py-1.5 text-xs border border-slate-300 rounded hover:bg-slate-50">Mở tất cả</button>
-                    <button onClick={() => toggleAllPlo(false)} className="px-2.5 py-1.5 text-xs border border-slate-300 rounded hover:bg-slate-50">Thu gọn</button>
+              {loading && <div className="text-center text-vnpt text-sm py-1 font-bold animate-pulse bg-white">Đang đồng bộ dữ liệu...</div>}
+              {error && <div className="mx-6 mt-4 p-3 bg-red-50 border border-risk text-risk rounded text-sm font-semibold">Lỗi: {error}</div>}
+
+              {/* VÙNG NỘI DUNG CUỘN */}
+              <div className="flex-1 overflow-auto px-6 py-5 space-y-5">
+                {/* 4 THẺ KPI */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-white border rounded p-4 shadow-sm">
+                    <div className="text-xs font-bold text-navy uppercase">Tổng số PLO (DMPLO)</div>
+                    <div className="text-3xl font-bold text-navy mt-1">{ploList.length}</div>
+                  </div>
+                  <div className="bg-white border rounded p-4 shadow-sm">
+                    <div className="text-xs font-bold text-navy uppercase">Tổng số SPDV (DMSPDV)</div>
+                    <div className="text-3xl font-bold text-vnpt mt-1">{totalSpdv}</div>
+                  </div>
+                  <div className="bg-white border rounded p-4 shadow-sm">
+                    <div className="text-xs font-bold text-navy uppercase">SPDV đã gắn PLO</div>
+                    <div className="text-3xl font-bold text-good mt-1">{mappedSpdv}</div>
+                  </div>
+                  <div className="bg-white border rounded p-4 shadow-sm">
+                    <div className="text-xs font-bold text-navy uppercase">SPDV chưa gắn PLO</div>
+                    <div className={`text-3xl font-bold mt-1 ${unmappedSpdv > 0 ? 'text-risk' : 'text-good'}`}>{unmappedSpdv}</div>
+                  </div>
+                </div>
+
+                {/* TAB 1: DỮ LIỆU SHEET DMSPDV */}
+                {activeSubTab === 'spdv' && (
+                  <div className="bg-white border rounded shadow-sm overflow-hidden">
+                    <div className="overflow-auto max-h-[540px]">
+                      <table className="w-full text-left text-sm border-collapse">
+                        <thead className="bg-navy text-white sticky top-0 z-10 shadow">
+                          <tr>
+                            <th className="p-3 w-12 text-center">STT</th>
+                            <th className="p-3">Mã SPDV</th>
+                            <th className="p-3">Tên SPDV</th>
+                            <th className="p-3">Mã PLO</th>
+                            <th className="p-3">Nhóm SPDV</th>
+                            <th className="p-3">Trạng thái</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {filteredSpdv.map((row, idx) => {
+                            const maSpdv = getField(row, ['MA_SPDV', 'ma_spdv', 'spdv_code'], '-');
+                            const tenSpdv = getField(row, ['TEN_SPDV', 'ten_spdv', 'spdv_name'], '-');
+                            const maPlo = getField(row, ['MA_PLO', 'plo_code', 'ma_plo', 'sxkd_plo']);
+                            const nhomSpdv = getField(row, ['NHOM_SPDV', 'nhom_spdv', 'nhomspdv_code', 'sxkd_nhomspdv'], '-');
+                            const trangThai = getField(row, ['TRANG_THAI', 'trang_thai', 'status'], 'Hoạt động');
+                            return (
+                              <tr key={idx} className="hover:bg-blue-50 transition">
+                                <td className="p-3 text-center text-gray-500">{idx + 1}</td>
+                                <td className="p-3 font-bold text-navy">{maSpdv}</td>
+                                <td className="p-3 font-semibold text-gray-800">{tenSpdv}</td>
+                                <td className="p-3">
+                                  {maPlo ? (
+                                    <span className="px-2.5 py-0.5 rounded bg-blue-100 text-navy font-bold text-xs">{maPlo}</span>
+                                  ) : (
+                                    <span className="px-2.5 py-0.5 rounded bg-red-100 text-risk font-bold text-xs">Chưa gắn PLO</span>
+                                  )}
+                                </td>
+                                <td className="p-3 text-gray-600">{nhomSpdv}</td>
+                                <td className="p-3">
+                                  <span className="px-2.5 py-0.5 rounded-full bg-green-100 text-good font-bold text-xs">{trangThai}</span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                          {filteredSpdv.length === 0 && (
+                            <tr><td colSpan="6" className="p-8 text-center text-gray-400">Không tìm thấy SPDV phù hợp.</td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
-              </div>
-            </div>
 
-            {error && <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">Lỗi: {error}</div>}
-
-            {/* Nội dung chính */}
-            {loading ? (
-              <div className="bg-white p-12 rounded-lg border border-slate-200 text-center text-slate-500 text-sm">
-                Đang tải dữ liệu từ Google Sheets...
-              </div>
-            ) : activeSubTab === "SPDV" ? (
-              /* TAB 1: DỮ LIỆU SHEET DMSPDV */
-              <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-x-auto">
-                <table className="w-full text-left border-collapse text-sm">
-                  <thead>
-                    <tr className="bg-[#003B7A] text-white text-xs uppercase">
-                      <th className="py-3 px-4 w-12">STT</th>
-                      <th className="py-3 px-4">Mã SPDV</th>
-                      <th className="py-3 px-4">Tên SPDV</th>
-                      <th className="py-3 px-4">Mã PLO</th>
-                      <th className="py-3 px-4">Nhóm SPDV</th>
-                      <th className="py-3 px-4">Trạng thái</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {filteredSpdv.map((row, idx) => {
-                      const maSpdv = getVal(row, ["MA_SPDV", "ma_spdv", "spdv_code"]);
-                      const tenSpdv = getVal(row, ["TEN_SPDV", "ten_spdv", "spdv_name"]);
-                      const maPlo = getVal(row, ["MA_PLO", "plo_code", "ma_plo", "sxkd_plo"]);
-                      const nhomSpdv = getVal(row, ["NHOM_SPDV", "nhom_spdv", "nhomspdv_code", "sxkd_nhomspdv"]);
-                      const trangThai = getVal(row, ["TRANG_THAI", "trang_thai", "status"]);
-
+                {/* TAB 2: DỮ LIỆU SHEET DMPLO & SPDV TRỰC THUỘC */}
+                {activeSubTab === 'plo' && (
+                  <div className="space-y-3">
+                    {filteredPlo.map(plo => {
+                      const isOpen = !!expandedPlo[plo.MA_PLO];
+                      const ds = plo.ds_spdv || [];
                       return (
-                        <tr key={maSpdv || idx} className="hover:bg-sky-50/50 transition">
-                          <td className="py-2.5 px-4 text-slate-400">{idx + 1}</td>
-                          <td className="py-2.5 px-4 font-semibold text-[#003B7A]">{maSpdv || "-"}</td>
-                          <td className="py-2.5 px-4 font-medium text-slate-800">{tenSpdv || "-"}</td>
-                          <td className="py-2.5 px-4">
-                            {maPlo ? (
-                              <span className="px-2 py-0.5 rounded text-xs font-semibold bg-sky-100 text-[#003B7A]">{maPlo}</span>
-                            ) : (
-                              <span className="px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-700">Chưa gắn PLO</span>
-                            )}
-                          </td>
-                          <td className="py-2.5 px-4 text-slate-600">{nhomSpdv || "-"}</td>
-                          <td className="py-2.5 px-4">
-                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
-                              {trangThai || "Hoạt động"}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    {filteredSpdv.length === 0 && (
-                      <tr><td colSpan="6" className="py-8 text-center text-slate-400">Không tìm thấy SPDV phù hợp.</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              /* TAB 2: DỮ LIỆU SHEET DMPLO & SPDV TRỰC THUỘC */
-              <div className="space-y-3">
-                {filteredPlo.map(plo => {
-                  const isOpen = !!expandedPlo[plo.MA_PLO];
-                  const spdvList = plo.ds_spdv || [];
-                  return (
-                    <div key={plo.MA_PLO} className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-                      <div
-                        onClick={() => toggleExpand(plo.MA_PLO)}
-                        className="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition">
-                        <div className="flex items-center gap-3">
-                          <span className="px-2.5 py-1 rounded bg-[#003B7A] text-white text-xs font-bold">{plo.MA_PLO}</span>
-                          <h2 className="text-sm font-bold text-slate-800">{plo.TEN_PLO || "(Chưa có tên PLO)"}</h2>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                            spdvList.length > 0 ? "bg-sky-100 text-[#0094D9]" : "bg-red-100 text-red-600"
-                          }`}>
-                            {spdvList.length} SPDV
-                          </span>
-                          <span className="text-slate-400 text-xs">{isOpen ? "▲" : "▼"}</span>
-                        </div>
-                      </div>
+                        <div key={plo.MA_PLO} className="bg-white border rounded shadow-sm overflow-hidden">
+                          <div
+                            onClick={() => setExpandedPlo(prev => ({ ...prev, [plo.MA_PLO]: !prev[plo.MA_PLO] }))}
+                            className="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-blue-50/50 transition">
+                            <div className="flex items-center gap-3">
+                              <span className="px-2.5 py-1 rounded bg-navy text-white text-xs font-bold">{plo.MA_PLO}</span>
+                              <h2 className="text-sm font-bold text-navy">{plo.TEN_PLO || '(Chưa có tên PLO)'}</h2>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${ds.length > 0 ? 'bg-blue-100 text-vnpt' : 'bg-red-100 text-risk'}`}>
+                                {ds.length} SPDV
+                              </span>
+                              <span className="text-gray-400 text-xs">{isOpen ? '▲' : '▼'}</span>
+                            </div>
+                          </div>
 
-                      {isOpen && (
-                        <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-3">
-                          {spdvList.length === 0 ? (
-                            <p className="text-xs text-slate-400 italic">Chưa có SPDV nào gắn mã {plo.MA_PLO} trong sheet DMSPDV.</p>
-                          ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                              {spdvList.map((s, i) => {
-                                const maSpdv = getVal(s, ["MA_SPDV", "ma_spdv", "spdv_code"]);
-                                const tenSpdv = getVal(s, ["TEN_SPDV", "ten_spdv", "spdv_name"]);
-                                const nhomSpdv = getVal(s, ["NHOM_SPDV", "nhom_spdv", "nhomspdv_code", "sxkd_nhomspdv"]);
-                                return (
-                                  <div key={maSpdv || i} className="bg-white p-2.5 rounded border border-slate-200">
-                                    <p className="text-xs font-bold text-[#0094D9]">{maSpdv || "-"}</p>
-                                    <p className="text-sm font-medium text-slate-800">{tenSpdv || "-"}</p>
-                                    {nhomSpdv && <p className="text-xs text-slate-500 mt-0.5">{nhomSpdv}</p>}
-                                  </div>
-                                );
-                              })}
+                          {isOpen && (
+                            <div className="border-t bg-gray-50 px-4 py-3">
+                              {ds.length === 0 ? (
+                                <p className="text-xs text-gray-400 italic">Chưa có SPDV nào gắn mã {plo.MA_PLO} trong sheet DMSPDV.</p>
+                              ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                                  {ds.map((s, i) => (
+                                    <div key={i} className="bg-white p-3 rounded border hover:border-vnpt transition">
+                                      <div className="text-xs font-bold text-vnpt">{getField(s, ['MA_SPDV', 'ma_spdv', 'spdv_code'], '-')}</div>
+                                      <div className="text-sm font-bold text-gray-800 mt-0.5">{getField(s, ['TEN_SPDV', 'ten_spdv', 'spdv_name'], '-')}</div>
+                                      <div className="text-xs text-gray-500 mt-1">{getField(s, ['NHOM_SPDV', 'nhom_spdv', 'nhomspdv_code', 'sxkd_nhomspdv'])}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
-                {filteredPlo.length === 0 && (
-                  <div className="bg-white p-8 rounded-lg border border-slate-200 text-center text-slate-400 text-sm">
-                    Không tìm thấy PLO phù hợp.
+                      );
+                    })}
+                    {filteredPlo.length === 0 && (
+                      <div className="bg-white p-8 border rounded text-center text-gray-400 text-sm">Không tìm thấy PLO phù hợp.</div>
+                    )}
                   </div>
                 )}
               </div>
-            )}
-          </main>
-        </div>
-      );
-    }
 
-    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+              {/* FOOTER LOGO VNPT-IT */}
+              <footer className="bg-white border-t px-6 py-2.5 flex justify-between items-center shrink-0 text-xs text-gray-500">
+                <div className="flex items-center gap-2.5">
+                  <span className="bg-navy text-white font-extrabold px-2 py-0.5 rounded tracking-wider text-[11px]">VNPT-IT</span>
+                  <span className="font-semibold text-navy">Công ty Công nghệ Thông tin VNPT</span>
+                  <span className="text-gray-400">|</span>
+                  <span>Thành viên của Tập đoàn <b className="text-vnpt">VNPT</b></span>
+                </div>
+                <div className="text-[11px] text-gray-400">Tổ Dữ liệu • Ban KDGP</div>
+              </footer>
+            </main>
+          </div>
+        );
+      }
+
+      ReactDOM.render(<App />, document.getElementById('root'));
+    } catch (err) {
+      document.getElementById('root').innerHTML = `<div style="padding: 40px; text-align: center;"><h2 style="color: #ef4444; font-size: 24px; font-weight: bold;">LỖI BIÊN DỊCH REACT</h2><p style="color: #333; margin-top: 10px;">${err.message}</p></div>`;
+    }
   </script>
 </body>
 </html>
