@@ -652,18 +652,26 @@
         const hdTySuatLN = kpiHD.vnptGt ? kpiHD.tongLnGop / kpiHD.vnptGt : 0;
         
         // 4. Dữ liệu Biểu đồ & Bảng chi tiết Hợp đồng
-        const hdDiemRoiMap = {};
+        const hdTinhMap = {};
         const hdStatusMap = {};
+        
         baseHopDong.forEach(d => {
-          const mKey = d.diemRoi || 'Chưa XĐ';
-          if (!hdDiemRoiMap[mKey]) hdDiemRoiMap[mKey] = { thang: mKey, vnptGt: 0, lienDanhGt: 0, count: 0 };
-          hdDiemRoiMap[mKey].vnptGt += d.giaTriVNPT; hdDiemRoiMap[mKey].lienDanhGt += d.giaTriLienDanh; hdDiemRoiMap[mKey].count += 1;
+          // Gom nhóm giá trị HĐ theo từng tỉnh thành
+          const tKey = d.maTinh || 'Chưa XĐ';
+          if (!hdTinhMap[tKey]) hdTinhMap[tKey] = { maTinh: tKey, vnptGt: 0, lienDanhGt: 0, tongGt: 0, count: 0 };
+          hdTinhMap[tKey].vnptGt += d.giaTriVNPT;
+          hdTinhMap[tKey].lienDanhGt += d.giaTriLienDanh;
+          hdTinhMap[tKey].tongGt += d.giaTriHD;
+          hdTinhMap[tKey].count += 1;
         
           const stKey = d.trangThai || 'Chưa cập nhật';
           if (!hdStatusMap[stKey]) hdStatusMap[stKey] = { name: stKey, value: 0, count: 0 };
-          hdStatusMap[stKey].value += d.giaTriVNPT; hdStatusMap[stKey].count += 1;
+          hdStatusMap[stKey].value += d.giaTriVNPT;
+          hdStatusMap[stKey].count += 1;
         });
-        const hdDiemRoiChart = Object.values(hdDiemRoiMap).sort((a, b) => (getMonthVal(a.thang) || 999999) - (getMonthVal(b.thang) || 999999));
+        
+        // Sắp xếp tỉnh thành theo Tổng giá trị HĐ giảm dần
+        const hdTinhChart = Object.values(hdTinhMap).sort((a, b) => b.tongGt - a.tongGt);
         const hdStatusChart = Object.values(hdStatusMap).sort((a, b) => b.value - a.value);
         
         const filteredHopDongTable = baseHopDong.filter(d => {
@@ -1222,28 +1230,37 @@
 
                     {/* HÀNG 3: BIỂU ĐỒ ĐIỂM RƠI DOANH THU & TRẠNG THÁI THI CÔNG */}
                     <div className="px-6 pb-6 flex gap-6 shrink-0 min-h-[340px]">
-                      <div className="bg-white border border-gray-200 rounded shadow-sm p-5 flex-[1.4] flex flex-col">
-                        <div className="flex justify-between items-center mb-3">
-                          <h2 className="text-navy font-bold text-sm uppercase">ĐIỂM RƠI DOANH THU HỢP ĐỒNG THEO THÁNG</h2>
-                          <span className="text-xs text-gray-500">Đơn vị: trĐ</span>
-                        </div>
-                        <div className="flex-1 w-full min-h-[240px]">
-                          {ResponsiveContainer && BarChart && (
-                            <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={hdDiemRoiChart} margin={{ top: 10, right: 15, left: 0, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                <XAxis dataKey="thang" tick={{ fontSize: 11 }} />
-                                <YAxis tick={{ fontSize: 11 }} />
-                                <Tooltip formatter={(val) => `${fmtNum(val)} trĐ`} />
-                                <Legend wrapperStyle={{ fontSize: '12px' }} />
-                                <Bar dataKey="vnptGt" name="VNPT hưởng" stackId="hd" fill="#0094D9" maxBarSize={42} />
-                                <Bar dataKey="lienDanhGt" name="Liên danh hưởng" stackId="hd" fill="#94A3B8" radius={[4, 4, 0, 0]} maxBarSize={42} />
-                              </BarChart>
-                            </ResponsiveContainer>
-                          )}
+                      {/* Biểu đồ Giá trị Hợp đồng theo Tỉnh/Thành (Stacked Bar: VNPT hưởng + Liên danh) */}
+                      <div className="bg-white border rounded shadow-sm p-4 flex-1 flex flex-col">
+                        <h3 className="text-navy font-bold text-xs uppercase mb-3">GIÁ TRỊ HỢP ĐỒNG THEO TỈNH/THÀNH (trĐ)</h3>
+                        <div className="flex-1 min-h-[260px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={hdTinhChart} margin={{ top: 10, right: 16, left: 0, bottom: 20 }}>
+                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                              <XAxis
+                                dataKey="maTinh"
+                                tick={{ fontSize: 11, fill: '#334155' }}
+                                interval={0}          // Hiện đủ mã tỉnh (34 TTP)
+                                angle={-35}           // Xoay nhãn tránh đè chữ khi nhiều tỉnh
+                                textAnchor="end"
+                              />
+                              <YAxis tick={{ fontSize: 11, fill: '#64748B' }} tickFormatter={v => fmtNum(v)} />
+                              <Tooltip
+                                formatter={(val, name) => [`${fmtNum(val)} trĐ`, name]}
+                                labelFormatter={label => {
+                                  const item = hdTinhChart.find(x => x.maTinh === label);
+                                  return `Tỉnh ${label} (${item ? item.count : 0} HĐ)`;
+                                }}
+                              />
+                              <Legend wrapperStyle={{ fontSize: 11 }} />
+                              <Bar dataKey="vnptGt" name="VNPT hưởng" stackId="a" fill="#0094D9" radius={[0, 0, 0, 0]} />
+                              <Bar dataKey="lienDanhGt" name="Liên danh" stackId="a" fill="#94A3B8" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
                         </div>
                       </div>
-
+                      </div>
+                      {/* Biểu đồ trạng thái thi công */}
                       <div className="bg-white border border-gray-200 rounded shadow-sm p-5 flex-1 flex flex-col">
                         <div className="flex justify-between items-center mb-3">
                           <h2 className="text-navy font-bold text-sm uppercase">GIÁ TRỊ VNPT THEO TRẠNG THÁI THI CÔNG</h2>
