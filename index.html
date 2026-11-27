@@ -976,44 +976,23 @@
                 {activeTab === 'cohoi' && (
                   <div className="bg-[#F4F6F8] flex-1 flex flex-col overflow-auto">
                     <div className="flex gap-4 px-6 pt-6 pb-2 shrink-0">
-                      <KpiCard highlight
-                        title="1.PIPELINE ĐANG MỞ"
-                        v1={fmtNum(kpiCHKD.moGt)}
-                        l1={`trĐ (${fmtPct(tyLeMoGt)} giá trị)`}
-                        v2={fmtNum(kpiCHKD.moSl)}
-                        l2="Số lượng CHKD mở"
-                        st="neutral"
+                      <KpiCard highlight title="1.PIPELINE ĐANG MỞ" 
+                        v1={fmtNum(kpiCHKD.moGt)} l1={`trĐ (${fmtPct(tyLeMoGt)} Tổng giá trị)`}
+                        v2={fmtNum(kpiCHKD.moSl)} l2="Số lượng CHKD mở" st="neutral"/>
+                      <KpiCard title="2.TỔNG GIÁ TRỊ" 
+                        v1={fmtNum(kpiCHKD.tongGt)} l1="Tổng ngân sách (trĐ)"
+                        v2={fmtNum(kpiCHKD.tongSl)} l2="Tổng số lượng CHKD" st="neutral"/>
+                      <KpiCard title="3.ĐÃ CHỐT"
+                        v1={fmtNum(kpiCHKD.chotGt)} l1="Ngân sách chốt (trĐ)"
+                        v2={fmtNum(kpiCHKD.chotSl)} l2="Số lượng CHKD chốt" st="good"
                       />
-                      <KpiCard
-                        title="2.TỔNG GIÁ TRỊ"
-                        v1={fmtNum(kpiCHKD.tongGt)}
-                        l1="Tổng ngân sách (trĐ)"
-                        v2={fmtNum(kpiCHKD.tongSl)}
-                        l2="Tổng số lượng CHKD"
-                        st="neutral"
+                      <KpiCard title="4.THẤT BẠI"
+                        v1={fmtNum(kpiCHKD.thuaGt)} l1="Ngân sách mất (trĐ)"
+                        v2={fmtNum(kpiCHKD.thuaSl)} l2="Số lượng CHKD thất bại"st="risk"
                       />
-                      <KpiCard
-                        title="3.ĐÃ CHỐT"
-                        v1={fmtNum(kpiCHKD.chotGt)}
-                        l1="Ngân sách chốt (trĐ)"
-                        v2={fmtNum(kpiCHKD.chotSl)}
-                        l2="Số lượng CHKD chốt"
-                        st="good"
-                      />
-                      <KpiCard
-                        title="4.THẤT BẠI"
-                        v1={fmtNum(kpiCHKD.thuaGt)}
-                        l1="Ngân sách mất (trĐ)"
-                        v2={fmtNum(kpiCHKD.thuaSl)}
-                        l2="Số lượng CHKD thất bại"
-                        st="risk"
-                      />
-                      <KpiCard
-                        title="5.TỶ LỆ THẮNG"
-                        v1={fmtPct(winRateSl)}
-                        l1="Winrate theo số lượng"
-                        v2={fmtPct(winRateGt)}
-                        l2="Winrate theo giá trị"
+                      <KpiCard title="5.TỶ LỆ THẮNG"
+                        v1={fmtPct(winRateGt)} l1="Winrate theo giá trị"
+                        v2={fmtPct(winRateSl)} l2="Winrate theo số lượng"
                         st={winRateSl >= 0.3 ? 'good' : 'risk'}
                       />
                     </div>
