@@ -524,7 +524,7 @@
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const next90Days = new Date(today.getTime() + (90 * 24 * 60 * 60 * 1000));
-
+        
         // 1. Lọc dòng rác & Chuẩn hóa trường + Phái sinh
         const normalizedHopDong = (hopDongRaw || [])
           .filter(d => getField(d, ['ma_hopdong', 'ma_hd', 'Mã Hợp Đồng', 'so_hopdong', 'so_hd', 'Số hợp đồng']) !== '')
@@ -537,46 +537,49 @@
             const hinhThuc = getField(d, ['hinhthuc_cungcap', 'loai_hd', 'Hình thức cung cấp'], 'Chưa phân loại').toString().trim();
             const trangThai = getField(d, ['trangthai_thicong', 'trang_thai', 'Trạng Thái Thi Công'], 'Chưa cập nhật').toString().trim();
             const diemRoi = normalizeThang(getField(d, ['diem_roi_doanhthu', 'thang', 'ĐIỂM RƠI DOANH THU (MM/YYYY)']));
-            const ploCode = getField(d, ['plo_code', 'PLO']);
+            const ploCode = getField(d, ['plo_code', 'PLO'], '').toString().trim(); // Chuẩn hóa chuỗi để kiểm tra rỗng chính xác
             const nhomCode = getField(d, ['nhomspdv_code', 'Nhóm SPDV']);
             const luongSPDV = getField(d, ['luong_spdv', 'Luồng SPDV']);
-
+        
             // Giá trị HĐ & Phái sinh VNPT hưởng (ĐVT: trĐ)
             const giaTriHD = parseNum(getField(d, ['giatri_hd', 'gia_tri_hd', 'Giá trị hợp đồng (trVND)'], 0));
             const giaTriLienDanh = parseNum(getField(d, ['giatri_liendanh', 'Giá trị Liên danh hưởng'], 0));
             const giaTriVNPT = Math.max(giaTriHD - giaTriLienDanh, 0);
-
+        
             // Chi phí COGS & Thực chi (quy đổi VND -> trĐ)
             const duToanCogs = vndToTr(getField(d, ['dutoan_cogs', 'Dự Toán COGS Ban Đầu (VND)'], 0));
             const thucChiNoiBo = vndToTr(getField(d, ['thucchi_noibo', 'Thực Chi Nội Bộ (VND)'], 0));
             const thucChiThauPhu = vndToTr(getField(d, ['thucchi_thauphu', 'Thực Chi Thầu Phụ (VND)'], 0));
             const rawTongChi = vndToTr(getField(d, ['tong_thucchi', 'Tổng Thực Chi (VND)'], 0));
             const tongThucChi = rawTongChi > 0 ? rawTongChi : (thucChiNoiBo + thucChiThauPhu);
-
+        
             // Phái sinh tài chính
             const chenhLechCogs = tongThucChi - duToanCogs;
             const vuotNganSach = chenhLechCogs > 0 ? chenhLechCogs : 0;
             const loiNhuanGop = giaTriVNPT - tongThucChi;
-
+        
             // Phái sinh tiến độ & Hạn HĐ
             const ngayHetHan = parseDateVN(getField(d, ['ngay_hethan', 'Ngày hết hạn']));
             const deadline = parseDateVN(getField(d, ['ngay_bangiao_dukien', 'deadline', 'Ngày Bàn Giao Dự Kiến (Deadline)']));
             const banGiaoThucTe = parseDateVN(getField(d, ['ngay_bangiao_thucte', 'Ngày Bàn Giao Thực Tế']));
-
+        
             const rawCham = getField(d, ['cham_tiendo', 'so_ngay_cham', 'Chậm Tiến Độ (Ngày)'], '');
             let chamTienDo = rawCham !== '' ? parseNum(rawCham) : 0;
             if (rawCham === '' && deadline) {
               const diffDays = Math.ceil(((banGiaoThucTe || today) - deadline) / (1000 * 60 * 60 * 24));
               chamTienDo = diffDays > 0 ? diffDays : 0;
             }
-
+        
+            // 6 cờ trạng thái cảnh báo dùng chung cho KPI & bộ lọc nhanh
             const stUpper = trangThai.toUpperCase();
             const isHieuLuc = !stUpper.includes('THANH LÝ') && !stUpper.includes('HẾT HIỆU LỰC') && !stUpper.includes('HỦY');
             const isTreHan = chamTienDo > 0;
             const isVuotNS = vuotNganSach > 0;
             const isQuaHanHD = isHieuLuc && ngayHetHan && ngayHetHan < today;
             const isSapHetHan90 = isHieuLuc && ngayHetHan && ngayHetHan >= today && ngayHetHan <= next90Days;
-
+            const isChuaGanPlo = !ploCode || ploCode.toLowerCase() === 'chưa gán' || ploCode.toUpperCase() === 'N/A'; // Cờ chưa gán PLO
+            const isThieuGiaTri = giaTriHD <= 0; // Cờ thiếu giá trị HĐ
+        
             let canhBao = getField(d, ['canhbao_chidao', 'canh_bao', 'Cảnh Báo & Chỉ Đạo Lãnh Đạo'], '').toString().trim();
             if (!canhBao) {
               const alerts = [];
@@ -584,16 +587,19 @@
               if (isVuotNS) alerts.push(`VƯỢT NS ${fmtNum(vuotNganSach)} trĐ`);
               if (isQuaHanHD) alerts.push('QUÁ HẠN HĐ');
               else if (isSapHetHan90) alerts.push('SẮP HẾT HẠN ≤90N');
+              if (isChuaGanPlo) alerts.push('CHƯA GÁN PLO');
+              if (isThieuGiaTri) alerts.push('THIẾU GIÁ TRỊ');
               canhBao = alerts.length ? alerts.join(' | ') : 'Bình thường';
             }
-
+        
             return {
               maHD, maDeal, maTinh, tenHD, tenSPDV, hinhThuc, trangThai, diemRoi, ploCode, nhomCode, luongSPDV,
               giaTriHD, giaTriLienDanh, giaTriVNPT, duToanCogs, tongThucChi, vuotNganSach, loiNhuanGop,
-              ngayHetHan, chamTienDo, isHieuLuc, isTreHan, isVuotNS, isQuaHanHD, isSapHetHan90, canhBao
+              ngayHetHan, chamTienDo, isHieuLuc, isTreHan, isVuotNS, isQuaHanHD, isSapHetHan90,
+              isChuaGanPlo, isThieuGiaTri, canhBao
             };
           });
-
+        
         // 2. Áp dụng Bộ lọc chung
         const baseHopDong = normalizedHopDong.filter(d =>
           (isAllTime || d.diemRoi === filters.thoiGian) &&
@@ -602,16 +608,16 @@
           (filters.nhomSPDV === 'ALL' || !d.nhomCode || d.nhomCode === filters.nhomSPDV) &&
           (filters.plo === 'ALL' || !d.ploCode || d.ploCode === filters.plo)
         );
-
+        
         // 3. Tổng hợp KPI & Phái sinh Hợp đồng
         const kpiHD = {
           tongSl: 0, tongGt: 0, lienDanhGt: 0, vnptGt: 0, trungVi: 0,
           hieuLucSl: 0, hieuLucGt: 0, thueDvSl: 0, thueDvGt: 0, dauTuSl: 0, dauTuGt: 0,
           tongCogs: 0, tongThucChi: 0, tongVuotNS: 0, tongLnGop: 0,
-          treHanSl: 0, tongNgayCham: 0, vuotNsSl: 0, quaHanHdSl: 0, sapHetHan90Sl: 0, thieuGtSl: 0
+          treHanSl: 0, tongNgayCham: 0, vuotNsSl: 0, quaHanHdSl: 0, sapHetHan90Sl: 0, thieuGtSl: 0, chuaGanPloSl: 0
         };
         const hdValues = [];
-
+        
         baseHopDong.forEach(d => {
           kpiHD.tongSl += 1;
           kpiHD.tongGt += d.giaTriHD;
@@ -622,18 +628,20 @@
           kpiHD.tongVuotNS += d.vuotNganSach;
           kpiHD.tongLnGop += d.loiNhuanGop;
           hdValues.push(d.giaTriVNPT);
-
-          if (d.giaTriHD <= 0) kpiHD.thieuGtSl += 1;
+        
           if (d.isHieuLuc) { kpiHD.hieuLucSl += 1; kpiHD.hieuLucGt += d.giaTriVNPT; }
           if (d.hinhThuc.toUpperCase().includes('THUÊ')) { kpiHD.thueDvSl += 1; kpiHD.thueDvGt += d.giaTriVNPT; }
           else if (d.hinhThuc.toUpperCase().includes('ĐẦU TƯ') || d.hinhThuc.toUpperCase().includes('MUA SẮM')) { kpiHD.dauTuSl += 1; kpiHD.dauTuGt += d.giaTriVNPT; }
-
+        
+          // Đếm 6 KPI cảnh báo tác chiến
           if (d.isTreHan) { kpiHD.treHanSl += 1; kpiHD.tongNgayCham += d.chamTienDo; }
-          if (d.isVuotNS) kpiHD.vuotNsSl += 1;
           if (d.isQuaHanHD) kpiHD.quaHanHdSl += 1;
+          if (d.isVuotNS) kpiHD.vuotNsSl += 1;
           if (d.isSapHetHan90) kpiHD.sapHetHan90Sl += 1;
+          if (d.isChuaGanPlo) kpiHD.chuaGanPloSl += 1;   // Bổ sung đếm HĐ chưa gán PLO
+          if (d.isThieuGiaTri) kpiHD.thieuGtSl += 1;    // Đồng bộ cờ thiếu giá trị
         });
-
+        
         if (hdValues.length > 0) {
           hdValues.sort((a, b) => b - a);
           const mid = Math.floor(hdValues.length / 2);
@@ -642,7 +650,7 @@
         const hdTyLeTreHan = kpiHD.tongSl ? kpiHD.treHanSl / kpiHD.tongSl : 0;
         const hdAvgDelay = kpiHD.treHanSl ? (kpiHD.tongNgayCham / kpiHD.treHanSl).toFixed(1) : 0;
         const hdTySuatLN = kpiHD.vnptGt ? kpiHD.tongLnGop / kpiHD.vnptGt : 0;
-
+        
         // 4. Dữ liệu Biểu đồ & Bảng chi tiết Hợp đồng
         const hdDiemRoiMap = {};
         const hdStatusMap = {};
@@ -650,18 +658,21 @@
           const mKey = d.diemRoi || 'Chưa XĐ';
           if (!hdDiemRoiMap[mKey]) hdDiemRoiMap[mKey] = { thang: mKey, vnptGt: 0, lienDanhGt: 0, count: 0 };
           hdDiemRoiMap[mKey].vnptGt += d.giaTriVNPT; hdDiemRoiMap[mKey].lienDanhGt += d.giaTriLienDanh; hdDiemRoiMap[mKey].count += 1;
-
+        
           const stKey = d.trangThai || 'Chưa cập nhật';
           if (!hdStatusMap[stKey]) hdStatusMap[stKey] = { name: stKey, value: 0, count: 0 };
           hdStatusMap[stKey].value += d.giaTriVNPT; hdStatusMap[stKey].count += 1;
         });
         const hdDiemRoiChart = Object.values(hdDiemRoiMap).sort((a, b) => (getMonthVal(a.thang) || 999999) - (getMonthVal(b.thang) || 999999));
         const hdStatusChart = Object.values(hdStatusMap).sort((a, b) => b.value - a.value);
-
+        
         const filteredHopDongTable = baseHopDong.filter(d => {
           if (hdQuickFilter === 'LATE') return d.isTreHan;
+          if (hdQuickFilter === 'EXPIRED') return d.isQuaHanHD;
           if (hdQuickFilter === 'OVER_BUDGET') return d.isVuotNS;
-          if (hdQuickFilter === 'EXPIRING') return d.isQuaHanHD || d.isSapHetHan90;
+          if (hdQuickFilter === 'EXPIRING_90') return d.isSapHetHan90;
+          if (hdQuickFilter === 'NO_PLO') return d.isChuaGanPlo;         // Sửa từ d.chuaGanPloSl
+          if (hdQuickFilter === 'MISSING_VAL') return d.isThieuGiaTri;   // Sửa từ d.isSapHetHan90
           return true;
         }).sort((a, b) => (b.isTreHan - a.isTreHan) || (b.vuotNganSach - a.vuotNganSach) || (b.giaTriVNPT - a.giaTriVNPT));
 
@@ -978,17 +989,17 @@
                     <div className="flex gap-4 px-6 pt-6 pb-2 shrink-0">
                       <KpiCard highlight title="1.PIPELINE ĐANG MỞ" 
                         v1={fmtNum(kpiCHKD.moGt)} l1={`trĐ (${fmtPct(tyLeMoGt)} Tổng giá trị)`}
-                        v2={fmtNum(kpiCHKD.moSl)} l2="Số lượng CHKD mở" st="neutral"/>
+                        v2={fmtInt(kpiCHKD.moSl)} l2="Số lượng CHKD mở" st="neutral"/>
                       <KpiCard title="2.TỔNG GIÁ TRỊ" 
                         v1={fmtNum(kpiCHKD.tongGt)} l1="Tổng ngân sách (trĐ)"
-                        v2={fmtNum(kpiCHKD.tongSl)} l2="Tổng số lượng CHKD" st="neutral"/>
+                        v2={fmtInt(kpiCHKD.tongSl)} l2="Tổng số lượng CHKD" st="neutral"/>
                       <KpiCard title="3.ĐÃ CHỐT"
                         v1={fmtNum(kpiCHKD.chotGt)} l1="Ngân sách chốt (trĐ)"
-                        v2={fmtNum(kpiCHKD.chotSl)} l2="Số lượng CHKD chốt" st="good"
+                        v2={fmtInt(kpiCHKD.chotSl)} l2="Số lượng CHKD chốt" st="good"
                       />
                       <KpiCard title="4.THẤT BẠI"
                         v1={fmtNum(kpiCHKD.thuaGt)} l1="Ngân sách mất (trĐ)"
-                        v2={fmtNum(kpiCHKD.thuaSl)} l2="Số lượng CHKD thất bại"st="risk"
+                        v2={fmtInt(kpiCHKD.thuaSl)} l2="Số lượng CHKD thất bại"st="risk"
                       />
                       <KpiCard title="5.TỶ LỆ THẮNG"
                         v1={fmtPct(winRateGt)} l1="Winrate theo giá trị"
@@ -1130,63 +1141,82 @@
                   <div className="bg-[#F4F6F8] flex-1 flex flex-col overflow-auto">
                     {/* HÀNG 1: 5 THẺ KPI CHÍNH & PHÁI SINH */}
                     <div className="flex gap-4 px-6 pt-6 pb-3 shrink-0">
-                      <div className="bg-navy text-white rounded-xl shadow-sm p-4 flex-[1.4] flex flex-col justify-between">
-                        <h3 className="text-[11px] font-bold text-blue-200 uppercase tracking-wider">GIÁ TRỊ HĐ VNPT HƯỞNG</h3>
-                        <div className="text-3xl font-extrabold my-2 tracking-tight">{fmtNum(kpiHD.vnptGt)}</div>
-                        <div className="text-[11px] text-blue-100">
-                          trĐ · Tổng HĐ: {fmtNum(kpiHD.tongGt)} (Liên danh: {fmtNum(kpiHD.lienDanhGt)}) · {fmtInt(kpiHD.tongSl)} HĐ · Trung vị {fmtNum(kpiHD.trungVi)}
-                        </div>
-                      </div>
-
-                      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
-                        <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">CÒN HIỆU LỰC / THI CÔNG</h3>
-                        <div className="text-3xl font-extrabold text-vnpt my-2">{fmtInt(kpiHD.hieuLucSl)} / {fmtInt(kpiHD.tongSl)}</div>
-                        <div className="text-[11px] text-gray-500">VNPT hưởng: {fmtNum(kpiHD.hieuLucGt)} trĐ</div>
-                      </div>
-
-                      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
-                        <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">TIẾN ĐỘ BÀN GIAO (SLA)</h3>
-                        <div className={`text-3xl font-extrabold my-2 ${kpiHD.treHanSl > 0 ? 'text-risk' : 'text-good'}`}>{fmtPct(hdTyLeTreHan)}</div>
-                        <div className="text-[11px] text-gray-500">{fmtInt(kpiHD.treHanSl)} HĐ trễ hạn · TB chậm {hdAvgDelay} ngày</div>
-                      </div>
-
-                      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
-                        <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">THỰC CHI VS DỰ TOÁN COGS</h3>
-                        <div className={`text-3xl font-extrabold my-2 ${kpiHD.tongVuotNS > 0 ? 'text-risk' : 'text-navy'}`}>{fmtNum(kpiHD.tongThucChi)}</div>
-                        <div className="text-[11px] text-gray-500">Dự toán: {fmtNum(kpiHD.tongCogs)} trĐ · Vượt NS: <b className="text-risk">{fmtNum(kpiHD.tongVuotNS)}</b></div>
-                      </div>
-
-                      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex-1 flex flex-col justify-between">
-                        <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">BIÊN LỢI NHUẬN GỘP</h3>
-                        <div className={`text-3xl font-extrabold my-2 ${hdTySuatLN >= 0.2 ? 'text-good' : 'text-risk'}`}>{fmtPct(hdTySuatLN)}</div>
-                        <div className="text-[11px] text-gray-500">LN gộp ước tính: {fmtNum(kpiHD.tongLnGop)} trĐ</div>
-                      </div>
+                      <KpiCard highlight title="1.GIÁ TRỊ HĐ VNPT HƯỞNG"
+                        v1={fmtNum(kpiHD.vnptGt)} l1={`trĐ · Tổng HĐ: ${fmtNum(kpiHD.tongGt)} (LD: ${fmtNum(kpiHD.lienDanhGt)})`}
+                        v2={`${fmtInt(kpiHD.tongSl)} HĐ`} l2={`Trung vị: ${fmtNum(kpiHD.trungVi)} trĐ`}
+                      />
+                      <KpiCard title="2.CÒN HIỆU LỰC / THI CÔNG"
+                        v1={`${fmtInt(kpiHD.hieuLucSl)} / ${fmtInt(kpiHD.tongSl)}`} l1="Số lượng HĐ còn hiệu lực"
+                        v2={fmtNum(kpiHD.hieuLucGt)} l2="VNPT hưởng (trĐ)"
+                        st="neutral"
+                      />
+                      <KpiCard title="3.TIẾN ĐỘ BÀN GIAO (SLA)"
+                        v1={fmtPct(hdTyLeTreHan)} l1="Tỷ lệ HĐ trễ hạn"
+                        v2={`${fmtInt(kpiHD.treHanSl)} HĐ`} l2={`TB chậm ${hdAvgDelay} ngày`}
+                        st={kpiHD.treHanSl > 0 ? 'risk' : 'good'}
+                      />
+                      <KpiCard title="4.THỰC CHI VS DỰ TOÁN COGS"
+                        v1={fmtNum(kpiHD.tongThucChi)} l1={`Dự toán: ${fmtNum(kpiHD.tongCogs)} trĐ`}
+                        v2={fmtNum(kpiHD.tongVuotNS)} l2="Vượt ngân sách (trĐ)"
+                        st={kpiHD.tongVuotNS > 0 ? 'risk' : 'neutral'}
+                      />
+                      <KpiCard title="5.BIÊN LỢI NHUẬN GỘP"
+                        v1={fmtPct(hdTySuatLN)} l1="Tỷ suất LN gộp"
+                        v2={fmtNum(kpiHD.tongLnGop)} l2="LN gộp ước tính (trĐ)"
+                        st={hdTySuatLN >= 0.2 ? 'good' : 'risk'}
+                      />
                     </div>
 
-                    {/* HÀNG 2: 4 THẺ CẢNH BÁO TÁC CHIẾN (BẤM ĐỂ LỌC NHANH BẢNG) */}
-                    <div className="grid grid-cols-4 gap-4 px-6 pb-5 shrink-0">
-                      <div onClick={() => setHdQuickFilter(hdQuickFilter === 'LATE' ? 'ALL' : 'LATE')}
-                        className={`cursor-pointer bg-[#FDEDEC] border-l-4 border-risk rounded-xl shadow-sm p-3.5 transition ${hdQuickFilter === 'LATE' ? 'ring-2 ring-risk' : ''}`}>
-                        <div className="text-2xl font-extrabold text-red-700">{fmtInt(kpiHD.treHanSl)}</div>
-                        <div className="text-xs font-semibold text-red-800 mt-0.5">HĐ trễ hạn bàn giao (bấm để lọc)</div>
+                    {/* HÀNG 2: 6 THẺ CẢNH BÁO TÁC CHIẾN (3 ĐỎ - 3 VÀNG, BẤM ĐỂ LỌC NHANH) */}
+                    <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 px-6 pb-5 shrink-0">
+                      {/* --- NHÓM ĐỎ: RỦI RO CAO --- */}
+                      <div
+                        onClick={() => setHdQuickFilter(hdQuickFilter === 'LATE' ? 'ALL' : 'LATE')}
+                        className={`cursor-pointer bg-[#FDEDEC] border border-red-200 border-l-4 border-l-risk rounded shadow-sm p-3 transition ${hdQuickFilter === 'LATE' ? 'ring-2 ring-risk' : ''}`}
+                      >
+                        <div className="text-xl font-extrabold text-red-700">{fmtInt(kpiHD.treHanSl)}</div>
+                        <div className="text-[11px] font-semibold text-red-800 mt-0.5 truncate" title="HĐ trễ hạn bàn giao">HĐ trễ hạn bàn giao</div>
                       </div>
-
-                      <div onClick={() => setHdQuickFilter(hdQuickFilter === 'OVER_BUDGET' ? 'ALL' : 'OVER_BUDGET')}
-                        className={`cursor-pointer bg-[#FDEDEC] border-l-4 border-risk rounded-xl shadow-sm p-3.5 transition ${hdQuickFilter === 'OVER_BUDGET' ? 'ring-2 ring-risk' : ''}`}>
-                        <div className="text-2xl font-extrabold text-red-700">{fmtInt(kpiHD.vuotNsSl)}</div>
-                        <div className="text-xs font-semibold text-red-800 mt-0.5">HĐ vượt dự toán COGS ({fmtNum(kpiHD.tongVuotNS)} trĐ)</div>
+                    
+                      <div
+                        onClick={() => setHdQuickFilter(hdQuickFilter === 'EXPIRED' ? 'ALL' : 'EXPIRED')}
+                        className={`cursor-pointer bg-[#FDEDEC] border border-red-200 border-l-4 border-l-risk rounded shadow-sm p-3 transition ${hdQuickFilter === 'EXPIRED' ? 'ring-2 ring-risk' : ''}`}
+                      >
+                        <div className="text-xl font-extrabold text-red-700">{fmtInt(kpiHD.quaHanHdSl)}</div>
+                        <div className="text-[11px] font-semibold text-red-800 mt-0.5 truncate" title="HĐ hết hạn, quá hạn">HĐ hết hạn, quá hạn</div>
                       </div>
-
-                      <div onClick={() => setHdQuickFilter(hdQuickFilter === 'EXPIRING' ? 'ALL' : 'EXPIRING')}
-                        className={`cursor-pointer bg-[#FEF5E7] border-l-4 border-amber-500 rounded-xl shadow-sm p-3.5 transition ${hdQuickFilter === 'EXPIRING' ? 'ring-2 ring-amber-500' : ''}`}>
-                        <div className="text-2xl font-extrabold text-[#92400E]">{fmtInt(kpiHD.quaHanHdSl + kpiHD.sapHetHan90Sl)}</div>
-                        <div className="text-xs font-semibold text-[#92400E] mt-0.5">Quá hạn ({kpiHD.quaHanHdSl}) & Sắp hết hạn ≤90N ({kpiHD.sapHetHan90Sl})</div>
+                    
+                      <div
+                        onClick={() => setHdQuickFilter(hdQuickFilter === 'OVER_BUDGET' ? 'ALL' : 'OVER_BUDGET')}
+                        className={`cursor-pointer bg-[#FDEDEC] border border-red-200 border-l-4 border-l-risk rounded shadow-sm p-3 transition ${hdQuickFilter === 'OVER_BUDGET' ? 'ring-2 ring-risk' : ''}`}
+                      >
+                        <div className="text-xl font-extrabold text-red-700">{fmtInt(kpiHD.vuotNsSl)}</div>
+                        <div className="text-[11px] font-semibold text-red-800 mt-0.5 truncate" title={`HĐ vượt dự toán (${fmtNum(kpiHD.tongVuotNS)} trĐ)`}>HĐ vượt dự toán ({fmtNum(kpiHD.tongVuotNS)} trĐ)</div>
                       </div>
-
-                      <div onClick={() => setHdQuickFilter('ALL')}
-                        className="cursor-pointer bg-[#FEF5E7] border-l-4 border-amber-500 rounded-xl shadow-sm p-3.5">
-                        <div className="text-2xl font-extrabold text-[#92400E]">{fmtInt(kpiHD.thieuGtSl)}</div>
-                        <div className="text-xs font-semibold text-[#92400E] mt-0.5">HĐ thiếu giá trị · Thuê DV: {kpiHD.thueDvSl} | Đầu tư: {kpiHD.dauTuSl}</div>
+                    
+                      {/* --- NHÓM VÀNG: CẢNH BÁO / DỮ LIỆU --- */}
+                      <div
+                        onClick={() => setHdQuickFilter(hdQuickFilter === 'EXPIRING_90' ? 'ALL' : 'EXPIRING_90')}
+                        className={`cursor-pointer bg-[#FEF5E7] border border-amber-200 border-l-4 border-l-amber-500 rounded shadow-sm p-3 transition ${hdQuickFilter === 'EXPIRING_90' ? 'ring-2 ring-amber-500' : ''}`}
+                      >
+                        <div className="text-xl font-extrabold text-[#92400E]">{fmtInt(kpiHD.sapHetHan90Sl)}</div>
+                        <div className="text-[11px] font-semibold text-[#92400E] mt-0.5 truncate" title="HĐ sắp hết hạn (<=90N)">HĐ sắp hết hạn (≤90N)</div>
+                      </div>
+                    
+                      <div
+                        onClick={() => setHdQuickFilter(hdQuickFilter === 'NO_PLO' ? 'ALL' : 'NO_PLO')}
+                        className={`cursor-pointer bg-[#FEF5E7] border border-amber-200 border-l-4 border-l-amber-500 rounded shadow-sm p-3 transition ${hdQuickFilter === 'NO_PLO' ? 'ring-2 ring-amber-500' : ''}`}
+                      >
+                        <div className="text-xl font-extrabold text-[#92400E]">{fmtInt(kpiHD.chuaGanPloSl || 0)}</div>
+                        <div className="text-[11px] font-semibold text-[#92400E] mt-0.5 truncate" title="HĐ chưa gán PLO">HĐ chưa gán PLO</div>
+                      </div>
+                    
+                      <div
+                        onClick={() => setHdQuickFilter(hdQuickFilter === 'MISSING_VAL' ? 'ALL' : 'MISSING_VAL')}
+                        className={`cursor-pointer bg-[#FEF5E7] border border-amber-200 border-l-4 border-l-amber-500 rounded shadow-sm p-3 transition ${hdQuickFilter === 'MISSING_VAL' ? 'ring-2 ring-amber-500' : ''}`}
+                      >
+                        <div className="text-xl font-extrabold text-[#92400E]">{fmtInt(kpiHD.thieuGtSl)}</div>
+                        <div className="text-[11px] font-semibold text-[#92400E] mt-0.5 truncate" title="HĐ thiếu giá trị">HĐ thiếu giá trị</div>
                       </div>
                     </div>
 
