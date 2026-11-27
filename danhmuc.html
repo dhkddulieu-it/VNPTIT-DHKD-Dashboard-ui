@@ -88,6 +88,7 @@
         const [ploList, setPloList] = React.useState([]);
         const [search, setSearch] = React.useState('');
         const [filterPlo, setFilterPlo] = React.useState('ALL');
+        const [filterDvcq, setFilterDvcq] = React.useState('ALL');
         const [expandedPlo, setExpandedPlo] = React.useState({});
 
         React.useEffect(() => { if (user) fetchDanhMucData(); }, [user]);
@@ -168,27 +169,36 @@
         const mappedSpdv = spdvList.filter(r => getField(r, ['MA_PLO', 'plo_code', 'ma_plo', 'sxkd_plo']) !== '').length;
         const unmappedSpdv = totalSpdv - mappedSpdv;
 
-        // Lọc SPDV
+        // Danh sách tùy chọn cho dropdown spdv_dvcq
+        const dvcqOptions = [...new Set(
+          spdvList.map(r => getField(r, ['spdv_dvcq', 'SPDV_DVCQ'])).filter(Boolean)
+        )].sort();
+        
+        // Lọc SPDV (theo PLO + ĐVCQ + từ khóa)
         const q = search.toLowerCase();
         const filteredSpdv = spdvList.filter(row => {
           const maPlo = getField(row, ['MA_PLO', 'plo_code', 'ma_plo', 'sxkd_plo']).toUpperCase();
+          const dvcq = getField(row, ['spdv_dvcq', 'SPDV_DVCQ']);
+        
           const matchPlo = filterPlo === 'ALL' || (filterPlo === 'UNMAPPED' ? !maPlo : maPlo === filterPlo);
+          const matchDvcq = filterDvcq === 'ALL' || (filterDvcq === 'EMPTY' ? !dvcq : dvcq === filterDvcq);
           const matchText = !q || Object.values(row).some(v => String(v).toLowerCase().includes(q));
-          return matchPlo && matchText;
+          return matchPlo && matchDvcq && matchText;
         });
-
+        
         // Lọc PLO (tìm theo mã PLO, tên PLO hoặc SPDV trực thuộc)
         const filteredPlo = !q ? ploList : ploList.filter(p =>
           (p.MA_PLO || '').toLowerCase().includes(q) ||
           (p.TEN_PLO || '').toLowerCase().includes(q) ||
           (p.ds_spdv || []).some(s => Object.values(s).some(v => String(v).toLowerCase().includes(q)))
         );
-
+        
         const toggleAllPlo = (open) => {
           const next = {};
           ploList.forEach(p => { next[p.MA_PLO] = open; });
           setExpandedPlo(next);
         };
+        
 
         return (
           <div className="flex min-h-screen w-full">
@@ -273,6 +283,19 @@
                         <option value="UNMAPPED">⚠ Chưa gắn PLO</option>
                         {ploList.map(p => (
                           <option key={p.MA_PLO} value={p.MA_PLO}>{p.MA_PLO} - {p.TEN_PLO}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex flex-col w-64">
+                      <label className="text-xs font-bold text-navy mb-1">Lọc theo ĐVCQ</label>
+                      <select
+                        value={filterDvcq}
+                        onChange={e => setFilterDvcq(e.target.value)}
+                        className="border border-gray-300 p-2 rounded text-sm w-full focus:outline-vnpt bg-white">
+                        <option value="ALL">Tất cả ĐVCQ</option>
+                        <option value="EMPTY">⚠ Chưa có ĐVCQ</option>
+                        {dvcqOptions.map(dv => (
+                          <option key={dv} value={dv}>{dv}</option>
                         ))}
                       </select>
                     </div>
