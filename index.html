@@ -1099,9 +1099,7 @@
                             CHI TIẾT DEAL ĐANG MỞ — {CHKD_FILTER_LABELS[chkdQuickFilter]} ({filteredChkdTable.length} CHKD)
                           </h2>
                           {chkdQuickFilter !== 'ALL' && (
-                            <button onClick={() => setChkdQuickFilter('ALL')} className="text-xs font-bold text-vnpt hover:underline">
-                              ✕ Bỏ lọc nhanh
-                            </button>
+                            <button onClick={() => setChkdQuickFilter('ALL')} className="text-xs font-bold text-vnpt hover:underline">✕ Bỏ lọc nhanh</button>
                           )}
                         </div>
                         <div className="overflow-auto flex-1 p-2">
@@ -1257,7 +1255,6 @@
                             </BarChart>
                           </ResponsiveContainer>
                         </div>
-                      </div>
                       </div>
                       
                       <div className="bg-white border border-gray-200 rounded shadow-sm p-5 flex-1 flex flex-col">
