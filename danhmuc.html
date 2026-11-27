@@ -40,7 +40,6 @@
     try {
       const API_URL = 'https://script.google.com/macros/s/AKfycby6E6r6KhZ54J6by2s1PF8MqtOSJu74GcyqO4GsFnSwWd-GmDScZFrS5Brq0IwXlO1N/exec';
 
-      // Menu đồng bộ 100% với index.html: bấm phân hệ nào nhảy thẳng về index.html?tab=...
       const MENU_ITEMS = [
         { id: 'dashboard', label: 'DASHBOARD', href: 'index.html?tab=dashboard' },
         { id: 'dean', label: 'CÁC KHUNG PHÁP LÝ', href: 'index.html?tab=dean' },
@@ -273,6 +272,7 @@
                   </div>
 
                   {activeSubTab === 'spdv' ? (
+                    <>
                     <div className="flex flex-col w-64">
                       <label className="text-xs font-bold text-navy mb-1">Lọc theo PLO</label>
                       <select
@@ -299,6 +299,7 @@
                         ))}
                       </select>
                     </div>
+                    </>
                   ) : (
                     <div className="flex gap-2">
                       <button onClick={() => toggleAllPlo(true)} className="px-3 py-2 text-xs font-bold border border-gray-300 rounded hover:bg-gray-100 text-navy">Mở tất cả</button>
