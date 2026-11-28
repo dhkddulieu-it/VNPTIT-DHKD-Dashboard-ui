@@ -399,16 +399,16 @@
               </button>
             </div>
 
-            <nav className="flex-1 py-4 px-2 space-y-1">
+            <nav className="flex-1 py-3 px-2 space-y-1">
               {navItems.map(item => (
                 <a
                   key={item.id}
                   href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
+                  className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium transition ${
                     item.active ? 'bg-[#0094D9] text-white shadow-md' : 'text-sky-100/80 hover:bg-white/10 hover:text-white'
                   }`}
                 >
-                  <i className={`fa-solid ${item.icon} w-5 text-center`}></i>
+                  <i className={`fa-solid ${item.icon} w-4 text-center`}></i>
                   {sidebarOpen && <span className="truncate">{item.label}</span>}
                 </a>
               ))}
