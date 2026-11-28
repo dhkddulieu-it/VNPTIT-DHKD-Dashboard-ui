@@ -407,13 +407,17 @@
           <aside className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-[#003B7A] text-white flex flex-col transition-all duration-200 shrink-0 shadow-xl z-20`}>
             <div className="h-16 px-4 flex items-center justify-between border-b border-white/10">
               {sidebarOpen && (
-                <div className="flex items-center gap-2.5 overflow-hidden">
-                  <div className="w-8 h-8 rounded-lg bg-[#0094D9] flex items-center justify-center font-extrabold text-sm">VN</div>
-                  <div className="leading-tight truncate">
-                    <div className="text-xs font-bold tracking-wide">VNPT-IT • KDGP</div>
-                    <div className="text-[10px] text-sky-200">Executive War-Room</div>
-                  </div>
+                <div className="bg-gradient-to-r from-[#003B7A] to-[#0094D9] p-6 text-white">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-white p-1 flex items-center justify-center shrink-0 shadow-xs">
+                  <img src="./logo-vnpt.png" alt="VNPT" className="w-full h-full object-contain"/>
                 </div>
+                <div>
+                  <div className="text-xs uppercase tracking-widest opacity-80">VNPT-IT • Ban KDGP</div>
+                  <h1 className="text-lg font-bold">War-Room Điều hành SXKD</h1>
+                </div>
+              </div>
+            </div>
               )}
               <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1.5 rounded-lg hover:bg-white/10 text-sky-200">
                 <i className={`fa-solid ${sidebarOpen ? 'fa-bars-staggered' : 'fa-bars'}`}></i>
