@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VNPT-IT | Ban KDGP - Cơ hội Kinh doanh</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root { --vnpt-navy: #003B7A; --vnpt-blue: #0094D9; --vnpt-green: #00B050; --vnpt-yellow: #FFC000; --vnpt-red: #D83A3A; }
+    body, button, input, select, textarea { font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background: #F4F7FB; color: #1E293B; }
+    .kpi-card { transition: transform .15s ease, box-shadow .15s ease; }
+    .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -5px rgba(0, 59, 122, .12); }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 999px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+    Chart.defaults.font.family = "'Nunito', sans-serif";
+
+    // ================== CẤU HÌNH KẾT NỐI ==================
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycby6E6r6KhZ54J6by2s1PF8MqtOSJu74GcyqO4GsFnSwWd-GmDScZFrS5Brq0IwXlO1N/exec";
+    const STORAGE_KEY_USER = "vnpt_dhkd_user_v1";
+
+    function VnptLogo({ size = "sm" }) {
+      const boxCls = size === "lg" ? "w-10 h-10 p-1.5" : "w-8 h-8 p-1";
+      return (
+        <div className={`${boxCls} rounded-lg bg-white flex items-center justify-center shrink-0 shadow-xs overflow-hidden text-[#003B7A] font-extrabold text-xs`}>
+          <img
+            src="./logo-vnpt.png"
+            alt="VNPT"
+            className="w-full h-full object-contain"
+            onError={(e) => { e.target.style.display = 'none'; e.target.parentNode.innerText = 'VN'; }}
+          />
+        </div>
+      );
+    }
+
+    // ================== HELPER ĐỊNH DẠNG & CẢNH BÁO ==================
+    const fmt = (n, dec = 0) => Number(n || 0).toLocaleString('vi-VN', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+
+    function isSlipped(d) {
+      if (String(d.trang_thai || '').toUpperCase() !== 'OPEN') return false;
+      if (!d.ngay_dukienchot) return false;
+      const dt = new Date(d.ngay_dukienchot);
+      return !isNaN(dt.getTime()) && dt < new Date();
+    }
+
+    function isStalled(d) {
+      return String(d.trang_thai || '').toUpperCase() === 'OPEN' && Number(d.songay_trangthai || 0) > 30;
+    }
+
+    function getAlertLevel(d) {
+      if (d.mucdo_canhbao) return d.mucdo_canhbao;
+      if (isSlipped(d) || isStalled(d) || (d.dexuat_chidao && !d.chidao_lanhdao)) return "Đỏ";
+      if (String(d.trang_thai || '').toUpperCase() === 'OPEN' && Number(d.songay_trangthai || 0) > 15) return "Vàng";
+      return "Xanh";
+    }
+
+    // ================== COMPONENT BIỂU ĐỒ CHART.JS ==================
+    function ChartBox({ id, title, subtitle, type, data, options }) {
+      const canvasRef = useRef(null);
+      const chartRef = useRef(null);
+
+      useEffect(() => {
+        if (!canvasRef.current) return;
+        if (chartRef.current) chartRef.current.destroy();
+        chartRef.current = new Chart(canvasRef.current, { type, data, options });
+        return () => { if (chartRef.current) chartRef.current.destroy(); };
+      }, [type, data, options]);
+
+      return (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-col">
+          <div className="mb-3">
+            <h3 className="text-sm font-bold text-[#003B7A] uppercase tracking-wide">{title}</h3>
+            {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+          </div>
+          <div className="relative h-64 w-full">
+            <canvas ref={canvasRef} id={id}></canvas>
+          </div>
+        </div>
+      );
+    }
+
+    // ================== MÀN HÌNH ĐĂNG NHẬP ==================
+    function LoginModal({ onLogin, loading, errorMsg }) {
+      const [email, setEmail] = useState("");
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        if (email.trim()) onLogin(email.trim().toLowerCase());
+      };
+
+      return (
+        <div className="fixed inset-0 bg-[#003B7A]/90 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="bg-gradient-to-r from-[#003B7A] to-[#0094D9] p-6 text-white">
+              <div className="flex items-center gap-3">
+                <VnptLogo size="lg" />
+                <div>
+                  <div className="text-xs uppercase tracking-widest opacity-80">VNPT-IT • Ban KDGP</div>
+                  <h1 className="text-lg font-bold">War-Room Điều hành SXKD</h1>
+                </div>
+              </div>
+            </div>
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Email xác thực (DMPHANQUYEN)</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="ten.ban@vnpt.vn"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0094D9]"
+                />
+              </div>
+              {errorMsg && <div className="text-xs text-[#D83A3A] bg-red-50 border border-red-200 rounded-lg p-2.5">{errorMsg}</div>}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-2.5 bg-[#0094D9] hover:bg-[#007bb5] text-white font-semibold rounded-lg text-sm transition flex items-center justify-center gap-2"
+              >
+                {loading ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-right-to-bracket"></i>}
+                Đăng nhập hệ thống
+              </button>
+              <p className="text-[11px] text-slate-400 text-center">
+                Phân quyền tự động theo cấp L0 / CLO L1-L2-L3 / PLO từ Google Sheets Master.
+              </p>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    // ================== ỨNG DỤNG CHÍNH ==================
+    function App() {
+      const [user, setUser] = useState(() => {
+        try { return JSON.parse(localStorage.getItem(STORAGE_KEY_USER) || "null"); } catch { return null; }
+      });
+      const [sidebarOpen, setSidebarOpen] = useState(true);
+      const [deals, setDeals] = useState([]);
+      const [history, setHistory] = useState([]);
+      const [updatedAt, setUpdatedAt] = useState("");
+      const [loading, setLoading] = useState(false);
+      const [authError, setAuthError] = useState("");
+
+      const [activeView, setActiveView] = useState("deals"); // 'deals' | 'history'
+      const [fTinh, setFTinh] = useState("ALL");
+      const [fNhom, setFNhom] = useState("ALL");
+      const [fPlo, setFPlo] = useState("ALL");
+      const [fTrangThai, setFTrangThai] = useState("ALL");
+      const [quickTab, setQuickTab] = useState("ALL");
+      const [search, setSearch] = useState("");
+
+      const [selectedDeal, setSelectedDeal] = useState(null);
+      const [chiDaoInput, setChiDaoInput] = useState("");
+      const [savingChiDao, setSavingChiDao] = useState(false);
+
+      const fetchData = async (email) => {
+        setLoading(true);
+        setAuthError("");
+        try {
+          const res = await fetch(`${GAS_API_URL}?action=getChkdData&email=${encodeURIComponent(email)}`);
+          const json = await res.json();
+          if (json.status !== 'success') {
+            setAuthError(json.message || 'Không có quyền truy cập');
+            setUser(null);
+            localStorage.removeItem(STORAGE_KEY_USER);
+          } else {
+            localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(json.user));
+            setUser(json.user);
+            setDeals(json.deals || []);
+            setHistory(json.history || []);
+            setUpdatedAt(json.updatedAt || '');
+          }
+        } catch (err) {
+          setAuthError("Lỗi kết nối GAS API: " + err.message);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      useEffect(() => {
+        if (user && user.email) fetchData(user.email);
+      }, []);
+
+      const handleLogout = () => {
+        localStorage.removeItem(STORAGE_KEY_USER);
+        setUser(null);
+        setDeals([]);
+        setHistory([]);
+      };
+
+      const handleSaveChiDao = async () => {
+        if (!selectedDeal) return;
+        setSavingChiDao(true);
+        try {
+          const res = await fetch(GAS_API_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+              email: user.email,
+              target: 'chkd',
+              record_id: selectedDeal.ma_chkd,
+              chidao_lanhdao: chiDaoInput
+            })
+          });
+          const json = await res.json();
+          if (json.status !== 'success') throw new Error(json.message || 'GAS từ chối ghi dữ liệu');
+          setDeals(prev => prev.map(d => d.ma_chkd === selectedDeal.ma_chkd ? { ...d, chidao_lanhdao: chiDaoInput } : d));
+          setSelectedDeal(null);
+        } catch (e) {
+          alert("Lưu chỉ đạo thất bại: " + e.message);
+        } finally {
+          setSavingChiDao(false);
+        }
+      };
+
+      const filterOpts = useMemo(() => ({
+        tinh: [...new Set(deals.map(d => d.ma_tinh).filter(Boolean))].sort(),
+        nhom: [...new Set(deals.map(d => d.nhomspdv_code).filter(Boolean))].sort(),
+        plo: [...new Set(deals.map(d => d.plo_code || '(Chưa gán)'))].sort(),
+        trangThai: [...new Set(deals.map(d => d.trang_thai).filter(Boolean))].sort()
+      }), [deals]);
+
+      const filteredDeals = useMemo(() => {
+        return deals.filter(d => {
+          if (fTinh !== "ALL" && d.ma_tinh !== fTinh) return false;
+          if (fNhom !== "ALL" && d.nhomspdv_code !== fNhom) return false;
+          const ploVal = d.plo_code || '(Chưa gán)';
+          if (fPlo !== "ALL" && ploVal !== fPlo) return false;
+          if (fTrangThai !== "ALL" && d.trang_thai !== fTrangThai) return false;
+
+          if (quickTab === "STALLED" && !isStalled(d)) return false;
+          if (quickTab === "SLIPPED" && !isSlipped(d)) return false;
+          if (quickTab === "CLOSING" && !(String(d.trang_thai).toUpperCase() === 'OPEN' && Number(d.tile_thang) >= 60)) return false;
+          if (quickTab === "ALERT" && !(getAlertLevel(d) === "Đỏ" || (d.dexuat_chidao && !d.chidao_lanhdao))) return false;
+
+          if (search.trim()) {
+            const q = search.toLowerCase();
+            const hay = `${d.ma_tinh} ${d.ma_chkd} ${d.ten_duan} ${d.ten_khachhang} ${d.ten_spdv} ${d.trangthai_pipeline}`.toLowerCase();
+            if (!hay.includes(q)) return false;
+          }
+          return true;
+        });
+      }, [deals, fTinh, fNhom, fPlo, fTrangThai, quickTab, search]);
+
+      const filteredHistory = useMemo(() => {
+        const dealIds = new Set(filteredDeals.map(d => d.ma_chkd));
+        return history.filter(h => {
+          if (fTinh !== "ALL" || fNhom !== "ALL" || fPlo !== "ALL" || fTrangThai !== "ALL") {
+            if (!dealIds.has(h.ma_chkd)) return false;
+          }
+          if (search.trim()) {
+            const q = search.toLowerCase();
+            const hay = `${h.log_id} ${h.ma_chkd} ${h.stage_pipeline} ${h.nguoi_cap_nhat} ${h.lydo_lost}`.toLowerCase();
+            if (!hay.includes(q)) return false;
+          }
+          return true;
+        });
+      }, [history, filteredDeals, fTinh, fNhom, fPlo, fTrangThai, search]);
+
+      // Tính 5 KPIs trọng tâm
+      const kpis = useMemo(() => {
+        const openDeals = filteredDeals.filter(d => String(d.trang_thai || '').toUpperCase() === 'OPEN');
+        const closedDeals = filteredDeals.filter(d => String(d.trang_thai || '').toUpperCase() === 'CLOSED');
+        const lostDeals = filteredDeals.filter(d => String(d.trang_thai || '').toUpperCase() === 'LOST');
+
+        const openBudget = openDeals.reduce((s, d) => s + Number(d.ngansach_duan || 0), 0);
+        const openForecast = openDeals.reduce((s, d) => s + Number(d.doanhthu_dubao || 0), 0);
+        const decided = closedDeals.length + lostDeals.length;
+        const winRate = decided > 0 ? Math.round((closedDeals.length / decided) * 100) : 0;
+
+        const stalled = openDeals.filter(isStalled);
+        const slipped = openDeals.filter(isSlipped);
+        const slippedBudget = slipped.reduce((s, d) => s + Number(d.ngansach_duan || 0), 0);
+        const pendingDir = filteredDeals.filter(d => d.dexuat_chidao && !d.chidao_lanhdao).length;
+        const totalPrePoc = filteredDeals.reduce((s, d) => s + Number(d.cp_presale_thuchien || 0) + Number(d.cp_poc_thuchien || 0), 0);
+
+        return {
+          openCount: openDeals.length, openBudget, openForecast,
+          closedCount: closedDeals.length, lostCount: lostDeals.length, winRate,
+          stalledCount: stalled.length, slippedCount: slipped.length, slippedBudget,
+          pendingDir, totalPrePoc
+        };
+      }, [filteredDeals]);
+
+      // Biểu đồ 1: Phễu Pipeline OPEN theo giai đoạn (Giá trị trVND)
+      const chartFunnelData = useMemo(() => {
+        const map = {};
+        filteredDeals.filter(d => String(d.trang_thai || '').toUpperCase() === 'OPEN').forEach(d => {
+          const st = d.trangthai_pipeline || 'Chưa phân bước';
+          if (!map[st]) map[st] = { budget: 0, forecast: 0 };
+          map[st].budget += Number(d.ngansach_duan || 0);
+          map[st].forecast += Number(d.doanhthu_dubao || 0);
+        });
+        const labels = Object.keys(map).sort();
+        return {
+          labels,
+          datasets: [
+            { label: 'Ngân sách dự kiến (tr)', data: labels.map(l => map[l].budget), backgroundColor: '#CBD5E1', borderRadius: 4 },
+            { label: 'Doanh thu dự báo (tr)', data: labels.map(l => map[l].forecast), backgroundColor: '#0094D9', borderRadius: 4 }
+          ]
+        };
+      }, [filteredDeals]);
+
+      // Biểu đồ 2: Điểm nghẽn SLA (Trung bình ngày thực tế vs SLA chuẩn từ 04_LICHSU_PIPELINE)
+      const chartSlaData = useMemo(() => {
+        const map = {};
+        filteredHistory.forEach(h => {
+          const st = h.stage_pipeline || 'Khác';
+          if (!map[st]) map[st] = { sumAct: 0, sumSla: 0, cnt: 0 };
+          map[st].sumAct += Number(h.so_ngay_o_stage_cu || 0);
+          map[st].sumSla += Number(h.sla_chuan || 0);
+          map[st].cnt += 1;
+        });
+        const labels = Object.keys(map).sort();
+        return {
+          labels,
+          datasets: [
+            { label: 'TB Ngày thực tế', data: labels.map(l => Math.round(map[l].sumAct / map[l].cnt)), backgroundColor: '#D83A3A', borderRadius: 4 },
+            { label: 'SLA chuẩn (Ngày)', data: labels.map(l => Math.round(map[l].sumSla / map[l].cnt)), backgroundColor: '#003B7A', borderRadius: 4 }
+          ]
+        };
+      }, [filteredHistory]);
+
+      const selectedTimeline = useMemo(() => {
+        if (!selectedDeal) return [];
+        return history.filter(h => h.ma_chkd === selectedDeal.ma_chkd);
+      }, [selectedDeal, history]);
+
+      const navItems = [
+        { id: 'p1', label: 'Tổng quan SXKD', icon: 'fa-chart-line', href: 'index.html' },
+        { id: 'p2', label: 'Khung pháp lý CĐS', icon: 'fa-landmark', href: 'phaply.html' },
+        { id: 'p3', label: 'Cơ hội kinh doanh', icon: 'fa-funnel-dollar', href: 'chkd.html', active: true },
+        { id: 'p4', label: 'Quản lý POC', icon: 'fa-flask', href: 'poc.html' },
+        { id: 'p5', label: 'Đấu thầu', icon: 'fa-gavel', href: 'dauthau.html' },
+        { id: 'p6', label: 'Hợp đồng', icon: 'fa-file-contract', href: 'hopdong.html' },
+        { id: 'p7', label: 'Triển khai', icon: 'fa-gears', href: 'po.html' },
+        { id: 'p8', label: 'Danh mục', icon: 'fa-database', href: 'danhmuc.html' }
+      ];
+
+      if (!user) return <LoginModal onLogin={fetchData} loading={loading} errorMsg={authError} />;
+
+      return (
+        <div className="min-h-screen flex bg-[#F4F7FB]">
+          {/* =============== SIDEBAR GỌN W-52 + LOGO VNPT =============== */}
+          <aside className={`${sidebarOpen ? 'w-52' : 'w-14'} bg-[#003B7A] text-white flex flex-col transition-all duration-200 shrink-0 shadow-xl z-20`}>
+            <div className="h-16 px-3 flex items-center justify-between border-b border-white/10">
+              {sidebarOpen && (
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <VnptLogo size="sm" />
+                  <div className="leading-tight truncate">
+                    <div className="text-xs font-extrabold tracking-wide">VNPT-IT • Ban KDGP</div>
+                    <div className="text-[10px] text-sky-200">Executive War-Room</div>
+                  </div>
+                </div>
+              )}
+              <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1.5 rounded-lg hover:bg-white/10 text-sky-200">
+                <i className={`fa-solid ${sidebarOpen ? 'fa-bars-staggered' : 'fa-bars'}`}></i>
+              </button>
+            </div>
+
+            <nav className="flex-1 py-3 px-2 space-y-1">
+              {navItems.map(item => (
+                <a
+                  key={item.id}
+                  href={item.href}
+                  className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-semibold transition ${
+                    item.active ? 'bg-[#0094D9] text-white shadow-md' : 'text-sky-100/80 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <i className={`fa-solid ${item.icon} w-4 text-center`}></i>
+                  {sidebarOpen && <span className="truncate">{item.label}</span>}
+                </a>
+              ))}
+            </nav>
+
+            <div className="p-2.5 border-t border-white/10 bg-[#002D5E]">
+              {sidebarOpen ? (
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold truncate">{user.name}</div>
+                    <div className="text-[10px] text-sky-300 truncate">{user.role} • {user.scope}</div>
+                  </div>
+                  <button onClick={handleLogout} title="Đăng xuất" className="p-1.5 rounded-lg hover:bg-red-500/20 text-red-300">
+                    <i className="fa-solid fa-right-from-bracket"></i>
+                  </button>
+                </div>
+              ) : (
+                <button onClick={handleLogout} title="Đăng xuất" className="w-full p-1.5 rounded-lg hover:bg-red-500/20 text-red-300">
+                  <i className="fa-solid fa-right-from-bracket"></i>
+                </button>
+              )}
+            </div>
+          </aside>
+
+          {/* =============== KHUNG NỘI DUNG CHÍNH =============== */}
+          <div className="flex-1 flex flex-col min-w-0">
+            <header className="bg-white border-b border-slate-200 px-6 py-3.5 sticky top-0 z-10 shadow-sm">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-[#0094D9]">
+                    Phần 3 • 03_PIPELINE_DUAN & 04_LICHSU_PIPELINE
+                  </div>
+                  <h1 className="text-lg font-extrabold text-[#003B7A]">
+                    Cơ hội Kinh doanh (Pipeline) & Kiểm soát SLA
+                  </h1>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <select value={fTinh} onChange={e => setFTinh(e.target.value)} className="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 bg-slate-50 font-semibold">
+                    <option value="ALL">Địa bàn: Tất cả</option>
+                    {filterOpts.tinh.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                  <select value={fNhom} onChange={e => setFNhom(e.target.value)} className="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 bg-slate-50 font-semibold">
+                    <option value="ALL">Nhóm SPDV: Tất cả</option>
+                    {filterOpts.nhom.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                  <select value={fPlo} onChange={e => setFPlo(e.target.value)} className="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 bg-slate-50 font-semibold">
+                    <option value="ALL">PLO: Tất cả</option>
+                    {filterOpts.plo.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                  <select value={fTrangThai} onChange={e => setFTrangThai(e.target.value)} className="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 bg-slate-50 font-semibold">
+                    <option value="ALL">Trạng thái: Tất cả</option>
+                    {filterOpts.trangThai.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                  <button
+                    onClick={() => fetchData(user.email)}
+                    className="px-3 py-1.5 bg-[#0094D9] hover:bg-[#007bb5] text-white rounded-lg text-xs font-bold flex items-center gap-1.5"
+                  >
+                    <i className={`fa-solid fa-rotate ${loading ? 'fa-spin' : ''}`}></i> Đồng bộ
+                  </button>
+                </div>
+              </div>
+            </header>
+
+            <main className="flex-1 p-6 space-y-5 max-w-[1600px] w-full mx-auto">
+              {/* TẦNG 1: 5 THẺ KPI TRỌNG TÂM */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+                <div className="kpi-card bg-white rounded-xl border border-slate-200 p-4 border-l-4 border-l-[#0094D9]">
+                  <div className="text-xs font-bold text-slate-500 uppercase">Phễu OPEN / Dự báo (KPI 6)</div>
+                  <div className="mt-2 flex items-baseline gap-1.5">
+                    <span className="text-2xl font-extrabold text-[#003B7A]">{fmt(kpis.openForecast)}</span>
+                    <span className="text-xs text-slate-500">tr ({kpis.openCount} deal)</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-[#0094D9] font-semibold">Tổng ngân sách mở: {fmt(kpis.openBudget)} tr</div>
+                </div>
+
+                <div className="kpi-card bg-white rounded-xl border border-slate-200 p-4 border-l-4 border-l-[#00B050]">
+                  <div className="text-xs font-bold text-slate-500 uppercase">Win-rate Thực tế (KPI 5)</div>
+                  <div className="mt-2 flex items-baseline gap-2">
+                    <span className={`text-2xl font-extrabold ${kpis.winRate >= 60 ? 'text-[#00B050]' : kpis.winRate >= 40 ? 'text-amber-600' : 'text-[#D83A3A]'}`}>
+                      {kpis.winRate}%
+                    </span>
+                    <span className="text-xs text-slate-500">({kpis.closedCount} Win / {kpis.lostCount} Lost)</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-slate-500">Mục tiêu điều hành: ≥ 60%</div>
+                </div>
+
+                <div className="kpi-card bg-white rounded-xl border border-slate-200 p-4 border-l-4 border-l-[#D83A3A]">
+                  <div className="text-xs font-bold text-slate-500 uppercase">Deal Ngâm >30 ngày</div>
+                  <div className="mt-2 flex items-baseline gap-2">
+                    <span className="text-2xl font-extrabold text-[#D83A3A]">{kpis.stalledCount}</span>
+                    <span className="text-xs text-slate-500">deal kẹt bước</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-[#D83A3A] font-semibold">Cần soi Timeline gỡ nút thắt</div>
+                </div>
+
+                <div className="kpi-card bg-white rounded-xl border border-slate-200 p-4 border-l-4 border-l-[#FFC000]">
+                  <div className="text-xs font-bold text-slate-500 uppercase">Trễ hạn chốt (Slipped)</div>
+                  <div className="mt-2 flex items-baseline gap-2">
+                    <span className="text-2xl font-extrabold text-amber-600">{kpis.slippedCount}</span>
+                    <span className="text-xs text-slate-500">({fmt(kpis.slippedBudget)} tr)</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-amber-700 font-semibold">Đã qua ngày dự kiến chốt</div>
+                </div>
+
+                <div className="kpi-card bg-white rounded-xl border border-slate-200 p-4 border-l-4 border-l-[#003B7A]">
+                  <div className="text-xs font-bold text-slate-500 uppercase">CP Pre-sale/POC & Chỉ đạo</div>
+                  <div className="mt-2 flex items-baseline gap-2">
+                    <span className="text-2xl font-extrabold text-[#003B7A]">{fmt(kpis.totalPrePoc)}</span>
+                    <span className="text-xs text-slate-500">tr • {kpis.pendingDir} kiến nghị</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-slate-500">Chi phí thực tế đã phát sinh</div>
+                </div>
+              </div>
+
+              {/* TẦNG 2: 2 BIỂU ĐỒ PHÂN TÍCH TRỰC QUAN */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <ChartBox
+                  id="chartFunnel"
+                  title="Phễu Pipeline OPEN theo Giai đoạn (trVND)"
+                  subtitle="So sánh Ngân sách dự kiến và Doanh thu dự báo (Weighted) ở từng bước"
+                  type="bar"
+                  data={chartFunnelData}
+                  options={{
+                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    scales: { x: { beginAtZero: true } }
+                  }}
+                />
+                <ChartBox
+                  id="chartSla"
+                  title="Điểm nghẽn SLA: TB Ngày thực tế vs SLA chuẩn"
+                  subtitle="Nguồn: Sheet 04_LICHSU_PIPELINE — Cột đỏ cao hơn xanh là bước đang tắc nghẽn"
+                  type="bar"
+                  data={chartSlaData}
+                  options={{
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } }
+                  }}
+                />
+              </div>
+
+              {/* TẦNG 3: BẢNG 2 CHẾ ĐỘ XEM (03_PIPELINE_DUAN & 04_LICHSU_PIPELINE) */}
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="p-4 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="inline-flex rounded-lg bg-slate-100 p-1">
+                      <button
+                        onClick={() => setActiveView("deals")}
+                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${
+                          activeView === "deals" ? "bg-[#003B7A] text-white" : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        <i className="fa-solid fa-funnel-dollar mr-1.5"></i>Danh sách CHKD ({filteredDeals.length})
+                      </button>
+                      <button
+                        onClick={() => setActiveView("history")}
+                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${
+                          activeView === "history" ? "bg-[#003B7A] text-white" : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        <i className="fa-solid fa-clock-rotate-left mr-1.5"></i>Lịch sử SLA ({filteredHistory.length})
+                      </button>
+                    </div>
+
+                    {activeView === "deals" && (
+                      <div className="flex flex-wrap gap-1">
+                        {[
+                          { id: 'ALL', label: 'Tất cả' },
+                          { id: 'STALLED', label: '🔴 Ngâm >30 ngày' },
+                          { id: 'SLIPPED', label: '⏰ Trễ hạn chốt' },
+                          { id: 'CLOSING', label: '🟢 Sắp chốt ≥60%' },
+                          { id: 'ALERT', label: '⚠️ Chờ LĐ chỉ đạo' }
+                        ].map(t => (
+                          <button
+                            key={t.id}
+                            onClick={() => setQuickTab(t.id)}
+                            className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition ${
+                              quickTab === t.id ? 'bg-[#0094D9] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            }`}
+                          >
+                            {t.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="relative w-full lg:w-72">
+                    <i className="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={e => setSearch(e.target.value)}
+                      placeholder="Tìm mã CHKD, dự án, khách hàng, SPDV..."
+                      className="w-full pl-8 pr-3 py-1.5 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#0094D9]"
+                    />
+                  </div>
+                </div>
+
+                {activeView === "deals" ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-50 text-[#003B7A] uppercase text-[11px] border-b border-slate-200">
+                          <th className="py-3 px-3 font-bold">Địa bàn / Mã CHKD</th>
+                          <th className="py-3 px-3 font-bold">Dự án / Khách hàng / SPDV</th>
+                          <th className="py-3 px-3 font-bold">Giai đoạn & Ngâm</th>
+                          <th className="py-3 px-3 font-bold text-right">Ngân sách / Dự báo</th>
+                          <th className="py-3 px-3 font-bold text-right">CLTC / Tỷ suất LN</th>
+                          <th className="py-3 px-3 font-bold">Cảnh báo & Chỉ đạo LĐ</th>
+                          <th className="py-3 px-3 font-bold text-center">Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {filteredDeals.length === 0 ? (
+                          <tr><td colSpan="7" className="py-8 text-center text-slate-400">Không có cơ hội phù hợp bộ lọc.</td></tr>
+                        ) : filteredDeals.slice(0, 100).map((d, idx) => {
+                          const lvl = getAlertLevel(d);
+                          const stUpper = String(d.trang_thai || '').toUpperCase();
+                          return (
+                            <tr key={d.ma_chkd || idx} className="hover:bg-sky-50/40 transition">
+                              <td className="py-3 px-3 align-top whitespace-nowrap">
+                                <span className="inline-block px-2 py-0.5 rounded bg-[#003B7A] text-white font-bold text-[10px] mb-1">{d.ma_tinh}</span>
+                                <div className="font-bold text-slate-800">{d.ma_chkd}</div>
+                                <span className={`inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                  stUpper === 'CLOSED' ? 'bg-emerald-100 text-[#00B050]' : stUpper === 'LOST' ? 'bg-red-100 text-[#D83A3A]' : 'bg-sky-100 text-[#0094D9]'
+                                }`}>{d.trang_thai}</span>
+                              </td>
+                              <td className="py-3 px-3 align-top max-w-xs">
+                                <div className="font-bold text-slate-800 line-clamp-2">{d.ten_duan}</div>
+                                <div className="text-slate-500 mt-0.5">KH: {d.ten_khachhang || '—'}</div>
+                                <div className="mt-1 flex flex-wrap gap-1">
+                                  {d.ten_spdv && <span className="px-1.5 py-0.5 bg-sky-50 text-[#0094D9] rounded text-[10px] font-bold">{d.ten_spdv}</span>}
+                                  {d.plo_code && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px]">{d.plo_code}</span>}
+                                </div>
+                              </td>
+                              <td className="py-3 px-3 align-top">
+                                <div className="font-semibold text-slate-700">{d.trangthai_pipeline || '—'}</div>
+                                <div className="text-[10px] text-slate-500 mt-0.5">Chốt DK: <b>{d.ngay_dukienchot || d.thang || '—'}</b></div>
+                                <div className="mt-1 flex flex-wrap gap-1">
+                                  {isStalled(d) && <span className="px-1.5 py-0.5 bg-red-100 text-[#D83A3A] rounded text-[10px] font-bold">Ngâm {d.songay_trangthai} ngày</span>}
+                                  {isSlipped(d) && <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded text-[10px] font-bold">Trễ hạn chốt</span>}
+                                </div>
+                              </td>
+                              <td className="py-3 px-3 align-top text-right whitespace-nowrap">
+                                <div className="font-bold text-[#003B7A]">{fmt(d.ngansach_duan)} tr</div>
+                                <div className="text-[11px] font-bold text-[#0094D9]">DB: {fmt(d.doanhthu_dubao)} tr ({fmt(d.tile_thang)}%)</div>
+                              </td>
+                              <td className="py-3 px-3 align-top text-right whitespace-nowrap">
+                                <div className="font-bold text-slate-700">{fmt(d.cltc)} tr</div>
+                                <div className="text-[10px] text-slate-500">LN: {fmt(d.tysuat_ln, 1)}%</div>
+                              </td>
+                              <td className="py-3 px-3 align-top max-w-xs">
+                                <div className="flex items-center gap-1.5 mb-1">
+                                  <span className={`w-2.5 h-2.5 rounded-full ${lvl === 'Đỏ' ? 'bg-[#D83A3A]' : lvl === 'Vàng' ? 'bg-[#FFC000]' : 'bg-[#00B050]'}`}></span>
+                                  <span className="font-bold text-[11px]">{lvl}</span>
+                                </div>
+                                {d.dexuat_chidao && <div className="text-[11px] text-slate-600 line-clamp-2"><b>Đề xuất:</b> {d.dexuat_chidao}</div>}
+                                {d.chidao_lanhdao && <div className="text-[11px] text-[#003B7A] mt-0.5 line-clamp-2"><b>Chỉ đạo:</b> {d.chidao_lanhdao}</div>}
+                              </td>
+                              <td className="py-3 px-3 align-top text-center">
+                                <button
+                                  onClick={() => { setSelectedDeal(d); setChiDaoInput(d.chidao_lanhdao || ''); }}
+                                  className="px-2.5 py-1.5 bg-[#0094D9]/10 hover:bg-[#0094D9] text-[#0094D9] hover:text-white rounded-lg font-bold transition"
+                                >
+                                  Chi tiết
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-50 text-[#003B7A] uppercase text-[11px] border-b border-slate-200">
+                          <th className="py-3 px-3 font-bold">Log ID / Mã CHKD</th>
+                          <th className="py-3 px-3 font-bold">Bước Pipeline</th>
+                          <th className="py-3 px-3 font-bold">Vào → Rời bước</th>
+                          <th className="py-3 px-3 font-bold text-right">Thực tế / SLA</th>
+                          <th className="py-3 px-3 font-bold text-right">Chênh lệch SLA</th>
+                          <th className="py-3 px-3 font-bold">Người cầm bóng (RACI)</th>
+                          <th className="py-3 px-3 font-bold">Ghi chú / Lý do LOST</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {filteredHistory.length === 0 ? (
+                          <tr><td colSpan="7" className="py-8 text-center text-slate-400">Không có nhật ký chuyển bước.</td></tr>
+                        ) : filteredHistory.slice(0, 100).map((h, i) => {
+                          const over = Number(h.chenhlech_sla || 0);
+                          return (
+                            <tr key={h.log_id || i} className="hover:bg-sky-50/40">
+                              <td className="py-2.5 px-3"><div className="font-bold text-[#003B7A]">{h.ma_chkd}</div><div className="text-[10px] text-slate-400">{h.log_id}</div></td>
+                              <td className="py-2.5 px-3 font-semibold">{h.stage_pipeline}</td>
+                              <td className="py-2.5 px-3 whitespace-nowrap">{h.ngay_vao_buoc} → {h.ngay_out_buoc || 'Hiện tại'}</td>
+                              <td className="py-2.5 px-3 text-right font-semibold">{h.so_ngay_o_stage_cu} / {h.sla_chuan} ngày</td>
+                              <td className="py-2.5 px-3 text-right">
+                                <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${over > 0 ? 'bg-red-100 text-[#D83A3A]' : 'bg-emerald-100 text-[#00B050]'}`}>
+                                  {over > 0 ? `+${over} ngày` : `${over} ngày`}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3">{h.nguoi_cap_nhat || '—'}</td>
+                              <td className="py-2.5 px-3 max-w-xs">{h.lydo_lost || h.ghi_chu_chuyen_buoc || '—'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </main>
+
+            <footer className="bg-white border-t border-slate-200 px-6 py-3 text-[11px] text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2">
+              <div>© 2026 <b>VNPT-IT | Ban KDGP - TTĐHKD</b> • Hệ thống Điều hành SXKD & Quản trị Dữ liệu (Fullstack Sheets → GitHub)</div>
+              <div>Đồng bộ dữ liệu: <b className="text-[#003B7A]">{updatedAt}</b></div>
+            </footer>
+          </div>
+
+          {/* =============== MODAL CHI TIẾT DEAL + TIMELINE + CHỈ ĐẠO =============== */}
+          {selectedDeal && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full overflow-hidden">
+                <div className="bg-[#003B7A] text-white px-5 py-3.5 flex justify-between items-center">
+                  <div>
+                    <div className="text-[10px] uppercase text-sky-300">{selectedDeal.ma_tinh} • {selectedDeal.ma_chkd} • {selectedDeal.trang_thai}</div>
+                    <h2 className="text-sm font-bold">{selectedDeal.ten_duan}</h2>
+                  </div>
+                  <button onClick={() => setSelectedDeal(null)} className="text-white/70 hover:text-white"><i className="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+
+                <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <div><span className="text-slate-400">Khách hàng / Hình thức:</span><b className="block">{selectedDeal.ten_khachhang || '—'} ({selectedDeal.hinhthuc_cungcap || '—'})</b></div>
+                    <div><span className="text-slate-400">SPDV / PLO:</span><b className="block">{selectedDeal.ten_spdv || '—'} ({selectedDeal.plo_code || '—'})</b></div>
+                    <div><span className="text-slate-400">Giai đoạn / Ngâm:</span><b className="block">{selectedDeal.trangthai_pipeline} ({selectedDeal.songay_trangthai || 0} ngày)</b></div>
+                    <div><span className="text-slate-400">Ngân sách / Dự báo:</span><b className="block text-[#003B7A]">{fmt(selectedDeal.ngansach_duan)} / {fmt(selectedDeal.doanhthu_dubao)} tr ({fmt(selectedDeal.tile_thang)}%)</b></div>
+                    <div><span className="text-slate-400">CP Pre-sale / POC / Tổng CP:</span><b className="block">{fmt(selectedDeal.cp_presale_thuchien)} / {fmt(selectedDeal.cp_poc_thuchien)} / {fmt(selectedDeal.tong_cp)} tr</b></div>
+                    <div><span className="text-slate-400">CLTC / Tỷ suất LN:</span><b className="block text-[#00B050]">{fmt(selectedDeal.cltc)} tr ({fmt(selectedDeal.tysuat_ln, 1)}%)</b></div>
+                  </div>
+
+                  {/* Timeline từ 04_LICHSU_PIPELINE */}
+                  <div>
+                    <div className="font-bold text-[#003B7A] mb-1.5 uppercase text-[11px]">Lịch sử chuyển bước (04_LICHSU_PIPELINE)</div>
+                    {selectedTimeline.length === 0 ? (
+                      <div className="p-3 bg-slate-50 rounded-lg text-slate-400">Chưa có bản ghi lịch sử cho mã {selectedDeal.ma_chkd}.</div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {selectedTimeline.map((h, i) => (
+                          <div key={i} className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                            <div>
+                              <div className="font-bold text-slate-800">{h.stage_pipeline}</div>
+                              <div className="text-[10px] text-slate-500">{h.ngay_vao_buoc} → {h.ngay_out_buoc || 'Hiện tại'} • PIC: {h.nguoi_cap_nhat || '—'}</div>
+                            </div>
+                            <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${Number(h.chenhlech_sla) > 0 ? 'bg-red-100 text-[#D83A3A]' : 'bg-emerald-100 text-[#00B050]'}`}>
+                              {h.so_ngay_o_stage_cu}d / SLA {h.sla_chuan}d
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedDeal.dexuat_chidao && (
+                    <div className="bg-sky-50 border border-sky-200 rounded-xl p-3">
+                      <div className="font-bold text-[#003B7A] mb-0.5">Đề xuất của địa bàn / CLO:</div>
+                      <div>{selectedDeal.dexuat_chidao}</div>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block font-bold text-[#003B7A] mb-1.5">Ý kiến Chỉ đạo của Lãnh đạo (ghi trực tiếp về cột <code>chidao_lanhdao</code>):</label>
+                    <textarea
+                      rows="3"
+                      value={chiDaoInput}
+                      onChange={e => setChiDaoInput(e.target.value)}
+                      placeholder="Nhập chỉ đạo tháo gỡ vướng mắc, thúc đẩy chốt Deal hoặc điều chỉnh nguồn lực..."
+                      className="w-full border border-slate-300 rounded-lg p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#0094D9]"
+                    ></textarea>
+                  </div>
+                </div>
+
+                <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+                  <button onClick={() => setSelectedDeal(null)} className="px-4 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200">Đóng</button>
+                  <button
+                    onClick={handleSaveChiDao}
+                    disabled={savingChiDao}
+                    className="px-4 py-2 rounded-lg text-xs font-bold bg-[#003B7A] hover:bg-[#002855] text-white flex items-center gap-1.5"
+                  >
+                    {savingChiDao && <i className="fa-solid fa-spinner fa-spin"></i>} Lưu chỉ đạo
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
