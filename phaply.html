@@ -367,14 +367,15 @@
 
       return (
         <div className="min-h-screen flex bg-[#F4F7FB]">
-          {/* =============== SIDEBAR ĐIỀU HƯỚNG (ĐỒNG BỘ 100% INDEX.HTML + LOGO VNPT) =============== */}
-          <aside className={`${sidebarOpen ? 'w-52' : 'w-16'} bg-[#003B7A] text-white flex flex-col transition-all duration-200 shrink-0 shadow-xl z-20`}>
-            <div className="h-16 px-4 flex items-center justify-between border-b border-white/10">
+          {/* =============== SIDEBAR CHUẨN DÙNG CHUNG (USER TRÊN NAV + FONT CHKD) =============== */}
+          <aside className={`${sidebarOpen ? 'w-52' : 'w-14'} bg-[#003B7A] text-white flex flex-col transition-all duration-200 shrink-0 shadow-xl z-20`}>
+            {/* 1. Logo & Nút thu gọn */}
+            <div className="h-16 px-3 flex items-center justify-between border-b border-white/10">
               {sidebarOpen && (
-                <div className="flex items-center gap-2.5 overflow-hidden">
+                <div className="flex items-center gap-2 overflow-hidden">
                   <VnptLogo size="sm" />
                   <div className="leading-tight truncate">
-                    <div className="text-xs font-bold tracking-wide">VNPT-IT • KDGP</div>
+                    <div className="text-xs font-extrabold tracking-wide">VNPT-IT • KDGP</div>
                     <div className="text-[10px] text-sky-200">Executive War-Room</div>
                   </div>
                 </div>
@@ -383,13 +384,33 @@
                 <i className={`fa-solid ${sidebarOpen ? 'fa-bars-staggered' : 'fa-bars'}`}></i>
               </button>
             </div>
-            
+          
+            {/* 2. Thông tin User & Nút Đăng xuất (Chuyển lên trên thanh điều hướng) */}
+            <div className="p-2.5 border-b border-white/10 bg-[#002D5E]">
+              {sidebarOpen ? (
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold truncate">{user.name}</div>
+                    <div className="text-[10px] text-sky-300 truncate">{user.role} • {user.scope}</div>
+                  </div>
+                  <button onClick={handleLogout} title="Đăng xuất" className="p-1.5 rounded-lg hover:bg-red-500/20 text-red-300 shrink-0">
+                    <i className="fa-solid fa-right-from-bracket"></i>
+                  </button>
+                </div>
+              ) : (
+                <button onClick={handleLogout} title={`Đăng xuất (${user.name})`} className="w-full p-1.5 rounded-lg hover:bg-red-500/20 text-red-300">
+                  <i className="fa-solid fa-right-from-bracket"></i>
+                </button>
+              )}
+            </div>
+          
+            {/* 3. Thanh điều hướng (Đồng bộ font text-xs giống chkd.html) */}
             <nav className="flex-1 py-3 px-2 space-y-1">
               {navItems.map(item => (
                 <a
                   key={item.id}
                   href={item.href}
-                  className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium transition ${
+                  className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-semibold transition ${
                     item.active ? 'bg-[#0094D9] text-white shadow-md' : 'text-sky-100/80 hover:bg-white/10 hover:text-white'
                   }`}
                 >
@@ -398,24 +419,6 @@
                 </a>
               ))}
             </nav>
-
-            <div className="p-3 border-t border-white/10 bg-[#002D5E]">
-              {sidebarOpen ? (
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="text-xs font-semibold truncate">{user.name}</div>
-                    <div className="text-[10px] text-sky-300 truncate">{user.role} • Phạm vi: {user.scope}</div>
-                  </div>
-                  <button onClick={handleLogout} title="Đăng xuất" className="p-2 rounded-lg hover:bg-red-500/20 text-red-300">
-                    <i className="fa-solid fa-right-from-bracket"></i>
-                  </button>
-                </div>
-              ) : (
-                <button onClick={handleLogout} title="Đăng xuất" className="w-full p-2 rounded-lg hover:bg-red-500/20 text-red-300">
-                  <i className="fa-solid fa-right-from-bracket"></i>
-                </button>
-              )}
-            </div>
           </aside>
 
           {/* =============== KHUNG NỘI DUNG CHÍNH =============== */}
