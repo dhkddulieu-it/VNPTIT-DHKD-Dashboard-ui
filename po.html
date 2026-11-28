@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VNPT-IT | Ban KDGP - Triển khai PO & Phân bổ Nhà máy</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root { --vnpt-navy: #003B7A; --vnpt-blue: #0094D9; --vnpt-green: #00B050; --vnpt-yellow: #FFC000; --vnpt-red: #D83A3A; }
+    body, button, input, select, textarea { font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background: #F4F7FB; color: #1E293B; }
+    .kpi-card { transition: transform .15s ease, box-shadow .15s ease; }
+    .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -5px rgba(0, 59, 122, .12); }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 999px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+    Chart.defaults.font.family = "'Nunito', sans-serif";
+
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycby6E6r6KhZ54J6by2s1PF8MqtOSJu74GcyqO4GsFnSwWd-GmDScZFrS5Brq0IwXlO1N/exec";
+    const STORAGE_KEY_USER = "vnpt_dhkd_user_v1";
+
+    function VnptLogo({ size = "sm" }) {
+      const boxCls = size === "lg" ? "w-10 h-10 p-1.5" : "w-8 h-8 p-1";
+      return (
+        <div className={`${boxCls} rounded-lg bg-white flex items-center justify-center shrink-0 shadow-xs overflow-hidden text-[#003B7A] font-extrabold text-xs`}>
+          <img
+            src="./logo-vnpt.png"
+            alt="VNPT"
+            className="w-full h-full object-contain"
+            onError={(e) => { e.target.style.display = 'none'; e.target.parentNode.innerText = 'VN'; }}
+          />
+        </div>
+      );
+    }
+
+    const fmt = (n, dec = 0) => Number(n || 0).toLocaleString('vi-VN', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+
+    function ChartBox({ id, title, subtitle, type, data, options }) {
+      const canvasRef = useRef(null);
+      const chartRef = useRef(null);
+      useEffect(() => {
+        if (!canvasRef.current) return;
+        if (chartRef.current) chartRef.current.destroy();
+        chartRef.current = new Chart(canvasRef.current, { type, data, options });
+        return () => { if (chartRef.current) chartRef.current.destroy(); };
+      }, [type, data, options]);
+      return (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-col">
+          <div className="mb-3">
+            <h3 className="text-sm font-bold text-[#003B7A] uppercase tracking-wide">{title}</h3>
+            {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+          </div>
+          <div className="relative h-64 w-full"><canvas ref={canvasRef} id={id}></canvas></div>
+        </div>
+      );
+    }
+
+    function LoginModal({ onLogin, loading, errorMsg }) {
+      const [email, setEmail] = useState("");
+      const handleSubmit = (e) => { e.preventDefault(); if (email.trim()) onLogin(email.trim().toLowerCase()); };
+      return (
+        <div className="fixed inset-0 bg-[#003B7A]/90 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="bg-gradient-to-r from-[#003B7A] to-[#0094D9] p-6 text-white">
+              <div className="flex items-center gap-3">
+                <VnptLogo size="lg" />
+                <div>
+                  <div className="text-xs uppercase tracking-widest opacity-80">VNPT-IT • Ban KDGP</div>
+                  <h1 className="text-lg font-bold">War-Room Điều hành SXKD</h1>
+                </div>
+              </div>
+            </div>
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Email xác thực (DMPHANQUYEN)</label>
+                <input type="email" required placeholder="ten.ban@vnpt.vn" value={email} onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0094D9]" />
+              </div>
+              {errorMsg && <div className="text-xs text-[#D83A3A] bg-red-50 border border-red-200 rounded-lg p-2.5">{errorMsg}</div>}
+              <button type="submit" disabled={loading}
+                className="w-full py-2.5 bg-[#0094D9] hover:bg-[#007bb5] text-white font-semibold rounded-lg text-sm transition flex items-center justify-center gap-2">
+                {loading ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-right-to-bracket"></i>}
+                Đăng nhập hệ thống
+              </button>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    function App() {
+      const [user, setUser] = useState(() => {
+        try { return JSON.parse(localStorage.getItem(STORAGE_KEY_USER) || "null"); } catch { return null; }
+      });
+      const [sidebarOpen, setSidebarOpen] = useState(true);
+      const [poList, setPoList] = useState([]);
+      const [phanBo, setPhanBo] = useState([]);
+      const [updatedAt, setUpdatedAt] = useState("");
+      const [loading, setLoading] = useState(false);
+      const [authError, setAuthError] = useState("");
+
+      const [activeView, setActiveView] = useState("po"); // 'po' | 'phanbo'
+      const [fTinh, setFTinh] = useState("ALL");
+      const [fKy, setFKy] = useState("ALL");
+      const [fDonVi, setFDonVi] = useState("ALL");
+      const [fLoaiDV, setFLoaiDV] = useState("ALL");
+      const [search, setSearch] = useState("");
+
+      const [modalItem, setModalItem] = useState(null); // { type: 'po' | 'phanbo', row }
+      const [chiDaoInput, setChiDaoInput] = useState("");
+      const [savingChiDao, setSavingChiDao] = useState(false);
+
+      const fetchData = async (email) => {
+        setLoading(true);
+        setAuthError("");
+        try {
+          const res = await fetch(`${GAS_API_URL}?action=getPoData&email=${encodeURIComponent(email)}`);
+          const json = await res.json();
+          if (json.status !== 'success') {
+            setAuthError(json.message || 'Không có quyền truy cập');
+            setUser(null);
+            localStorage.removeItem(STORAGE_KEY_USER);
+          } else {
+            localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(json.user));
+            setUser(json.user);
+            setPoList(json.poList || []);
+            setPhanBo(json.phanBo || []);
+            setUpdatedAt(json.updatedAt || '');
+          }
+        } catch (err) {
+          setAuthError("Lỗi kết nối GAS API: " + err.message);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      useEffect(() => { if (user && user.email) fetchData(user.email); }, []);
+
+      const handleLogout = () => { localStorage.removeItem(STORAGE_KEY_USER); setUser(null); setPoList([]); setPhanBo([]); };
+
+      const handleSaveChiDao = async () => {
+        if (!modalItem) return;
+        setSavingChiDao(true);
+        const isPO = modalItem.type === 'po';
+        const recordId = isPO ? modalItem.row.ma_po_noibo : modalItem.row.ma_hangmuc;
+        try {
+          const res = await fetch(GAS_API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ email: user.email, target: modalItem.type, record_id: recordId, chidao_lanhdao: chiDaoInput })
+          });
+          const json = await res.json();
+          if (json.status !== 'success') throw new Error(json.message || 'GAS từ chối ghi dữ liệu');
+          if (isPO) {
+            setPoList(prev => prev.map(p => p.ma_po_noibo === recordId ? { ...p, chidao_lanhdao: chiDaoInput } : p));
+          } else {
+            setPhanBo(prev => prev.map(x => x.ma_hangmuc === recordId ? { ...x, chidao_lanhdao: chiDaoInput } : x));
+          }
+          setModalItem(null);
+        } catch (e) {
+          alert("Lưu chỉ đạo thất bại: " + e.message);
+        } finally {
+          setSavingChiDao(false);
+        }
+      };
+
+      const filterOpts = useMemo(() => ({
+        tinh: [...new Set(poList.map(p => p.ma_tinh).filter(Boolean))].sort(),
+        ky: [...new Set(poList.map(p => p.ky_doi_soat || '(Chưa gán kỳ)'))].sort(),
+        donVi: [...new Set(phanBo.map(x => x.don_vi_thuc_hien).filter(Boolean))].sort(),
+        loaiDV: [...new Set(phanBo.map(x => x.loai_don_vi).filter(Boolean))].sort()
+      }), [poList, phanBo]);
+
+      const filteredPO = useMemo(() => {
+        return poList.filter(p => {
+          if (fTinh !== "ALL" && p.ma_tinh !== fTinh) return false;
+          const kyVal = p.ky_doi_soat || '(Chưa gán kỳ)';
+          if (fKy !== "ALL" && kyVal !== fKy) return false;
+          if (search.trim()) {
+            const q = search.toLowerCase();
+            const hay = `${p.ma_tinh} ${p.ma_po_noibo} ${p.ma_hd} ${p.ten_hopdong} ${p.trang_thai_po}`.toLowerCase();
+            if (!hay.includes(q)) return false;
+          }
+          return true;
+        });
+      }, [poList, fTinh, fKy, search]);
+
+      const filteredPB = useMemo(() => {
+        const poSet = new Set(filteredPO.map(p => p.ma_po_noibo));
+        return phanBo.filter(x => {
+          if ((fTinh !== "ALL" || fKy !== "ALL") && !poSet.has(x.ma_po_noibo)) return false;
+          if (fDonVi !== "ALL" && x.don_vi_thuc_hien !== fDonVi) return false;
+          if (fLoaiDV !== "ALL" && x.loai_don_vi !== fLoaiDV) return false;
+          if (search.trim()) {
+            const q = search.toLowerCase();
+            const hay = `${x.ma_hangmuc} ${x.ma_po_noibo} ${x.ma_hd} ${x.don_vi_thuc_hien} ${x.ten_hang_muc} ${x.loai_don_vi}`.toLowerCase();
+            if (!hay.includes(q)) return false;
+          }
+          return true;
+        });
+      }, [phanBo, filteredPO, fTinh, fKy, fDonVi, fLoaiDV, search]);
+
+      // Map hạng mục theo ma_po_noibo
+      const pbByPoMap = useMemo(() => {
+        const m = {};
+        phanBo.forEach(x => {
+          if (!m[x.ma_po_noibo]) m[x.ma_po_noibo] = [];
+          m[x.ma_po_noibo].push(x);
+        });
+        return m;
+      }, [phanBo]);
+
+      const kpis = useMemo(() => {
+        const totalPoVal = filteredPO.reduce((s, p) => s + Number(p.giatri_hopdong || 0), 0);
+        const totalDS = filteredPO.reduce((s, p) => s + Number(p.dt_doi_soat_ky || 0), 0);
+        const totalClo = filteredPO.reduce((s, p) => s + Number(p.dt_clo_huong || 0), 0);
+        const totalNM = filteredPO.reduce((s, p) => s + Number(p.dt_nhamay_huong || 0), 0);
+        const totalCltc = filteredPO.reduce((s, p) => s + Number(p.cltc_nhamay_ky || 0), 0);
+        const totalThauPhu = filteredPO.reduce((s, p) => s + Number(p.tong_cp_thauphu || 0), 0);
+        const cltcMargin = totalNM > 0 ? Math.round((totalCltc / totalNM) * 100) : 0;
+        const avgProgress = filteredPB.length > 0
+          ? Math.round(filteredPB.reduce((s, x) => s + Number(x.tiendo_pct || 0), 0) / filteredPB.length)
+          : 0;
+        return { poCount: filteredPO.length, pbCount: filteredPB.length, totalPoVal, totalDS, totalClo, totalNM, totalCltc, cltcMargin, totalThauPhu, avgProgress };
+      }, [filteredPO, filteredPB]);
+
+      // Biểu đồ 1: Cơ cấu Phân chia Tầng 1 (CLO vs Nhà máy vs Chi phí)
+      const chartSplitData = useMemo(() => ({
+        labels: ['Tổng GT PO', 'Kênh bán (CLO)', 'Quỹ Nhà máy (PLO)', 'CP Thầu phụ', 'CLTC Nhà máy'],
+        datasets: [{
+          label: 'Triệu VNĐ',
+          data: [kpis.totalPoVal, kpis.totalClo, kpis.totalNM, kpis.totalThauPhu, kpis.totalCltc],
+          backgroundColor: ['#003B7A', '#0094D9', '#0EA5E9', '#D83A3A', '#00B050'],
+          borderRadius: 6
+        }]
+      }), [kpis]);
+
+      // Biểu đồ 2: Top Đơn vị thực hiện (Nhà máy / Thầu phụ) theo Thành tiền (09_PHANBO_NHAMAY)
+      const chartUnitData = useMemo(() => {
+        const map = {};
+        filteredPB.forEach(x => {
+          const u = x.don_vi_thuc_hien || 'Chưa gán';
+          if (!map[u]) map[u] = { val: 0, chia: 0 };
+          map[u].val += Number(x.thanh_tien || 0);
+          map[u].chia += Number(x.gia_tri_chia_ky || 0);
+        });
+        const top = Object.entries(map).sort((a, b) => b[1].val - a[1].val).slice(0, 8);
+        return {
+          labels: top.map(x => x[0]),
+          datasets: [
+            { label: 'Ngân sách Thành tiền (tr)', data: top.map(x => x[1].val), backgroundColor: '#003B7A', borderRadius: 4 },
+            { label: 'Giá trị chia kỳ (tr)', data: top.map(x => x[1].chia), backgroundColor: '#00B050', borderRadius: 4 }
+          ]
+        };
+      }, [filteredPB]);
+
+      const navItems = [
+        { id: 'p1', label: 'Tổng quan SXKD', icon: 'fa-chart-line', href: 'index.html' },
+        { id: 'p2', label: 'Khung pháp lý CĐS', icon: 'fa-landmark', href: 'phaply.html' },
+        { id: 'p3', label: 'Cơ hội kinh doanh', icon: 'fa-funnel-dollar', href: 'chkd.html' },
+        { id: 'p4', label: 'Quản lý POC', icon: 'fa-flask', href: 'poc.html' },
+        { id: 'p5', label: 'Đấu thầu', icon: 'fa-gavel', href: 'dauthau.html' },
+        { id: 'p6', label: 'Hợp đồng', icon: 'fa-file-contract', href: 'hopdong.html' },
+        { id: 'p7', label: 'Triển khai', icon: 'fa-gears', href: 'po.html', active: true },
+        { id: 'p8', label: 'Danh mục', icon: 'fa-database', href: 'danhmuc.html' }
+      ];
+
+      if (!user) return <LoginModal onLogin={fetchData} loading={loading} errorMsg={authError} />;
+
+      return (
+        <div className="min-h-screen flex bg-[#F4F7FB]">
+          {/* =============== SIDEBAR CHUẨN DÙNG CHUNG =============== */}
+          <aside className={`${sidebarOpen ? 'w-52' : 'w-14'} bg-[#003B7A] text-white flex flex-col transition-all duration-200 shrink-0 shadow-xl z-20`}>
+            <div className="h-16 px-3 flex items-center justify-between border-b border-white/10">
+              {sidebarOpen && (
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <VnptLogo size="sm" />
+                  <div className="leading-tight truncate">
+                    <div className="text-xs font-extrabold tracking-wide">VNPT-IT • KDGP</div>
+                    <div className="text-[10px] text-sky-200">Executive War-Room</div>
+                  </div>
+                </div>
+              )}
+              <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1.5 rounded-lg hover:bg-white/10 text-sky-200">
+                <i className={`fa-solid ${sidebarOpen ? 'fa-bars-staggered' : 'fa-bars'}`}></i>
+              </button>
+            </div>
+
+            <div className="p-2.5 border-b border-white/10 bg-[#002D5E]">
+              {sidebarOpen ? (
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold truncate">{user.name}</div>
+                    <div className="text-[10px] text-sky-300 truncate">{user.role} • {user.scope}</div>
+                  </div>
+                  <button onClick={handleLogout} title="Đăng xuất" className="p-1.5 rounded-lg hover:bg-red-500/20 text-red-300 shrink-0">
+                    <i className="fa-solid fa-right-from-bracket"></i>
+                  </button>
+                </div>
+              ) : (
+                <button onClick={handleLogout} title={`Đăng xuất (${user.name})`} className="w-full p-1.5 rounded-lg hover:bg-red-500/20 text-red-300">
+                  <i className="fa-solid fa-right-from-bracket"></i>
+                </button>
+              )}
+            </div>
+
+            <nav className="flex-1 py-3 px-2 space-y-1">
+              {navItems.map(item => (
+                <a key={item.id} href={item.href}
+                  className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-semibold transition ${
+                    item.active ? 'bg-[#0094D9] text-white shadow-md' : 'text-sky-100/80 hover:bg-white/10 hover:text-white'
+                  }`}>
+                  <i className={`fa-solid ${item.icon} w-4 text-center`}></i>
+                  {sidebarOpen && <span className="truncate">{item.label}</span>}
+                </a>
+              ))}
+            </nav>
+          </aside>
+
+          {/* =============== NỘI DUNG CHÍNH =============== */}
+          <div className="flex-1 flex flex-col min-w-0">
+            <header className="bg-white border-b border-slate-200 px-6 py-3.5 sticky top-0 z-10 shadow-sm">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-[#0094D9]">Phần 7 • 08_PO_NOIBO & 09_PHANBO_NHAMAY</div>
+                  <h1 className="text-lg font-extrabold text-[#003B7A]">Đối soát PO Nội bộ & Điều hành Nhà máy</h1>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <select value={fTinh} onChange={e => setFTinh(e.target.value)} className="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 bg-slate-50 font-semibold">
+                    <option value="ALL">Địa bàn: Tất cả</option>
+                    {filterOpts.tinh.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                  <select value={fKy} onChange={e => setFKy(e.target.value)} className="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 bg-slate-50 font-semibold">
+                    <option value="ALL">Kỳ đối soát: Tất cả</option>
+                    {filterOpts.ky.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                  <select value={fDonVi} onChange={e => setFDonVi(e.target.value)} className="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 bg-slate-50 font-semibold">
+                    <option value="ALL">Đơn vị TH: Tất cả</option>
+                    {filterOpts.donVi.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                  <select value={fLoaiDV} onChange={e => setFLoaiDV(e.target.value)} className="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 bg-slate-50 font-semibold">
+                    <option value="ALL">Loại ĐV: Tất cả</option>
+                    {filterOpts.loaiDV.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                  <button onClick={() => fetchData(user.email)}
+                    className="px-3 py-1.5 bg-[#0094D9] hover:bg-[#007bb5] text-white rounded-lg text-xs font-bold flex items-center gap-1.5">
+                    <i className={`fa-solid fa-rotate ${loading ? 'fa-spin' : ''}`}></i> Đồng bộ
+                  </button>
+                </div>
+              </div>
+            </header>
+
+            <main className="flex-1 p-6 space-y-5 max-w-[1600px] w-full mx-auto">
+              {/* TẦNG 1: 5 THẺ KPI TRỌNG TÂM */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+                <div className="kpi-card bg-white rounded-xl border border-slate-200 p-4 border-l-4 border-l-[#003B7A]">
+                  <div className="text-xs font-bold text-slate-500 uppercase">Tổng GT PO Nội bộ</div>
+                  <div className="mt-2 flex items-baseline gap-1.5">
+                    <span className="text-2xl font-extrabold text-[#003B7A]">{fmt(kpis.totalPoVal)}</span>
+                    <span className="text-xs text-slate-500">tr ({kpis.poCount} PO)</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-[#0094D9] font-semibold">Đối soát kỳ: {fmt(kpis.totalDS)} tr</div>
+                </div>
+
+                <div className="kpi-card bg-white rounded-xl border border-slate-200 p-4 border-l-4 border-l-[#0094D9]">
+                  <div className="text-xs font-bold text-slate-500 uppercase">Quỹ Nhà máy / Kênh bán</div>
+                  <div className="mt-2 flex items-baseline gap-1.5">
+                    <span className="text-2xl font-extrabold text-[#0094D9]">{fmt(kpis.totalNM)}</span>
+                    <span className="text-xs text-slate-500">tr (NM)</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-slate-500">Kênh bán (CLO): <b>{fmt(kpis.totalClo)} tr</b></div>
+                </div>
+
+                <div className="kpi-card bg-white rounded-xl border border-slate-200 p-4 border-l-4 border-l-[#00B050]">
+                  <div className="text-xs font-bold text-slate-500 uppercase">CLTC Nhà máy (Lãi gộp)</div>
+                  <div className="mt-2 flex items-baseline gap-1.5">
+                    <span className="text-2xl font-extrabold text-[#00B050]">{fmt(kpis.totalCltc)}</span>
+                    <span className="text-xs text-slate-500">tr ({kpis.cltcMargin}%)</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-slate-500">Biên CLTC trên quỹ Nhà máy</div>
+                </div>
+
+                <div className="kpi-card bg-white rounded-xl border border-slate-200 p-4 border-l-4 border-l-[#D83A3A]">
+                  <div className="text-xs font-bold text-slate-500 uppercase">Chi phí Thầu phụ</div>
+                  <div className="mt-2 flex items-baseline gap-1.5">
+                    <span className="text-2xl font-extrabold text-[#D83A3A]">{fmt(kpis.totalThauPhu)}</span>
+                    <span className="text-xs text-slate-500">trVND</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-[#D83A3A] font-semibold">Kiểm soát tỷ trọng thuê ngoài</div>
+                </div>
+
+                <div className="kpi-card bg-white rounded-xl border border-slate-200 p-4 border-l-4 border-l-[#FFC000]">
+                  <div className="text-xs font-bold text-slate-500 uppercase">Tiến độ Hạng mục TB</div>
+                  <div className="mt-2 flex items-baseline gap-1.5">
+                    <span className="text-2xl font-extrabold text-[#003B7A]">{kpis.avgProgress}%</span>
+                    <span className="text-xs text-slate-500">({kpis.pbCount} hạng mục)</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-slate-500">Tổng hợp từ 09_PHANBO_NHAMAY</div>
+                </div>
+              </div>
+
+              {/* TẦNG 2: 2 BIỂU ĐỒ */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <ChartBox
+                  id="chartSplit"
+                  title="Cắt lớp Tài chính Tầng 1: PO → CLO / Nhà máy / CLTC (trVND)"
+                  subtitle="Nguồn: Sheet 08_PO_NOIBO"
+                  type="bar"
+                  data={chartSplitData}
+                  options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }}
+                />
+                <ChartBox
+                  id="chartUnit"
+                  title="Top Đơn vị Thực hiện theo Ngân sách & Giá trị chia kỳ (trVND)"
+                  subtitle="Nguồn: Sheet 09_PHANBO_NHAMAY (Nội bộ & Thầu phụ)"
+                  type="bar"
+                  data={chartUnitData}
+                  options={{ responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }}
+                />
+              </div>
+
+              {/* TẦNG 3: BẢNG 2 CHẾ ĐỘ XEM (08_PO_NOIBO & 09_PHANBO_NHAMAY) */}
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="p-4 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                  <div className="inline-flex rounded-lg bg-slate-100 p-1">
+                    <button onClick={() => setActiveView("po")}
+                      className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${activeView === "po" ? "bg-[#003B7A] text-white" : "text-slate-600"}`}>
+                      <i className="fa-solid fa-layer-group mr-1.5"></i>PO Đối soát ({filteredPO.length})
+                    </button>
+                    <button onClick={() => setActiveView("phanbo")}
+                      className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${activeView === "phanbo" ? "bg-[#003B7A] text-white" : "text-slate-600"}`}>
+                      <i className="fa-solid fa-industry mr-1.5"></i>Phân bổ Nhà máy ({filteredPB.length})
+                    </button>
+                  </div>
+
+                  <div className="relative w-full lg:w-72">
+                    <i className="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                    <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+                      placeholder="Tìm mã PO, mã HĐ, đơn vị thực hiện..."
+                      className="w-full pl-8 pr-3 py-1.5 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#0094D9]" />
+                  </div>
+                </div>
+
+                {activeView === "po" ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-50 text-[#003B7A] uppercase text-[11px] border-b border-slate-200">
+                          <th className="py-3 px-3 font-bold">Địa bàn / Mã PO</th>
+                          <th className="py-3 px-3 font-bold">Hợp đồng & Kỳ Đối soát</th>
+                          <th className="py-3 px-3 font-bold text-right">GT HĐ / ĐS Kỳ</th>
+                          <th className="py-3 px-3 font-bold text-right">CLO / Nhà máy</th>
+                          <th className="py-3 px-3 font-bold text-right">CP / CLTC Nhà máy</th>
+                          <th className="py-3 px-3 font-bold">Trạng thái & Chỉ đạo</th>
+                          <th className="py-3 px-3 font-bold text-center">Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {filteredPO.length === 0 ? (
+                          <tr><td colSpan="7" className="py-8 text-center text-slate-400">Không có bản ghi PO phù hợp.</td></tr>
+                        ) : filteredPO.map((p, i) => (
+                          <tr key={p.ma_po_noibo || i} className="hover:bg-sky-50/40 transition">
+                            <td className="py-3 px-3 align-top whitespace-nowrap">
+                              <span className="inline-block px-2 py-0.5 rounded bg-[#003B7A] text-white font-bold text-[10px] mb-1">{p.ma_tinh}</span>
+                              <div className="font-bold text-slate-800">{p.ma_po_noibo}</div>
+                              <div className="text-[10px] text-slate-500">{p.ma_hd}</div>
+                            </td>
+                            <td className="py-3 px-3 align-top max-w-xs">
+                              <div className="font-bold text-slate-800 line-clamp-2">{p.ten_hopdong}</div>
+                              <div className="text-[10px] text-slate-500 mt-0.5">Kỳ: <b>{p.ky_doi_soat || 'Chưa gán'}</b> • Chốt: {p.ngay_chot_ds || '—'}</div>
+                            </td>
+                            <td className="py-3 px-3 align-top text-right whitespace-nowrap">
+                              <div className="font-bold text-[#003B7A]">{fmt(p.giatri_hopdong, 1)} tr</div>
+                              <div className="text-[11px] font-bold text-[#00B050]">ĐS: {fmt(p.dt_doi_soat_ky, 1)} tr</div>
+                            </td>
+                            <td className="py-3 px-3 align-top text-right whitespace-nowrap">
+                              <div className="text-slate-600">CLO ({fmt(p.tile_clo)}%): <b>{fmt(p.dt_clo_huong)}</b></div>
+                              <div className="text-[#0094D9]">NM ({fmt(p.tile_nhamay)}%): <b>{fmt(p.dt_nhamay_huong)}</b></div>
+                            </td>
+                            <td className="py-3 px-3 align-top text-right whitespace-nowrap">
+                              <div className="font-bold text-[#00B050]">CLTC: {fmt(p.cltc_nhamay_ky)} tr</div>
+                              <div className="text-[10px] text-slate-500">CP NM: {fmt(p.tong_cp_nhamay)} • TP: {fmt(p.tong_cp_thauphu)}</div>
+                            </td>
+                            <td className="py-3 px-3 align-top max-w-xs">
+                              <div className="font-semibold text-slate-700">{p.trang_thai_po || '—'}</div>
+                              {p.chidao_lanhdao && <div className="text-[11px] text-[#003B7A] mt-0.5 line-clamp-2"><b>Chỉ đạo:</b> {p.chidao_lanhdao}</div>}
+                            </td>
+                            <td className="py-3 px-3 align-top text-center">
+                              <button onClick={() => { setModalItem({ type: 'po', row: p }); setChiDaoInput(p.chidao_lanhdao || ''); }}
+                                className="px-2.5 py-1.5 bg-[#0094D9]/10 hover:bg-[#0094D9] text-[#0094D9] hover:text-white rounded-lg font-bold transition">
+                                Chi tiết
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-50 text-[#003B7A] uppercase text-[11px] border-b border-slate-200">
+                          <th className="py-3 px-3 font-bold">Mã HM / PO / HĐ</th>
+                          <th className="py-3 px-3 font-bold">Đơn vị Thực hiện & Loại</th>
+                          <th className="py-3 px-3 font-bold">Hạng mục & Cơ chế giá</th>
+                          <th className="py-3 px-3 font-bold text-right">Thành tiền / Chia kỳ</th>
+                          <th className="py-3 px-3 font-bold text-right">Tiến độ & NT Nội bộ</th>
+                          <th className="py-3 px-3 font-bold">Chỉ đạo LĐ</th>
+                          <th className="py-3 px-3 font-bold text-center">Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {filteredPB.length === 0 ? (
+                          <tr><td colSpan="7" className="py-8 text-center text-slate-400">Không có hạng mục phân bổ phù hợp.</td></tr>
+                        ) : filteredPB.map((x, i) => (
+                          <tr key={x.ma_hangmuc || i} className="hover:bg-sky-50/40 transition">
+                            <td className="py-3 px-3 align-top whitespace-nowrap">
+                              <div className="font-bold text-[#003B7A]">{x.ma_hangmuc}</div>
+                              <div className="text-[10px] text-slate-500">{x.ma_po_noibo} • {x.ma_hd}</div>
+                            </td>
+                            <td className="py-3 px-3 align-top">
+                              <div className="font-bold text-slate-800">{x.don_vi_thuc_hien}</div>
+                              <span className={`inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold ${
+                                String(x.loai_don_vi || '').toLowerCase().includes('nội bộ') ? 'bg-sky-50 text-[#0094D9]' : 'bg-amber-100 text-amber-800'
+                              }`}>{x.loai_don_vi || '—'}</span>
+                            </td>
+                            <td className="py-3 px-3 align-top max-w-xs">
+                              <div className="font-semibold text-slate-800">{x.ten_hang_muc}</div>
+                              <div className="text-[10px] text-slate-500 mt-0.5">{x.coche_tinhgiathanh || '—'} ({fmt(x.khoi_luong)} × {fmt(x.don_gia)})</div>
+                            </td>
+                            <td className="py-3 px-3 align-top text-right whitespace-nowrap">
+                              <div className="font-bold text-[#003B7A]">{fmt(x.thanh_tien)} tr</div>
+                              <div className="text-[10px] text-[#00B050] font-semibold">
+                                Chia kỳ ({fmt(x.tile_bienban_po)}%): {fmt(x.gia_tri_chia_ky)} tr
+                              </div>
+                            </td>
+                            <td className="py-3 px-3 align-top text-right whitespace-nowrap">
+                              <div className="font-bold text-slate-800">{fmt(x.tiendo_pct)}%</div>
+                              <div className="text-[10px] text-slate-500">{x.nghiem_thu_noibo || 'Chưa NT'}</div>
+                            </td>
+                            <td className="py-3 px-3 align-top max-w-xs">
+                              {x.chidao_lanhdao ? <div className="text-[11px] text-[#003B7A] line-clamp-2">{x.chidao_lanhdao}</div> : <span className="text-slate-300">—</span>}
+                            </td>
+                            <td className="py-3 px-3 align-top text-center">
+                              <button onClick={() => { setModalItem({ type: 'phanbo', row: x }); setChiDaoInput(x.chidao_lanhdao || ''); }}
+                                className="px-2.5 py-1.5 bg-[#0094D9]/10 hover:bg-[#0094D9] text-[#0094D9] hover:text-white rounded-lg font-bold transition">
+                                Chi tiết
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </main>
+
+            <footer className="bg-white border-t border-slate-200 px-6 py-3 text-[11px] text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2">
+              <div>© 2026 <b>VNPT-IT | Ban KDGP - TTĐHKD</b> • Hệ thống Điều hành SXKD & Quản trị Dữ liệu (Fullstack Sheets → GitHub)</div>
+              <div>Đồng bộ dữ liệu: <b className="text-[#003B7A]">{updatedAt}</b></div>
+            </footer>
+          </div>
+
+          {/* =============== MODAL CHI TIẾT PO / HẠNG MỤC + CHỈ ĐẠO =============== */}
+          {modalItem && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full overflow-hidden">
+                <div className="bg-[#003B7A] text-white px-5 py-3.5 flex justify-between items-center">
+                  <div>
+                    <div className="text-[10px] uppercase text-sky-300">
+                      {modalItem.type === 'po'
+                        ? `08_PO_NOIBO • ${modalItem.row.ma_po_noibo} • ${modalItem.row.ma_hd}`
+                        : `09_PHANBO_NHAMAY • ${modalItem.row.ma_hangmuc} • ${modalItem.row.ma_po_noibo}`}
+                    </div>
+                    <h2 className="text-sm font-bold">
+                      {modalItem.type === 'po' ? modalItem.row.ten_hopdong : `${modalItem.row.don_vi_thuc_hien} — ${modalItem.row.ten_hang_muc}`}
+                    </h2>
+                  </div>
+                  <button onClick={() => setModalItem(null)} className="text-white/70 hover:text-white"><i className="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+
+                <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
+                  {modalItem.type === 'po' ? (
+                    <>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        <div><span className="text-slate-400">GT HĐ / ĐS kỳ:</span><b className="block text-[#003B7A]">{fmt(modalItem.row.giatri_hopdong, 1)} / {fmt(modalItem.row.dt_doi_soat_ky, 1)} tr</b></div>
+                        <div><span className="text-slate-400">CLO hưởng ({fmt(modalItem.row.tile_clo)}%):</span><b className="block">{fmt(modalItem.row.dt_clo_huong)} tr</b></div>
+                        <div><span className="text-slate-400">Nhà máy hưởng ({fmt(modalItem.row.tile_nhamay)}%):</span><b className="block text-[#0094D9]">{fmt(modalItem.row.dt_nhamay_huong)} tr</b></div>
+                        <div><span className="text-slate-400">CP Nhà máy / Thầu phụ:</span><b className="block text-[#D83A3A]">{fmt(modalItem.row.tong_cp_nhamay)} / {fmt(modalItem.row.tong_cp_thauphu)} tr</b></div>
+                        <div><span className="text-slate-400">CLTC Nhà máy kỳ:</span><b className="block text-[#00B050]">{fmt(modalItem.row.cltc_nhamay_ky)} tr</b></div>
+                        <div><span className="text-slate-400">Trạng thái PO:</span><b className="block">{modalItem.row.trang_thai_po || '—'}</b></div>
+                      </div>
+
+                      <div>
+                        <div className="font-bold text-[#003B7A] mb-1.5 uppercase text-[11px]">Các Hạng mục phân bổ thuộc PO này (09_PHANBO_NHAMAY)</div>
+                        {!(pbByPoMap[modalItem.row.ma_po_noibo] && pbByPoMap[modalItem.row.ma_po_noibo].length) ? (
+                          <div className="p-3 bg-slate-50 rounded-lg text-slate-400">Chưa có hạng mục phân bổ cho {modalItem.row.ma_po_noibo}.</div>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {pbByPoMap[modalItem.row.ma_po_noibo].map((hm, idx) => (
+                              <div key={idx} className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                                <div>
+                                  <div className="font-bold text-slate-800">{hm.don_vi_thuc_hien} ({hm.loai_don_vi}) — {hm.ten_hang_muc}</div>
+                                  <div className="text-[10px] text-slate-500">Tiến độ: {fmt(hm.tiendo_pct)}% • {hm.nghiem_thu_noibo || 'Chưa NT'}</div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="font-bold text-[#003B7A]">{fmt(hm.thanh_tien)} tr</div>
+                                  <div className="text-[10px] text-[#00B050]">Tỷ lệ BB: {fmt(hm.tile_bienban_po)}%</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                      <div><span className="text-slate-400">Đơn vị / Loại:</span><b className="block">{modalItem.row.don_vi_thuc_hien} ({modalItem.row.loai_don_vi})</b></div>
+                      <div><span className="text-slate-400">Cơ chế tính giá:</span><b className="block">{modalItem.row.coche_tinhgiathanh || '—'}</b></div>
+                      <div><span className="text-slate-400">Khối lượng × Đơn giá:</span><b className="block">{fmt(modalItem.row.khoi_luong)} × {fmt(modalItem.row.don_gia)} = {fmt(modalItem.row.thanh_tien)} tr</b></div>
+                      <div><span className="text-slate-400">Biên bản PO / Tỷ lệ / Chia kỳ:</span><b className="block text-[#00B050]">{modalItem.row.so_bienban_po || '—'} ({fmt(modalItem.row.tile_bienban_po)}%) → {fmt(modalItem.row.gia_tri_chia_ky)} tr</b></div>
+                      <div><span className="text-slate-400">CP Thực tế kỳ:</span><b className="block">{fmt(modalItem.row.cp_thuc_te_ky)} tr</b></div>
+                      <div><span className="text-slate-400">Tiến độ / NT Nội bộ:</span><b className="block">{fmt(modalItem.row.tiendo_pct)}% • {modalItem.row.nghiem_thu_noibo || '—'}</b></div>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block font-bold text-[#003B7A] mb-1.5">Ý kiến Chỉ đạo của Lãnh đạo:</label>
+                    <textarea rows="3" value={chiDaoInput} onChange={e => setChiDaoInput(e.target.value)}
+                      placeholder="Nhập chỉ đạo điều phối nhà máy, chốt biên bản chia doanh thu hoặc kiểm soát thầu phụ..."
+                      className="w-full border border-slate-300 rounded-lg p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#0094D9]"></textarea>
+                  </div>
+                </div>
+
+                <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+                  <button onClick={() => setModalItem(null)} className="px-4 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200">Đóng</button>
+                  <button onClick={handleSaveChiDao} disabled={savingChiDao}
+                    className="px-4 py-2 rounded-lg text-xs font-bold bg-[#003B7A] hover:bg-[#002855] text-white flex items-center gap-1.5">
+                    {savingChiDao && <i className="fa-solid fa-spinner fa-spin"></i>} Lưu chỉ đạo
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
