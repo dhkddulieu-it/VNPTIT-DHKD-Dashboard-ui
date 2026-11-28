@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>VNPT-IT | Ban KDGP - ĐHSXKD</title>
+  <title>VNPT-IT | Ban KDGP - Khung pháp lý CĐS</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -26,49 +26,23 @@
     const { useState, useEffect, useMemo, useRef } = React;
 
     // ================== CẤU HÌNH KẾT NỐI ==================
-    // Dán URL Web App GAS (/exec) vào đây. Khi đã dán, web TUYỆT ĐỐI không dùng dữ liệu mẫu.
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycby6E6r6KhZ54J6by2s1PF8MqtOSJu74GcyqO4GsFnSwWd-GmDScZFrS5Brq0IwXlO1N/exec";
     const STORAGE_KEY_USER = "vnpt_dhkd_user_v1";
 
-    // Dữ liệu mẫu đúng dòng 6-7 bạn cung cấp (chỉ chạy khi GAS_API_URL để trống)
-    const DEMO_PHAPLY = [
-      {
-        ma_tinh: "THA", phaply_id: "DA-THA-2026-01", so_ky_hieu_vb: "0123/QĐ-UNBD-THA", the_loai_vb: "Đề án CĐS",
-        nhom_nhiem_vu_trong_tam: "Hoàn thiện thể chế và bộ máy quản trị chuyển đổi số", khung_kien_truc: "Kiến trúc số 1425/QĐ-TTG",
-        ngay_ban_hanh: "09/12/2026", co_quan_ban_hanh: "Sở Khoa học và Công nghệ", giai_doan_ap_dung: "2026-2030",
-        link_vb_goc: "https://drive.google.com/file/d/1oZB2l7zTSSg02_D9U3zRrMy4usXkVDcO/view?usp=sharing",
-        tong_ngan_sach_du_kien: 0, trang_thai_phap_ly: "Đã ban hành", muc_do_anh_huong_vnpt: "Cao",
-        nhom_vuong_mac: "", mucdo_canhbao: "Xanh", dexuat_chidao: "", chidao_lanhdao: ""
-      },
-      {
-        ma_tinh: "THA", phaply_id: "DA-THA-2026-02", so_ky_hieu_vb: "0123/QĐ-UNBD-THA", the_loai_vb: "Đề án CĐS",
-        nhom_nhiem_vu_trong_tam: "Phát triển nguồn lực số", khung_kien_truc: "Kiến trúc số 1425/QĐ-TTG",
-        ngay_ban_hanh: "09/12/2026", co_quan_ban_hanh: "Sở Khoa học và Công nghệ", giai_doan_ap_dung: "2026-2030",
-        link_vb_goc: "https://drive.google.com/file/d/1oZB2l7zTSSg02_D9U3zRrMy4usXkVDcO/view?usp=sharing",
-        tong_ngan_sach_du_kien: 0, trang_thai_phap_ly: "Đã ban hành", muc_do_anh_huong_vnpt: "Trung bình",
-        nhom_vuong_mac: "Chưa cập nhật tổng ngân sách dự kiến", mucdo_canhbao: "Vàng", dexuat_chidao: "", chidao_lanhdao: ""
-      }
-    ];
-
-    const DEMO_NHIEMVU = [
-      {
-        ma_tinh: "THA", nhiemvu_id: "NV-THA-01", phaply_id: "DA-THA-2026-03", kh_id: "",
-        ten_nhiem_vu: "Nâng cấp tổng thể Trung tâm dữ liệu của tỉnh, kết nối đồng bộ với Trung tâm Dữ liệu quốc gia",
-        nhom_nhiem_vu: "Trung tâm dữ liệu và điện toán đám mây", nhom_tru_cot: "2. Hạ tầng số và nền tảng",
-        spdv_du_kien: "", plo_code: "", nguon_von: "", tinh_trang_von: "", kinh_phi_du_kien: 225000,
-        nam_trien_khai: "2026-2027", trang_thai_khai_thac: "", ma_chkd_link: "", doi_thu_canh_tranh: "VIETTEL",
-        clo_pic: "", sl_loi_dq: 2, nhom_vuong_mac: "Đối thủ Viettel đang bám sát; thiếu thông tin vốn & PIC",
-        mucdo_canhbao: "Đỏ", dexuat_chidao: "Đề nghị LĐ làm việc trực tiếp Sở KHCN giữ thị phần TTDL", chidao_lanhdao: ""
-      },
-      {
-        ma_tinh: "THA", nhiemvu_id: "NV-THA-02", phaply_id: "DA-THA-2026-03", kh_id: "",
-        ten_nhiem_vu: "Bảo đảm duy trì hoạt động Trung tâm dữ liệu của tỉnh và sao lưu, dự phòng.",
-        nhom_nhiem_vu: "Trung tâm dữ liệu và điện toán đám mây", nhom_tru_cot: "2. Hạ tầng số và nền tảng",
-        spdv_du_kien: "VNPT SmartCloud", plo_code: "PLO_CLOUD", nguon_von: "", tinh_trang_von: "", kinh_phi_du_kien: 25000,
-        nam_trien_khai: "2027-2030", trang_thai_khai_thac: "", ma_chkd_link: "", doi_thu_canh_tranh: "",
-        clo_pic: "", sl_loi_dq: 1, nhom_vuong_mac: "", mucdo_canhbao: "Vàng", dexuat_chidao: "", chidao_lanhdao: ""
-      }
-    ];
+    // Component Logo VNPT dùng chung cho Sidebar & LoginModal
+    function VnptLogo({ size = "sm" }) {
+      const boxCls = size === "lg" ? "w-10 h-10 p-1.5" : "w-8 h-8 p-1";
+      return (
+        <div className={`${boxCls} rounded-lg bg-white flex items-center justify-center shrink-0 shadow-xs overflow-hidden text-[#003B7A] font-extrabold text-xs`}>
+          <img
+            src="./logo-vnpt.png"
+            alt="VNPT"
+            className="w-full h-full object-contain"
+            onError={(e) => { e.target.style.display = 'none'; e.target.parentNode.innerText = 'VN'; }}
+          />
+        </div>
+      );
+    }
 
     // ================== HELPER PHÂN LOẠI TRẠNG THÁI & CẢNH BÁO ==================
     const isConverted = (r) => Boolean(r.ma_chkd_link) || String(r.trang_thai_khai_thac || '').toLowerCase().includes('chuyển');
@@ -117,7 +91,7 @@
       );
     }
 
-    // ================== MÀN HÌNH ĐĂNG NHẬP (ĐỒNG BỘ PHẦN 3 & 4) ==================
+    // ================== MÀN HÌNH ĐĂNG NHẬP (ĐỒNG BỘ INDEX.HTML) ==================
     function LoginModal({ onLogin, loading, errorMsg }) {
       const [email, setEmail] = useState("");
       const handleSubmit = (e) => {
@@ -128,7 +102,15 @@
       return (
         <div className="fixed inset-0 bg-[#003B7A]/90 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
-            
+            <div className="bg-gradient-to-r from-[#003B7A] to-[#0094D9] p-6 text-white">
+              <div className="flex items-center gap-3">
+                <VnptLogo size="lg" />
+                <div>
+                  <div className="text-xs uppercase tracking-widest opacity-80">VNPT-IT • Ban KDGP</div>
+                  <h1 className="text-lg font-bold">War-Room Điều hành SXKD</h1>
+                </div>
+              </div>
+            </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-600 uppercase mb-1.5">
@@ -173,10 +155,7 @@
       const [loading, setLoading] = useState(false);
       const [authError, setAuthError] = useState("");
 
-      // Chuyển đổi 2 bảng dữ liệu (Mặc định xem Nhiệm vụ để điều hành trực tiếp)
-      const [activeView, setActiveView] = useState("nhiemvu"); // 'nhiemvu' | 'phaply'
-
-      // Bộ lọc Header
+      const [activeView, setActiveView] = useState("nhiemvu");
       const [fTinh, setFTinh] = useState("ALL");
       const [fTheLoai, setFTheLoai] = useState("ALL");
       const [fTruCot, setFTruCot] = useState("ALL");
@@ -184,8 +163,7 @@
       const [quickTab, setQuickTab] = useState("ALL");
       const [search, setSearch] = useState("");
 
-      // Modal Chi tiết & Ghi Chỉ đạo
-      const [modalItem, setModalItem] = useState(null); // { type: 'nhiemvu' | 'phaply', row }
+      const [modalItem, setModalItem] = useState(null);
       const [chiDaoInput, setChiDaoInput] = useState("");
       const [savingChiDao, setSavingChiDao] = useState(false);
 
@@ -193,16 +171,6 @@
         setLoading(true);
         setAuthError("");
         try {
-          if (!GAS_API_URL) {
-            const demoUser = { authorized: true, email, name: email.split('@')[0], role: 'L0', scope: 'ALL' };
-            localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(demoUser));
-            setUser(demoUser);
-            setPhapLyData(DEMO_PHAPLY);
-            setNhiemVuData(DEMO_NHIEMVU);
-            setUpdatedAt("Chế độ dữ liệu mẫu");
-            setLoading(false);
-            return;
-          }
           const res = await fetch(`${GAS_API_URL}?action=getPhapLyData&email=${encodeURIComponent(email)}`);
           const json = await res.json();
           if (json.status !== 'success') {
@@ -241,20 +209,18 @@
         const recordId = isPL ? modalItem.row.phaply_id : modalItem.row.nhiemvu_id;
 
         try {
-          if (GAS_API_URL) {
-            // Không đặt header application/json để tránh lỗi CORS của GAS
-            const res = await fetch(GAS_API_URL, {
-              method: 'POST',
-              body: JSON.stringify({
-                email: user.email,
-                target: modalItem.type,
-                record_id: recordId,
-                chidao_lanhdao: chiDaoInput
-              })
-            });
-            const json = await res.json();
-            if (json.status !== 'success') throw new Error(json.message || 'GAS từ chối ghi dữ liệu');
-          }
+          const res = await fetch(GAS_API_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+              email: user.email,
+              target: modalItem.type,
+              record_id: recordId,
+              chidao_lanhdao: chiDaoInput
+            })
+          });
+          const json = await res.json();
+          if (json.status !== 'success') throw new Error(json.message || 'GAS từ chối ghi dữ liệu');
+
           if (isPL) {
             setPhapLyData(prev => prev.map(r => r.phaply_id === recordId ? { ...r, chidao_lanhdao: chiDaoInput } : r));
           } else {
@@ -268,14 +234,12 @@
         }
       };
 
-      // Map tra cứu nhanh phaply_id -> thông tin văn bản gốc
       const phapLyMap = useMemo(() => {
         const m = {};
         phapLyData.forEach(p => { m[p.phaply_id] = p; });
         return m;
       }, [phapLyData]);
 
-      // Danh sách bộ lọc động
       const filterOpts = useMemo(() => ({
         tinh: [...new Set([...phapLyData.map(r => r.ma_tinh), ...nhiemVuData.map(r => r.ma_tinh)].filter(Boolean))].sort(),
         theLoai: [...new Set(phapLyData.map(r => r.the_loai_vb).filter(Boolean))].sort(),
@@ -283,7 +247,6 @@
         plo: [...new Set(nhiemVuData.map(r => r.plo_code || '(Chưa gán)'))].sort()
       }), [phapLyData, nhiemVuData]);
 
-      // Lọc bảng 00_PHAPLY_CDS
       const filteredPL = useMemo(() => {
         return phapLyData.filter(r => {
           if (fTinh !== "ALL" && r.ma_tinh !== fTinh) return false;
@@ -297,7 +260,6 @@
         });
       }, [phapLyData, fTinh, fTheLoai, search]);
 
-      // Lọc bảng 01_PHAPLY_NVU
       const filteredNV = useMemo(() => {
         return nhiemVuData.filter(r => {
           if (fTinh !== "ALL" && r.ma_tinh !== fTinh) return false;
@@ -324,21 +286,16 @@
         });
       }, [nhiemVuData, phapLyMap, fTinh, fTheLoai, fTruCot, fPlo, quickTab, search]);
 
-      // Tính 5 KPIs trọng tâm (Chỉ số 2, 3, 4 + Độ phủ pháp lý + Chỉ đạo/DQ)
       const kpis = useMemo(() => {
         const totalPL = filteredPL.length;
         const provincesCovered = new Set(filteredPL.map(r => r.ma_tinh).filter(Boolean)).size;
-
         const totalNV = filteredNV.length;
         const convertedNV = filteredNV.filter(isConverted);
         const convRate = totalNV > 0 ? Math.round((convertedNV.length / totalNV) * 100) : 0;
-
         const compNV = filteredNV.filter(isCompetitor);
         const compBudget = compNV.reduce((s, r) => s + Number(r.kinh_phi_du_kien || 0), 0);
-
         const totalBudget = filteredNV.reduce((s, r) => s + Number(r.kinh_phi_du_kien || 0), 0);
         const convertedBudget = convertedNV.reduce((s, r) => s + Number(r.kinh_phi_du_kien || 0), 0);
-
         const fundedUnclaimed = filteredNV.filter(isFundedUnclaimed).length;
         const pendingDir =
           filteredNV.filter(r => r.dexuat_chidao && !r.chidao_lanhdao).length +
@@ -348,7 +305,6 @@
         return { totalPL, provincesCovered, totalNV, convertedCount: convertedNV.length, convRate, compCount: compNV.length, compBudget, totalBudget, convertedBudget, fundedUnclaimed, pendingDir, dqIssues };
       }, [filteredPL, filteredNV]);
 
-      // Biểu đồ 1: Trạng thái khai thác Nhiệm vụ theo Địa bàn (Stacked Bar)
       const chartTinhData = useMemo(() => {
         const map = {};
         filteredNV.forEach(r => {
@@ -369,7 +325,6 @@
         };
       }, [filteredNV]);
 
-      // Biểu đồ 2: Cơ cấu 5 Thể loại Văn bản Pháp lý (00_PHAPLY_CDS)
       const chartTheLoaiData = useMemo(() => {
         const map = {};
         filteredPL.forEach(r => {
@@ -388,14 +343,15 @@
         };
       }, [filteredPL]);
 
+      // Menu 8 phần chuẩn toàn hệ thống
       const navItems = [
         { id: 'p1', label: '1. Tổng quan SXKD', icon: 'fa-chart-line', href: 'index.html' },
         { id: 'p2', label: '2. Khung pháp lý CĐS', icon: 'fa-landmark', href: 'phaply.html', active: true },
         { id: 'p3', label: '3. Cơ hội kinh doanh', icon: 'fa-funnel-dollar', href: 'chkd.html' },
-        { id: 'p4', label: '4. Quản lý POC', icon: 'fa-flask', href: 'poc.html'},
-        { id: 'p5', label: '5. Đấu thầu', icon: 'fa-file-contract', href: 'dauthau.html' },
+        { id: 'p4', label: '4. Quản lý POC', icon: 'fa-flask', href: 'poc.html' },
+        { id: 'p5', label: '5. Đấu thầu', icon: 'fa-gavel', href: 'dauthau.html' },
         { id: 'p6', label: '6. Hợp đồng', icon: 'fa-file-contract', href: 'hopdong.html' },
-        { id: 'p7', label: '7. Triển khai', icon: 'fa-file-contract', href: 'po.html' },
+        { id: 'p7', label: '7. Triển khai', icon: 'fa-gears', href: 'po.html' },
         { id: 'p8', label: '8. Danh mục chuẩn', icon: 'fa-database', href: 'danhmuc.html' }
       ];
 
@@ -403,21 +359,17 @@
 
       return (
         <div className="min-h-screen flex bg-[#F4F7FB]">
-          {/* =============== SIDEBAR ĐIỀU HƯỚNG (ĐỒNG BỘ PHẦN 3 & 4) =============== */}
+          {/* =============== SIDEBAR ĐIỀU HƯỚNG (ĐỒNG BỘ 100% INDEX.HTML + LOGO VNPT) =============== */}
           <aside className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-[#003B7A] text-white flex flex-col transition-all duration-200 shrink-0 shadow-xl z-20`}>
             <div className="h-16 px-4 flex items-center justify-between border-b border-white/10">
               {sidebarOpen && (
-                <div className="bg-gradient-to-r from-[#003B7A] to-[#0094D9] p-6 text-white">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-white p-1 flex items-center justify-center shrink-0 shadow-xs">
-                  <img src="./logo-vnpt.png" alt="VNPT" className="w-full h-full object-contain"/>
+                <div className="flex items-center gap-2.5 overflow-hidden">
+                  <VnptLogo size="sm" />
+                  <div className="leading-tight truncate">
+                    <div className="text-xs font-bold tracking-wide">VNPT-IT • KDGP</div>
+                    <div className="text-[10px] text-sky-200">Executive War-Room</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-xs uppercase tracking-widest opacity-80">VNPT-IT • Ban KDGP</div>
-                  <h1 className="text-lg font-bold">War-Room Điều hành SXKD</h1>
-                </div>
-              </div>
-            </div>
               )}
               <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1.5 rounded-lg hover:bg-white/10 text-sky-200">
                 <i className={`fa-solid ${sidebarOpen ? 'fa-bars-staggered' : 'fa-bars'}`}></i>
@@ -460,13 +412,6 @@
 
           {/* =============== KHUNG NỘI DUNG CHÍNH =============== */}
           <div className="flex-1 flex flex-col min-w-0">
-            {!GAS_API_URL && (
-              <div className="bg-amber-50 border-b border-amber-300 px-6 py-2 text-xs text-amber-900 flex items-center justify-between">
-                <span><i className="fa-solid fa-triangle-exclamation mr-1.5 text-amber-600"></i><b>Đang chạy dữ liệu mẫu:</b> Hãy dán link Web App GAS (<code>/exec</code>) vào biến <code>GAS_API_URL</code> trong <code>dean.html</code> để kết nối dữ liệu thật.</span>
-              </div>
-            )}
-
-            {/* HEADER 2 CỘT + BỘ LỌC ĐA CHIỀU */}
             <header className="bg-white border-b border-slate-200 px-6 py-3.5 sticky top-0 z-10 shadow-sm">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                 <div>
@@ -583,10 +528,9 @@
                 />
               </div>
 
-              {/* TẦNG 3: BẢNG 2 CHẾ ĐỘ XEM (01_PHAPLY_NVU & 00_PHAPLY_CDS) */}
+              {/* TẦNG 3: BẢNG 2 CHẾ ĐỘ XEM */}
               <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                 <div className="p-4 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                  {/* Chuyển đổi bảng */}
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="inline-flex rounded-lg bg-slate-100 p-1">
                       <button
@@ -642,7 +586,6 @@
                   </div>
                 </div>
 
-                {/* BẢNG 1: NHIỆM VỤ CĐS (01_PHAPLY_NVU) */}
                 {activeView === "nhiemvu" ? (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse text-xs">
@@ -728,7 +671,6 @@
                     </table>
                   </div>
                 ) : (
-                  /* BẢNG 2: CƠ SỞ PHÁP LÝ (00_PHAPLY_CDS) */
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse text-xs">
                       <thead>
@@ -802,7 +744,6 @@
               </div>
             </main>
 
-            {/* FOOTER ĐỒNG BỘ HỆ THỐNG */}
             <footer className="bg-white border-t border-slate-200 px-6 py-3 text-[11px] text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2">
               <div>© 2026 <b>VNPT-IT | Ban KDGP - TTĐHKD</b> • Hệ thống Điều hành SXKD & Quản trị Dữ liệu (Fullstack Sheets → GitHub)</div>
               <div>Đồng bộ dữ liệu: <b className="text-[#003B7A]">{updatedAt}</b></div>
