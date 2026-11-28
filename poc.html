@@ -27,7 +27,7 @@
 
     // ================== CẤU HÌNH KẾT NỐI ==================
     // Thay URL Web App GAS thật vào đây. Để trống sẽ tự chạy dữ liệu mẫu từ dòng 6-7 của bạn.
-    const GAS_API_URL = "";
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycby6E6r6KhZ54J6by2s1PF8MqtOSJu74GcyqO4GsFnSwWd-GmDScZFrS5Brq0IwXlO1N/exec";
     const STORAGE_KEY_USER = "vnpt_dhkd_user_v1";
 
     // Dữ liệu mẫu khớp 100% schema sheet 05_QUANLY_POC (dòng 6-7 bạn cung cấp + mẫu kiểm thử)
@@ -246,11 +246,21 @@
         setSavingChiDao(true);
         try {
           if (GAS_API_URL) {
-            await fetch(GAS_API_URL, {
+            // Không dùng header 'application/json' để tránh lỗi CORS của GAS
+            const res = await fetch(GAS_API_URL, {
               method: 'POST',
-              body: JSON.stringify({ email: user.email, ma_poc: selectedRow.ma_poc, chidao_lanhdao: chiDaoInput })
+              body: JSON.stringify({
+                email: user.email,
+                ma_poc: selectedRow.ma_poc,
+                chidao_lanhdao: chiDaoInput
+              })
             });
+            const json = await res.json();
+            if (json.status !== 'success') {
+              throw new Error(json.message || 'GAS từ chối ghi dữ liệu');
+            }
           }
+          // Chỉ cập nhật giao diện khi Sheet đã ghi thành công
           setRawData(prev => prev.map(r => r.ma_poc === selectedRow.ma_poc ? { ...r, chidao_lanhdao: chiDaoInput } : r));
           setSelectedRow(null);
         } catch (e) {
