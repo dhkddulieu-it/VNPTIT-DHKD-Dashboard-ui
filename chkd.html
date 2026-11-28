@@ -356,13 +356,13 @@
       return (
         <div className="min-h-screen flex bg-[#F4F7FB]">
           {/* =============== SIDEBAR GỌN W-52 + LOGO VNPT =============== */}
-          <aside className={`${sidebarOpen ? 'w-52' : 'w-14'} bg-[#003B7A] text-white flex flex-col transition-all duration-200 shrink-0 shadow-xl z-20`}>
-            <div className="h-16 px-3 flex items-center justify-between border-b border-white/10">
+          <aside className={`${sidebarOpen ? 'w-52' : 'w-16'} bg-[#003B7A] text-white flex flex-col transition-all duration-200 shrink-0 shadow-xl z-20`}>
+            <div className="h-16 px-4 flex items-center justify-between border-b border-white/10">
               {sidebarOpen && (
-                <div className="flex items-center gap-2 overflow-hidden">
-                  <VnptLogo size="sm" />
+                <div className="flex items-center gap-2.5 overflow-hidden">
+                  <div className="w-8 h-8 rounded-lg bg-[#0094D9] flex items-center justify-center font-extrabold text-sm">VN</div>
                   <div className="leading-tight truncate">
-                    <div className="text-xs font-extrabold tracking-wide">VNPT-IT • Ban KDGP</div>
+                    <div className="text-xs font-bold tracking-wide">VNPT-IT • KDGP</div>
                     <div className="text-[10px] text-sky-200">Executive War-Room</div>
                   </div>
                 </div>
