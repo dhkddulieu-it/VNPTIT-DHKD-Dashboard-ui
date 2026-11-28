@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phần 2: Quản lý Các khung pháp lý Đề án & Nhiệm vụ CĐS | VNPT-IT Ban KDGP</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
+  <style>
+    :root { --vnpt-navy: #003B7A; --vnpt-blue: #0094D9; --vnpt-green: #00B050; --vnpt-yellow: #FFC000; --vnpt-red: #D83A3A; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #F4F7FB; color: #1E293B; }
+    .kpi-card { transition: transform .15s ease, box-shadow .15s ease; }
+    .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -5px rgba(0, 59, 122, .12); }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 999px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    // ================== CẤU HÌNH KẾT NỐI ==================
+    // Dán URL Web App GAS (/exec) vào đây. Khi đã dán, web TUYỆT ĐỐI không dùng dữ liệu mẫu.
+    const GAS_API_URL = "";
+    const STORAGE_KEY_USER = "vnpt_dhkd_user_v1";
+
+    // Dữ liệu mẫu đúng dòng 6-7 bạn cung cấp (chỉ chạy khi GAS_API_URL để trống)
+    const DEMO_PHAPLY = [
+      {
+        ma_tinh: "THA", phaply_id: "DA-THA-2026-01", so_ky_hieu_vb: "0123/QĐ-UNBD-THA", the_loai_vb: "Đề án CĐS",
+        nhom_nhiem_vu_trong_tam: "Hoàn thiện thể chế và bộ máy quản trị chuyển đổi số", khung_kien_truc: "Kiến trúc số 1425/QĐ-TTG",
+        ngay_ban_hanh: "09/12/2026", co_quan_ban_hanh: "Sở Khoa học và Công nghệ", giai_doan_ap_dung: "2026-2030",
+        link_vb_goc: "https://drive.google.com/file/d/1oZB2l7zTSSg02_D9U3zRrMy4usXkVDcO/view?usp=sharing",
+        tong_ngan_sach_du_kien: 0, trang_thai_phap_ly: "Đã ban hành", muc_do_anh_huong_vnpt: "Cao",
+        nhom_vuong_mac: "", mucdo_canhbao: "Xanh", dexuat_chidao: "", chidao_lanhdao: ""
+      },
+      {
+        ma_tinh: "THA", phaply_id: "DA-THA-2026-02", so_ky_hieu_vb: "0123/QĐ-UNBD-THA", the_loai_vb: "Đề án CĐS",
+        nhom_nhiem_vu_trong_tam: "Phát triển nguồn lực số", khung_kien_truc: "Kiến trúc số 1425/QĐ-TTG",
+        ngay_ban_hanh: "09/12/2026", co_quan_ban_hanh: "Sở Khoa học và Công nghệ", giai_doan_ap_dung: "2026-2030",
+        link_vb_goc: "https://drive.google.com/file/d/1oZB2l7zTSSg02_D9U3zRrMy4usXkVDcO/view?usp=sharing",
+        tong_ngan_sach_du_kien: 0, trang_thai_phap_ly: "Đã ban hành", muc_do_anh_huong_vnpt: "Trung bình",
+        nhom_vuong_mac: "Chưa cập nhật tổng ngân sách dự kiến", mucdo_canhbao: "Vàng", dexuat_chidao: "", chidao_lanhdao: ""
+      }
+    ];
+
+    const DEMO_NHIEMVU = [
+      {
+        ma_tinh: "THA", nhiemvu_id: "NV-THA-01", phaply_id: "DA-THA-2026-03", kh_id: "",
+        ten_nhiem_vu: "Nâng cấp tổng thể Trung tâm dữ liệu của tỉnh, kết nối đồng bộ với Trung tâm Dữ liệu quốc gia",
+        nhom_nhiem_vu: "Trung tâm dữ liệu và điện toán đám mây", nhom_tru_cot: "2. Hạ tầng số và nền tảng",
+        spdv_du_kien: "", plo_code: "", nguon_von: "", tinh_trang_von: "", kinh_phi_du_kien: 225000,
+        nam_trien_khai: "2026-2027", trang_thai_khai_thac: "", ma_chkd_link: "", doi_thu_canh_tranh: "VIETTEL",
+        clo_pic: "", sl_loi_dq: 2, nhom_vuong_mac: "Đối thủ Viettel đang bám sát; thiếu thông tin vốn & PIC",
+        mucdo_canhbao: "Đỏ", dexuat_chidao: "Đề nghị LĐ làm việc trực tiếp Sở KHCN giữ thị phần TTDL", chidao_lanhdao: ""
+      },
+      {
+        ma_tinh: "THA", nhiemvu_id: "NV-THA-02", phaply_id: "DA-THA-2026-03", kh_id: "",
+        ten_nhiem_vu: "Bảo đảm duy trì hoạt động Trung tâm dữ liệu của tỉnh và sao lưu, dự phòng.",
+        nhom_nhiem_vu: "Trung tâm dữ liệu và điện toán đám mây", nhom_tru_cot: "2. Hạ tầng số và nền tảng",
+        spdv_du_kien: "VNPT SmartCloud", plo_code: "PLO_CLOUD", nguon_von: "", tinh_trang_von: "", kinh_phi_du_kien: 25000,
+        nam_trien_khai: "2027-2030", trang_thai_khai_thac: "", ma_chkd_link: "", doi_thu_canh_tranh: "",
+        clo_pic: "", sl_loi_dq: 1, nhom_vuong_mac: "", mucdo_canhbao: "Vàng", dexuat_chidao: "", chidao_lanhdao: ""
+      }
+    ];
+
+    // ================== HELPER PHÂN LOẠI TRẠNG THÁI & CẢNH BÁO ==================
+    const isConverted = (r) => Boolean(r.ma_chkd_link) || String(r.trang_thai_khai_thac || '').toLowerCase().includes('chuyển');
+    const isCompetitor = (r) => Boolean(r.doi_thu_canh_tranh) || String(r.trang_thai_khai_thac || '').toLowerCase().includes('đối thủ');
+    const isFundedUnclaimed = (r) => {
+      const v = String(r.tinh_trang_von || '').toLowerCase();
+      return (v.includes('đã bố trí') || v.includes('đã có')) && !isConverted(r) && !isCompetitor(r);
+    };
+
+    function getAlertLevelNV(r) {
+      if (r.mucdo_canhbao) return r.mucdo_canhbao;
+      if (isCompetitor(r) || (r.dexuat_chidao && !r.chidao_lanhdao)) return "Đỏ";
+      if (isFundedUnclaimed(r) || Number(r.sl_loi_dq || 0) > 0 || !r.clo_pic) return "Vàng";
+      return "Xanh";
+    }
+
+    function getAlertLevelPL(r) {
+      if (r.mucdo_canhbao) return r.mucdo_canhbao;
+      if (r.dexuat_chidao && !r.chidao_lanhdao) return "Đỏ";
+      if (!r.link_vb_goc || Number(r.tong_ngan_sach_du_kien || 0) === 0) return "Vàng";
+      return "Xanh";
+    }
+
+    // ================== COMPONENT BIỂU ĐỒ CHART.JS ==================
+    function ChartBox({ id, title, subtitle, type, data, options }) {
+      const canvasRef = useRef(null);
+      const chartRef = useRef(null);
+
+      useEffect(() => {
+        if (!canvasRef.current) return;
+        if (chartRef.current) chartRef.current.destroy();
+        chartRef.current = new Chart(canvasRef.current, { type, data, options });
+        return () => { if (chartRef.current) chartRef.current.destroy(); };
+      }, [type, data, options]);
+
+      return (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-col">
+          <div className="mb-3">
+            <h3 className="text-sm font-bold text-[#003B7A] uppercase tracking-wide">{title}</h3>
+            {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+          </div>
+          <div className="relative h-60 w-full">
+            <canvas ref={canvasRef} id={id}></canvas>
+          </div>
+        </div>
+      );
+    }
+
+    // ================== MÀN HÌNH ĐĂNG NHẬP (ĐỒNG BỘ PHẦN 3 & 4) ==================
+    function LoginModal({ onLogin, loading, errorMsg }) {
+      const [email, setEmail] = useState("");
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        if (email.trim()) onLogin(email.trim().toLowerCase());
+      };
+
+      return (
+        <div className="fixed inset-0 bg-[#003B7A]/90 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="bg-gradient-to-r from-[#003B7A] to-[#0094D9] p-6 text-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center text-xl font-bold">V</div>
+                <div>
+                  <div className="text-xs uppercase tracking-widest opacity-80">VNPT-IT • Ban KDGP</div>
+                  <h1 className="text-lg font-bold">Hệ thống Điều hành SXKD & CĐS</h1>
+                </div>
+              </div>
+            </div>
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase mb-1.5">
+                  Email xác thực (DMPHANQUYEN)
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="ten.ban@vnpt.vn"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0094D9]"
+                />
+              </div>
+              {errorMsg && <div className="text-xs text-[#D83A3A] bg-red-50 border border-red-200 rounded-lg p-2.5">{errorMsg}</div>}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-2.5 bg-[#0094D9] hover:bg-[#007bb5] text-white font-semibold rounded-lg text-sm transition flex items-center justify-center gap-2"
+              >
+                {loading ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-right-to-bracket"></i>}
+                Đăng nhập hệ thống
+              </button>
+              <p className="text-[11px] text-slate-400 text-center">
+                Phân quyền tự động theo cấp L0 / CLO L1-L2-L3 / PLO từ Google Sheets Master.
+              </p>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    // ================== ỨNG DỤNG CHÍNH ==================
+    function App() {
+      const [user, setUser] = useState(() => {
+        try { return JSON.parse(localStorage.getItem(STORAGE_KEY_USER) || "null"); } catch { return null; }
+      });
+      const [sidebarOpen, setSidebarOpen] = useState(true);
+      const [phapLyData, setPhapLyData] = useState([]);
+      const [nhiemVuData, setNhiemVuData] = useState([]);
+      const [updatedAt, setUpdatedAt] = useState("");
+      const [loading, setLoading] = useState(false);
+      const [authError, setAuthError] = useState("");
+
+      // Chuyển đổi 2 bảng dữ liệu (Mặc định xem Nhiệm vụ để điều hành trực tiếp)
+      const [activeView, setActiveView] = useState("nhiemvu"); // 'nhiemvu' | 'phaply'
+
+      // Bộ lọc Header
+      const [fTinh, setFTinh] = useState("ALL");
+      const [fTheLoai, setFTheLoai] = useState("ALL");
+      const [fTruCot, setFTruCot] = useState("ALL");
+      const [fPlo, setFPlo] = useState("ALL");
+      const [quickTab, setQuickTab] = useState("ALL");
+      const [search, setSearch] = useState("");
+
+      // Modal Chi tiết & Ghi Chỉ đạo
+      const [modalItem, setModalItem] = useState(null); // { type: 'nhiemvu' | 'phaply', row }
+      const [chiDaoInput, setChiDaoInput] = useState("");
+      const [savingChiDao, setSavingChiDao] = useState(false);
+
+      const fetchData = async (email) => {
+        setLoading(true);
+        setAuthError("");
+        try {
+          if (!GAS_API_URL) {
+            const demoUser = { authorized: true, email, name: email.split('@')[0], role: 'L0', scope: 'ALL' };
+            localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(demoUser));
+            setUser(demoUser);
+            setPhapLyData(DEMO_PHAPLY);
+            setNhiemVuData(DEMO_NHIEMVU);
+            setUpdatedAt("Chế độ dữ liệu mẫu");
+            setLoading(false);
+            return;
+          }
+          const res = await fetch(`${GAS_API_URL}?action=getPhapLyData&email=${encodeURIComponent(email)}`);
+          const json = await res.json();
+          if (json.status !== 'success') {
+            setAuthError(json.message || 'Không có quyền truy cập');
+            setUser(null);
+            localStorage.removeItem(STORAGE_KEY_USER);
+          } else {
+            localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(json.user));
+            setUser(json.user);
+            setPhapLyData(json.phapLy || []);
+            setNhiemVuData(json.nhiemVu || []);
+            setUpdatedAt(json.updatedAt || '');
+          }
+        } catch (err) {
+          setAuthError("Lỗi kết nối GAS API: " + err.message);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      useEffect(() => {
+        if (user && user.email) fetchData(user.email);
+      }, []);
+
+      const handleLogout = () => {
+        localStorage.removeItem(STORAGE_KEY_USER);
+        setUser(null);
+        setPhapLyData([]);
+        setNhiemVuData([]);
+      };
+
+      const handleSaveChiDao = async () => {
+        if (!modalItem) return;
+        setSavingChiDao(true);
+        const isPL = modalItem.type === 'phaply';
+        const recordId = isPL ? modalItem.row.phaply_id : modalItem.row.nhiemvu_id;
+
+        try {
+          if (GAS_API_URL) {
+            // Không đặt header application/json để tránh lỗi CORS của GAS
+            const res = await fetch(GAS_API_URL, {
+              method: 'POST',
+              body: JSON.stringify({
+                email: user.email,
+                target: modalItem.type,
+                record_id: recordId,
+                chidao_lanhdao: chiDaoInput
+              })
+            });
+            const json = await res.json();
+            if (json.status !== 'success') throw new Error(json.message || 'GAS từ chối ghi dữ liệu');
+          }
+          if (isPL) {
+            setPhapLyData(prev => prev.map(r => r.phaply_id === recordId ? { ...r, chidao_lanhdao: chiDaoInput } : r));
+          } else {
+            setNhiemVuData(prev => prev.map(r => r.nhiemvu_id === recordId ? { ...r, chidao_lanhdao: chiDaoInput } : r));
+          }
+          setModalItem(null);
+        } catch (e) {
+          alert("Lưu chỉ đạo thất bại: " + e.message);
+        } finally {
+          setSavingChiDao(false);
+        }
+      };
+
+      // Map tra cứu nhanh phaply_id -> thông tin văn bản gốc
+      const phapLyMap = useMemo(() => {
+        const m = {};
+        phapLyData.forEach(p => { m[p.phaply_id] = p; });
+        return m;
+      }, [phapLyData]);
+
+      // Danh sách bộ lọc động
+      const filterOpts = useMemo(() => ({
+        tinh: [...new Set([...phapLyData.map(r => r.ma_tinh), ...nhiemVuData.map(r => r.ma_tinh)].filter(Boolean))].sort(),
+        theLoai: [...new Set(phapLyData.map(r => r.the_loai_vb).filter(Boolean))].sort(),
+        truCot: [...new Set(nhiemVuData.map(r => r.nhom_tru_cot).filter(Boolean))].sort(),
+        plo: [...new Set(nhiemVuData.map(r => r.plo_code || '(Chưa gán)'))].sort()
+      }), [phapLyData, nhiemVuData]);
+
+      // Lọc bảng 00_PHAPLY_CDS
+      const filteredPL = useMemo(() => {
+        return phapLyData.filter(r => {
+          if (fTinh !== "ALL" && r.ma_tinh !== fTinh) return false;
+          if (fTheLoai !== "ALL" && r.the_loai_vb !== fTheLoai) return false;
+          if (search.trim()) {
+            const q = search.toLowerCase();
+            const hay = `${r.ma_tinh} ${r.phaply_id} ${r.so_ky_hieu_vb} ${r.the_loai_vb} ${r.nhom_nhiem_vu_trong_tam} ${r.co_quan_ban_hanh}`.toLowerCase();
+            if (!hay.includes(q)) return false;
+          }
+          return true;
+        });
+      }, [phapLyData, fTinh, fTheLoai, search]);
+
+      // Lọc bảng 01_PHAPLY_NVU
+      const filteredNV = useMemo(() => {
+        return nhiemVuData.filter(r => {
+          if (fTinh !== "ALL" && r.ma_tinh !== fTinh) return false;
+          if (fTruCot !== "ALL" && r.nhom_tru_cot !== fTruCot) return false;
+          const ploVal = r.plo_code || '(Chưa gán)';
+          if (fPlo !== "ALL" && ploVal !== fPlo) return false;
+          if (fTheLoai !== "ALL") {
+            const parent = phapLyMap[r.phaply_id];
+            if (!parent || parent.the_loai_vb !== fTheLoai) return false;
+          }
+
+          const lvl = getAlertLevelNV(r);
+          if (quickTab === "COMPETITOR" && !isCompetitor(r)) return false;
+          if (quickTab === "FUNDED" && !isFundedUnclaimed(r)) return false;
+          if (quickTab === "CONVERTED" && !isConverted(r)) return false;
+          if (quickTab === "ALERT" && !(lvl === "Đỏ" || (r.dexuat_chidao && !r.chidao_lanhdao) || Number(r.sl_loi_dq) > 0)) return false;
+
+          if (search.trim()) {
+            const q = search.toLowerCase();
+            const hay = `${r.ma_tinh} ${r.nhiemvu_id} ${r.phaply_id} ${r.ten_nhiem_vu} ${r.nhom_nhiem_vu} ${r.spdv_du_kien} ${r.doi_thu_canh_tranh}`.toLowerCase();
+            if (!hay.includes(q)) return false;
+          }
+          return true;
+        });
+      }, [nhiemVuData, phapLyMap, fTinh, fTheLoai, fTruCot, fPlo, quickTab, search]);
+
+      // Tính 5 KPIs trọng tâm (Chỉ số 2, 3, 4 + Độ phủ pháp lý + Chỉ đạo/DQ)
+      const kpis = useMemo(() => {
+        const totalPL = filteredPL.length;
+        const provincesCovered = new Set(filteredPL.map(r => r.ma_tinh).filter(Boolean)).size;
+
+        const totalNV = filteredNV.length;
+        const convertedNV = filteredNV.filter(isConverted);
+        const convRate = totalNV > 0 ? Math.round((convertedNV.length / totalNV) * 100) : 0;
+
+        const compNV = filteredNV.filter(isCompetitor);
+        const compBudget = compNV.reduce((s, r) => s + Number(r.kinh_phi_du_kien || 0), 0);
+
+        const totalBudget = filteredNV.reduce((s, r) => s + Number(r.kinh_phi_du_kien || 0), 0);
+        const convertedBudget = convertedNV.reduce((s, r) => s + Number(r.kinh_phi_du_kien || 0), 0);
+
+        const fundedUnclaimed = filteredNV.filter(isFundedUnclaimed).length;
+        const pendingDir =
+          filteredNV.filter(r => r.dexuat_chidao && !r.chidao_lanhdao).length +
+          filteredPL.filter(r => r.dexuat_chidao && !r.chidao_lanhdao).length;
+        const dqIssues = filteredNV.filter(r => Number(r.sl_loi_dq || 0) > 0 || !r.clo_pic).length;
+
+        return { totalPL, provincesCovered, totalNV, convertedCount: convertedNV.length, convRate, compCount: compNV.length, compBudget, totalBudget, convertedBudget, fundedUnclaimed, pendingDir, dqIssues };
+      }, [filteredPL, filteredNV]);
+
+      // Biểu đồ 1: Trạng thái khai thác Nhiệm vụ theo Địa bàn (Stacked Bar)
+      const chartTinhData = useMemo(() => {
+        const map = {};
+        filteredNV.forEach(r => {
+          const t = r.ma_tinh || 'Trống';
+          if (!map[t]) map[t] = { conv: 0, comp: 0, open: 0 };
+          if (isConverted(r)) map[t].conv++;
+          else if (isCompetitor(r)) map[t].comp++;
+          else map[t].open++;
+        });
+        const sorted = Object.entries(map).sort((a, b) => (b[1].conv + b[1].comp + b[1].open) - (a[1].conv + a[1].comp + a[1].open)).slice(0, 8);
+        return {
+          labels: sorted.map(x => x[0]),
+          datasets: [
+            { label: 'Đã chuyển CHKD', data: sorted.map(x => x[1].conv), backgroundColor: '#00B050', borderRadius: 4 },
+            { label: 'Chưa chuyển hóa', data: sorted.map(x => x[1].open), backgroundColor: '#0094D9', borderRadius: 4 },
+            { label: 'Đối thủ bám sát / triển khai', data: sorted.map(x => x[1].comp), backgroundColor: '#D83A3A', borderRadius: 4 }
+          ]
+        };
+      }, [filteredNV]);
+
+      // Biểu đồ 2: Cơ cấu 5 Thể loại Văn bản Pháp lý (00_PHAPLY_CDS)
+      const chartTheLoaiData = useMemo(() => {
+        const map = {};
+        filteredPL.forEach(r => {
+          const k = r.the_loai_vb || 'Khác';
+          map[k] = (map[k] || 0) + 1;
+        });
+        const labels = Object.keys(map);
+        return {
+          labels,
+          datasets: [{
+            label: 'Số văn bản / nhóm trọng tâm',
+            data: labels.map(l => map[l]),
+            backgroundColor: ['#003B7A', '#0094D9', '#00B050', '#FFC000', '#64748B'],
+            borderRadius: 6
+          }]
+        };
+      }, [filteredPL]);
+
+      const navItems = [
+        { id: 'p1', label: '1. Tổng quan SXKD', icon: 'fa-chart-line', href: 'index.html' },
+        { id: 'p2', label: '2. Đề án & Nhiệm vụ CĐS', icon: 'fa-landmark', href: 'dean.html', active: true },
+        { id: 'p3', label: '3. Cơ hội kinh doanh', icon: 'fa-funnel-dollar', href: 'chkd.html' },
+        { id: 'p4', label: '4. Quản lý POC', icon: 'fa-flask', href: 'poc.html' },
+        { id: 'p5', label: '5. Đấu thầu & Hợp đồng', icon: 'fa-file-contract', href: 'dauthau_hd.html' },
+        { id: 'p6', label: '6. Danh mục chuẩn', icon: 'fa-database', href: 'danhmuc.html' }
+      ];
+
+      if (!user) return <LoginModal onLogin={fetchData} loading={loading} errorMsg={authError} />;
+
+      return (
+        <div className="min-h-screen flex bg-[#F4F7FB]">
+          {/* =============== SIDEBAR ĐIỀU HƯỚNG (ĐỒNG BỘ PHẦN 3 & 4) =============== */}
+          <aside className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-[#003B7A] text-white flex flex-col transition-all duration-200 shrink-0 shadow-xl z-20`}>
+            <div className="h-16 px-4 flex items-center justify-between border-b border-white/10">
+              {sidebarOpen && (
+                <div className="flex items-center gap-2.5 overflow-hidden">
+                  <div className="w-8 h-8 rounded-lg bg-[#0094D9] flex items-center justify-center font-extrabold text-sm">VN</div>
+                  <div className="leading-tight truncate">
+                    <div className="text-xs font-bold tracking-wide">VNPT-IT • KDGP</div>
+                    <div className="text-[10px] text-sky-200">Executive War-Room</div>
+                  </div>
+                </div>
+              )}
+              <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1.5 rounded-lg hover:bg-white/10 text-sky-200">
+                <i className={`fa-solid ${sidebarOpen ? 'fa-bars-staggered' : 'fa-bars'}`}></i>
+              </button>
+            </div>
+
+            <nav className="flex-1 py-4 px-2 space-y-1">
+              {navItems.map(item => (
+                <a
+                  key={item.id}
+                  href={item.href}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
+                    item.active ? 'bg-[#0094D9] text-white shadow-md' : 'text-sky-100/80 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <i className={`fa-solid ${item.icon} w-5 text-center`}></i>
+                  {sidebarOpen && <span className="truncate">{item.label}</span>}
+                </a>
+              ))}
+            </nav>
+
+            <div className="p-3 border-t border-white/10 bg-[#002D5E]">
+              {sidebarOpen ? (
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold truncate">{user.name}</div>
+                    <div className="text-[10px] text-sky-300 truncate">{user.role} • Phạm vi: {user.scope}</div>
+                  </div>
+                  <button onClick={handleLogout} title="Đăng xuất" className="p-2 rounded-lg hover:bg-red-500/20 text-red-300">
+                    <i className="fa-solid fa-right-from-bracket"></i>
+                  </button>
+                </div>
+              ) : (
+                <button onClick={handleLogout} title="Đăng xuất" className="w-full p-2 rounded-lg hover:bg-red-500/20 text-red-300">
+                  <i className="fa-solid fa-right-from-bracket"></i>
+                </button>
+              )}
+            </div>
+          </aside>
+
+          {/* =============== KHUNG NỘI DUNG CHÍNH =============== */}
+          <div className="flex-1 flex flex-col min-w-0">
+            {!GAS_API_URL && (
+              <div className="bg-amber-50 border-b border-amber-300 px-6 py-2 text-xs text-amber-900 flex items-center justify-between">
+                <span><i className="fa-solid fa-triangle-exclamation mr-1.5 text-amber-600"></i><b>Đang chạy dữ liệu mẫu:</b> Hãy dán link Web App GAS (<code>/exec</code>) vào biến <code>GAS_API_URL</code> trong <code>dean.html</code> để kết nối dữ liệu thật.</span>
+              </div>
+            )}
+
+            {/* HEADER 2 CỘT + BỘ LỌC ĐA CHIỀU */}
+            <header className="bg-white border-b border-slate-200 px-6 py-3.5 sticky top-0 z-10 shadow-sm">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-[#0094D9]">
+                    Phần 2 • 00_PHAPLY_CDS & 01_PHAPLY_NVU
+                  </div>
+                  <h1 className="text-lg font-extrabold text-[#003B7A]">
+                    Quản trị Pháp lý CĐS, Bóc tách Nhiệm vụ & Cảnh báo Thị phần
+                  </h1>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <select value={fTinh} onChange={e => setFTinh(e.target.value)} className="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 bg-slate-50 font-medium">
+                    <option value="ALL">Địa bàn: Tất cả</option>
+                    {filterOpts.tinh.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                  <select value={fTheLoai} onChange={e => setFTheLoai(e.target.value)} className="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 bg-slate-50 font-medium">
+                    <option value="ALL">Thể loại VB: Tất cả</option>
+                    {filterOpts.theLoai.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                  <select value={fTruCot} onChange={e => setFTruCot(e.target.value)} className="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 bg-slate-50 font-medium">
+                    <option value="ALL">Trụ cột: Tất cả</option>
+                    {filterOpts.truCot.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                  <select value={fPlo} onChange={e => setFPlo(e.target.value)} className="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 bg-slate-50 font-medium">
+                    <option value="ALL">PLO: Tất cả</option>
+                    {filterOpts.plo.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                  <button
+                    onClick={() => fetchData(user.email)}
+                    className="px-3 py-1.5 bg-[#0094D9] hover:bg-[#007bb5] text-white rounded-lg text-xs font-semibold flex items-center gap-1.5"
+                  >
+                    <i className={`fa-solid fa-rotate ${loading ? 'fa-spin' : ''}`}></i> Đồng bộ
+                  </button>
+                </div>
+              </div>
+            </header>
+
+            <main className="flex-1 p-6 space-y-5 max-w-[1600px] w-full mx-auto">
+              {/* TẦNG 1: 5 THẺ KPI TRỌNG TÂM */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+                <div className="kpi-card bg-white rounded-xl border border-slate-200 p-4 border-l-4 border-l-[#003B7A]">
+                  <div className="text-xs font-semibold text-slate-500 uppercase">Độ phủ Cơ sở Pháp lý</div>
+                  <div className="mt-2 flex items-baseline gap-2">
+                    <span className="text-2xl font-extrabold text-[#003B7A]">{kpis.totalPL}</span>
+                    <span className="text-xs font-semibold text-slate-500">mục ({kpis.provincesCovered}/34 Tỉnh)</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-[#0094D9] font-medium">5 thể loại VB quy hoạch & TTHT</div>
+                </div>
+
+                <div className="kpi-card bg-white rounded-xl border border-slate-200 p-4 border-l-4 border-l-[#00B050]">
+                  <div className="text-xs font-semibold text-slate-500 uppercase">Chuyển hóa CHKD (KPI 2)</div>
+                  <div className="mt-2 flex items-baseline gap-2">
+                    <span className={`text-2xl font-extrabold ${kpis.convRate >= 50 ? 'text-[#00B050]' : 'text-amber-600'}`}>
+                      {kpis.convRate}%
+                    </span>
+                    <span className="text-xs text-slate-500">({kpis.convertedCount}/{kpis.totalNV} NV)</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-slate-500">Mục tiêu điều hành: ≥ 50%</div>
+                </div>
+
+                <div className="kpi-card bg-white rounded-xl border border-slate-200 p-4 border-l-4 border-l-[#D83A3A]">
+                  <div className="text-xs font-semibold text-slate-500 uppercase">Cảnh báo Đối thủ (KPI 3)</div>
+                  <div className="mt-2 flex items-baseline gap-2">
+                    <span className="text-2xl font-extrabold text-[#D83A3A]">{kpis.compCount}</span>
+                    <span className="text-xs text-slate-500">NV ({kpis.compBudget.toLocaleString('vi-VN')} tr)</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-[#D83A3A] font-medium">Báo động đỏ giữ thị phần địa bàn</div>
+                </div>
+
+                <div className="kpi-card bg-white rounded-xl border border-slate-200 p-4 border-l-4 border-l-[#0094D9]">
+                  <div className="text-xs font-semibold text-slate-500 uppercase">Quy mô Thượng nguồn (KPI 4)</div>
+                  <div className="mt-2 flex items-baseline gap-1.5">
+                    <span className="text-2xl font-extrabold text-[#003B7A]">{kpis.totalBudget.toLocaleString('vi-VN')}</span>
+                    <span className="text-xs font-semibold text-slate-500">trVND</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-[#00B050] font-medium">Đã vào CHKD: {kpis.convertedBudget.toLocaleString('vi-VN')} tr</div>
+                </div>
+
+                <div className="kpi-card bg-white rounded-xl border border-slate-200 p-4 border-l-4 border-l-[#FFC000]">
+                  <div className="text-xs font-semibold text-slate-500 uppercase">Chờ LĐ Chỉ đạo / Lỗi DQ</div>
+                  <div className="mt-2 flex items-baseline gap-2">
+                    <span className="text-2xl font-extrabold text-amber-600">{kpis.pendingDir}</span>
+                    <span className="text-xs text-slate-500">kiến nghị • {kpis.dqIssues} lỗi DQ</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-amber-700 font-medium">Có vốn chưa CHKD: {kpis.fundedUnclaimed} NV</div>
+                </div>
+              </div>
+
+              {/* TẦNG 2: 2 BIỂU ĐỒ PHÂN TÍCH TRỰC QUAN */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <ChartBox
+                  id="chartTinhNV"
+                  title="Tình hình Khai thác Nhiệm vụ theo Địa bàn"
+                  subtitle="So sánh giữa Đã chuyển CHKD, Chưa chuyển hóa và Đối thủ bám sát"
+                  type="bar"
+                  data={chartTinhData}
+                  options={{
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } }
+                  }}
+                />
+                <ChartBox
+                  id="chartTheLoai"
+                  title="Cơ cấu Cơ sở Pháp lý theo 5 Thể loại Văn bản"
+                  subtitle="Nguồn: Sheet 00_PHAPLY_CDS (Đề án, KH năm, Khung KT, TTHT)"
+                  type="bar"
+                  data={chartTheLoaiData}
+                  options={{
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                  }}
+                />
+              </div>
+
+              {/* TẦNG 3: BẢNG 2 CHẾ ĐỘ XEM (01_PHAPLY_NVU & 00_PHAPLY_CDS) */}
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="p-4 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                  {/* Chuyển đổi bảng */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="inline-flex rounded-lg bg-slate-100 p-1">
+                      <button
+                        onClick={() => setActiveView("nhiemvu")}
+                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${
+                          activeView === "nhiemvu" ? "bg-[#003B7A] text-white shadow-xs" : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        <i className="fa-solid fa-list-check mr-1.5"></i>Nhiệm vụ CĐS ({filteredNV.length})
+                      </button>
+                      <button
+                        onClick={() => setActiveView("phaply")}
+                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${
+                          activeView === "phaply" ? "bg-[#003B7A] text-white shadow-xs" : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        <i className="fa-solid fa-scale-balanced mr-1.5"></i>Cơ sở Pháp lý ({filteredPL.length})
+                      </button>
+                    </div>
+
+                    {activeView === "nhiemvu" && (
+                      <div className="flex flex-wrap gap-1">
+                        {[
+                          { id: 'ALL', label: 'Tất cả' },
+                          { id: 'COMPETITOR', label: '🔴 Đối thủ' },
+                          { id: 'FUNDED', label: '💰 Có vốn chưa CHKD' },
+                          { id: 'CONVERTED', label: '🟢 Đã chuyển CHKD' },
+                          { id: 'ALERT', label: '⚠️ Chờ LĐ / Lỗi DQ' }
+                        ].map(t => (
+                          <button
+                            key={t.id}
+                            onClick={() => setQuickTab(t.id)}
+                            className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition ${
+                              quickTab === t.id ? 'bg-[#0094D9] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            }`}
+                          >
+                            {t.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="relative w-full lg:w-72">
+                    <i className="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={e => setSearch(e.target.value)}
+                      placeholder="Tìm mã NV, pháp lý, tên nhiệm vụ, đối thủ..."
+                      className="w-full pl-8 pr-3 py-1.5 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#0094D9]"
+                    />
+                  </div>
+                </div>
+
+                {/* BẢNG 1: NHIỆM VỤ CĐS (01_PHAPLY_NVU) */}
+                {activeView === "nhiemvu" ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-50 text-[#003B7A] uppercase text-[11px] border-b border-slate-200">
+                          <th className="py-3 px-3 font-bold">Địa bàn / Mã NV</th>
+                          <th className="py-3 px-3 font-bold">Nội dung Nhiệm vụ & Trụ cột</th>
+                          <th className="py-3 px-3 font-bold">SPDV / PLO</th>
+                          <th className="py-3 px-3 font-bold">Kinh phí & Vốn</th>
+                          <th className="py-3 px-3 font-bold">Khai thác & Đối thủ</th>
+                          <th className="py-3 px-3 font-bold">Cảnh báo & Chỉ đạo LĐ</th>
+                          <th className="py-3 px-3 font-bold text-center">Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {filteredNV.length === 0 ? (
+                          <tr><td colSpan="7" className="py-8 text-center text-slate-400">Không có nhiệm vụ phù hợp bộ lọc.</td></tr>
+                        ) : filteredNV.map((r, idx) => {
+                          const lvl = getAlertLevelNV(r);
+                          return (
+                            <tr key={r.nhiemvu_id || idx} className="hover:bg-sky-50/40 transition">
+                              <td className="py-3 px-3 align-top whitespace-nowrap">
+                                <span className="inline-block px-2 py-0.5 rounded bg-[#003B7A] text-white font-bold text-[10px] mb-1">
+                                  {r.ma_tinh || 'THIẾU'}
+                                </span>
+                                <div className="font-bold text-slate-800">{r.nhiemvu_id}</div>
+                                <div className="text-[10px] text-slate-500">{r.phaply_id}</div>
+                              </td>
+                              <td className="py-3 px-3 align-top max-w-sm">
+                                <div className="font-semibold text-slate-800">{r.ten_nhiem_vu}</div>
+                                <div className="text-[11px] text-slate-500 mt-0.5">{r.nhom_nhiem_vu}</div>
+                                {r.nhom_tru_cot && (
+                                  <span className="inline-block mt-1 px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px]">{r.nhom_tru_cot}</span>
+                                )}
+                              </td>
+                              <td className="py-3 px-3 align-top">
+                                {r.spdv_du_kien ? (
+                                  <span className="inline-block px-2 py-0.5 bg-sky-50 text-[#0094D9] rounded text-[10px] font-bold">{r.spdv_du_kien}</span>
+                                ) : <span className="text-slate-400 italic">Chưa gán SPDV</span>}
+                                {r.plo_code && <div className="text-[10px] text-slate-500 mt-1">{r.plo_code}</div>}
+                              </td>
+                              <td className="py-3 px-3 align-top whitespace-nowrap">
+                                <div className="font-bold text-[#003B7A]">{Number(r.kinh_phi_du_kien || 0).toLocaleString('vi-VN')} tr</div>
+                                <div className="text-[10px] text-slate-500">{r.nam_trien_khai || 'Chưa rõ năm'}</div>
+                                <div className="text-[10px] text-slate-500">{r.tinh_trang_von || <span className="text-amber-600">Chưa rõ vốn</span>}</div>
+                              </td>
+                              <td className="py-3 px-3 align-top">
+                                <div className="font-semibold text-slate-700">{r.trang_thai_khai_thac || 'Chưa cập nhật'}</div>
+                                {r.ma_chkd_link && (
+                                  <span className="inline-block mt-1 px-1.5 py-0.5 bg-emerald-100 text-[#00B050] rounded text-[10px] font-bold">
+                                    CHKD: {r.ma_chkd_link}
+                                  </span>
+                                )}
+                                {r.doi_thu_canh_tranh && (
+                                  <span className="inline-block mt-1 px-1.5 py-0.5 bg-red-100 text-[#D83A3A] rounded text-[10px] font-bold">
+                                    Đối thủ: {r.doi_thu_canh_tranh}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3 px-3 align-top max-w-xs">
+                                <div className="flex items-center gap-1.5 mb-1">
+                                  <span className={`w-2.5 h-2.5 rounded-full ${lvl === 'Đỏ' ? 'bg-[#D83A3A]' : lvl === 'Vàng' ? 'bg-[#FFC000]' : 'bg-[#00B050]'}`}></span>
+                                  <span className="font-bold text-[11px]">{lvl}</span>
+                                  {Number(r.sl_loi_dq) > 0 && (
+                                    <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded text-[10px] font-semibold">{r.sl_loi_dq} lỗi DQ</span>
+                                  )}
+                                </div>
+                                {r.dexuat_chidao && <div className="text-[11px] text-slate-600 line-clamp-2"><b>Đề xuất:</b> {r.dexuat_chidao}</div>}
+                                {r.chidao_lanhdao && <div className="text-[11px] text-[#003B7A] mt-0.5 line-clamp-2"><b>Chỉ đạo:</b> {r.chidao_lanhdao}</div>}
+                              </td>
+                              <td className="py-3 px-3 align-top text-center">
+                                <button
+                                  onClick={() => { setModalItem({ type: 'nhiemvu', row: r }); setChiDaoInput(r.chidao_lanhdao || ''); }}
+                                  className="px-2.5 py-1.5 bg-[#0094D9]/10 hover:bg-[#0094D9] text-[#0094D9] hover:text-white rounded-lg font-semibold transition"
+                                >
+                                  Chi tiết
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  /* BẢNG 2: CƠ SỞ PHÁP LÝ (00_PHAPLY_CDS) */
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-50 text-[#003B7A] uppercase text-[11px] border-b border-slate-200">
+                          <th className="py-3 px-3 font-bold">Địa bàn / Mã PL</th>
+                          <th className="py-3 px-3 font-bold">Số ký hiệu & Thể loại VB</th>
+                          <th className="py-3 px-3 font-bold">Nhóm nhiệm vụ trọng tâm & Khung KT</th>
+                          <th className="py-3 px-3 font-bold">Hiệu lực & Cơ quan</th>
+                          <th className="py-3 px-3 font-bold">Ngân sách / Ảnh hưởng</th>
+                          <th className="py-3 px-3 font-bold">Cảnh báo & Chỉ đạo LĐ</th>
+                          <th className="py-3 px-3 font-bold text-center">Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {filteredPL.length === 0 ? (
+                          <tr><td colSpan="7" className="py-8 text-center text-slate-400">Không có cơ sở pháp lý phù hợp bộ lọc.</td></tr>
+                        ) : filteredPL.map((r, idx) => {
+                          const lvl = getAlertLevelPL(r);
+                          return (
+                            <tr key={r.phaply_id || idx} className="hover:bg-sky-50/40 transition">
+                              <td className="py-3 px-3 align-top whitespace-nowrap">
+                                <span className="inline-block px-2 py-0.5 rounded bg-[#003B7A] text-white font-bold text-[10px] mb-1">{r.ma_tinh}</span>
+                                <div className="font-bold text-slate-800">{r.phaply_id}</div>
+                              </td>
+                              <td className="py-3 px-3 align-top">
+                                <div className="font-bold text-[#003B7A]">{r.so_ky_hieu_vb}</div>
+                                <span className="inline-block mt-1 px-2 py-0.5 bg-sky-50 text-[#0094D9] rounded text-[10px] font-bold">{r.the_loai_vb}</span>
+                                {r.link_vb_goc && (
+                                  <a href={r.link_vb_goc} target="_blank" className="block mt-1 text-[10px] text-[#0094D9] hover:underline">
+                                    <i className="fa-solid fa-file-pdf mr-1"></i>Xem văn bản gốc
+                                  </a>
+                                )}
+                              </td>
+                              <td className="py-3 px-3 align-top max-w-sm">
+                                <div className="font-semibold text-slate-800">{r.nhom_nhiem_vu_trong_tam}</div>
+                                <div className="text-[11px] text-slate-500 mt-0.5">{r.khung_kien_truc}</div>
+                              </td>
+                              <td className="py-3 px-3 align-top">
+                                <div className="font-medium text-slate-700">{r.co_quan_ban_hanh}</div>
+                                <div className="text-[10px] text-slate-500">Ban hành: {r.ngay_ban_hanh || '—'}</div>
+                                <div className="text-[10px] text-slate-500">Giai đoạn: <b>{r.giai_doan_ap_dung || '—'}</b></div>
+                              </td>
+                              <td className="py-3 px-3 align-top whitespace-nowrap">
+                                <div className="font-bold text-[#003B7A]">{Number(r.tong_ngan_sach_du_kien || 0).toLocaleString('vi-VN')} tr</div>
+                                <div className="text-[10px] text-slate-500">{r.trang_thai_phap_ly || 'Chưa rõ TT'}</div>
+                                {r.muc_do_anh_huong_vnpt && <div className="text-[10px] text-[#0094D9]">VNPT: {r.muc_do_anh_huong_vnpt}</div>}
+                              </td>
+                              <td className="py-3 px-3 align-top max-w-xs">
+                                <div className="flex items-center gap-1.5 mb-1">
+                                  <span className={`w-2.5 h-2.5 rounded-full ${lvl === 'Đỏ' ? 'bg-[#D83A3A]' : lvl === 'Vàng' ? 'bg-[#FFC000]' : 'bg-[#00B050]'}`}></span>
+                                  <span className="font-bold text-[11px]">{lvl}</span>
+                                </div>
+                                {r.dexuat_chidao && <div className="text-[11px] text-slate-600 line-clamp-2"><b>Đề xuất:</b> {r.dexuat_chidao}</div>}
+                                {r.chidao_lanhdao && <div className="text-[11px] text-[#003B7A] mt-0.5 line-clamp-2"><b>Chỉ đạo:</b> {r.chidao_lanhdao}</div>}
+                              </td>
+                              <td className="py-3 px-3 align-top text-center">
+                                <button
+                                  onClick={() => { setModalItem({ type: 'phaply', row: r }); setChiDaoInput(r.chidao_lanhdao || ''); }}
+                                  className="px-2.5 py-1.5 bg-[#0094D9]/10 hover:bg-[#0094D9] text-[#0094D9] hover:text-white rounded-lg font-semibold transition"
+                                >
+                                  Chi tiết
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </main>
+
+            {/* FOOTER ĐỒNG BỘ HỆ THỐNG */}
+            <footer className="bg-white border-t border-slate-200 px-6 py-3 text-[11px] text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2">
+              <div>© 2026 <b>VNPT-IT | Ban KDGP - TTĐHKD</b> • Hệ thống Điều hành SXKD & Quản trị Dữ liệu (Fullstack Sheets → GitHub)</div>
+              <div>Đồng bộ dữ liệu: <b className="text-[#003B7A]">{updatedAt}</b></div>
+            </footer>
+          </div>
+
+          {/* =============== MODAL CHI TIẾT & GHI CHỈ ĐẠO LÃNH ĐẠO =============== */}
+          {modalItem && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden">
+                <div className="bg-[#003B7A] text-white px-5 py-3.5 flex justify-between items-center">
+                  <div>
+                    <div className="text-[10px] uppercase text-sky-300">
+                      {modalItem.type === 'phaply'
+                        ? `00_PHAPLY_CDS • ${modalItem.row.phaply_id} • ${modalItem.row.ma_tinh}`
+                        : `01_PHAPLY_NVU • ${modalItem.row.nhiemvu_id} • ${modalItem.row.phaply_id}`}
+                    </div>
+                    <h2 className="text-sm font-bold">
+                      {modalItem.type === 'phaply' ? modalItem.row.nhom_nhiem_vu_trong_tam : modalItem.row.ten_nhiem_vu}
+                    </h2>
+                  </div>
+                  <button onClick={() => setModalItem(null)} className="text-white/70 hover:text-white">
+                    <i className="fa-solid fa-xmark text-lg"></i>
+                  </button>
+                </div>
+
+                <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
+                  {modalItem.type === 'nhiemvu' ? (
+                    <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                      <div><span className="text-slate-400">Trụ cột / Nhóm NV:</span> <b className="block">{modalItem.row.nhom_tru_cot || '—'} • {modalItem.row.nhom_nhiem_vu || '—'}</b></div>
+                      <div><span className="text-slate-400">SPDV dự kiến / PLO:</span> <b className="block">{modalItem.row.spdv_du_kien || '—'} ({modalItem.row.plo_code || '—'})</b></div>
+                      <div><span className="text-slate-400">Nguồn vốn / Tình trạng:</span> <b className="block">{modalItem.row.nguon_von || '—'} / {modalItem.row.tinh_trang_von || '—'}</b></div>
+                      <div><span className="text-slate-400">Kinh phí / Năm:</span> <b className="block text-[#003B7A]">{Number(modalItem.row.kinh_phi_du_kien || 0).toLocaleString('vi-VN')} trVND ({modalItem.row.nam_trien_khai || '—'})</b></div>
+                      <div><span className="text-slate-400">Link CHKD / CLO PIC:</span> <b className="block">{modalItem.row.ma_chkd_link || 'Chưa tạo CHKD'} • {modalItem.row.clo_pic || 'Chưa gán PIC'}</b></div>
+                      <div><span className="text-slate-400">Đối thủ cạnh tranh:</span> <b className="block text-[#D83A3A]">{modalItem.row.doi_thu_canh_tranh || 'Không ghi nhận'}</b></div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                      <div><span className="text-slate-400">Số ký hiệu / Thể loại:</span> <b className="block">{modalItem.row.so_ky_hieu_vb} ({modalItem.row.the_loai_vb})</b></div>
+                      <div><span className="text-slate-400">Khung kiến trúc:</span> <b className="block">{modalItem.row.khung_kien_truc || '—'}</b></div>
+                      <div><span className="text-slate-400">Cơ quan ban hành:</span> <b className="block">{modalItem.row.co_quan_ban_hanh || '—'} ({modalItem.row.ngay_ban_hanh || '—'})</b></div>
+                      <div><span className="text-slate-400">Giai đoạn / Ngân sách:</span> <b className="block">{modalItem.row.giai_doan_ap_dung || '—'} • {Number(modalItem.row.tong_ngan_sach_du_kien || 0).toLocaleString('vi-VN')} tr</b></div>
+                      <div className="col-span-2">
+                        <span className="text-slate-400">Văn bản gốc:</span>{' '}
+                        {modalItem.row.link_vb_goc
+                          ? <a href={modalItem.row.link_vb_goc} target="_blank" className="text-[#0094D9] underline font-semibold">Mở file trên Google Drive</a>
+                          : <b className="text-slate-400">Chưa đính kèm</b>}
+                      </div>
+                    </div>
+                  )}
+
+                  {modalItem.row.nhom_vuong_mac && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                      <div className="font-bold text-amber-800 mb-1">Vướng mắc / Cảnh báo:</div>
+                      <pre className="whitespace-pre-wrap font-sans text-amber-900">{modalItem.row.nhom_vuong_mac}</pre>
+                    </div>
+                  )}
+
+                  {modalItem.row.dexuat_chidao && (
+                    <div className="bg-sky-50 border border-sky-200 rounded-xl p-3">
+                      <div className="font-bold text-[#003B7A] mb-1">Đề xuất của địa bàn / CLO:</div>
+                      <div>{modalItem.row.dexuat_chidao}</div>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block font-bold text-[#003B7A] mb-1.5">
+                      Ý kiến Chỉ đạo của Lãnh đạo (ghi trực tiếp về cột <code>chidao_lanhdao</code>):
+                    </label>
+                    <textarea
+                      rows="3"
+                      value={chiDaoInput}
+                      onChange={e => setChiDaoInput(e.target.value)}
+                      placeholder="Nhập chỉ đạo tháo gỡ, phân công làm việc với Sở/UBND hoặc kế hoạch giữ thị phần..."
+                      className="w-full border border-slate-300 rounded-lg p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#0094D9]"
+                    ></textarea>
+                  </div>
+                </div>
+
+                <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+                  <button onClick={() => setModalItem(null)} className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200">Đóng</button>
+                  <button
+                    onClick={handleSaveChiDao}
+                    disabled={savingChiDao}
+                    className="px-4 py-2 rounded-lg text-xs font-semibold bg-[#003B7A] hover:bg-[#002855] text-white flex items-center gap-1.5"
+                  >
+                    {savingChiDao && <i className="fa-solid fa-spinner fa-spin"></i>} Lưu chỉ đạo
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
