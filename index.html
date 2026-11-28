@@ -367,14 +367,14 @@
       }, [summaryRows]);
 
       const navItems = [
-        { id: 'p1', label: '1. Tổng quan SXKD', icon: 'fa-chart-line', href: 'index.html', active: true },
-        { id: 'p2', label: '2. Khung pháp lý CĐS', icon: 'fa-landmark', href: 'phaply.html' },
-        { id: 'p3', label: '3. Cơ hội kinh doanh', icon: 'fa-funnel-dollar', href: 'chkd.html' },
-        { id: 'p4', label: '4. Quản lý POC', icon: 'fa-flask', href: 'poc.html' },
-        { id: 'p5', label: '5. Đấu thầu', icon: 'fa-gavel', href: 'dauthau.html' },
-        { id: 'p6', label: '6. Hợp đồng', icon: 'fa-file-contract', href: 'hopdong.html' },
-        { id: 'p7', label: '7. Triển khai', icon: 'fa-gears', href: 'po.html' },
-        { id: 'p8', label: '8. Danh mục chuẩn', icon: 'fa-database', href: 'danhmuc.html' }
+        { id: 'p1', label: 'Tổng quan SXKD', icon: 'fa-chart-line', href: 'index.html', active: true },
+        { id: 'p2', label: 'Khung pháp lý CĐS', icon: 'fa-landmark', href: 'phaply.html' },
+        { id: 'p3', label: 'Cơ hội kinh doanh', icon: 'fa-funnel-dollar', href: 'chkd.html' },
+        { id: 'p4', label: 'Quản lý POC', icon: 'fa-flask', href: 'poc.html' },
+        { id: 'p5', label: 'Đấu thầu', icon: 'fa-gavel', href: 'dauthau.html' },
+        { id: 'p6', label: 'Hợp đồng', icon: 'fa-file-contract', href: 'hopdong.html' },
+        { id: 'p7', label: 'Triển khai', icon: 'fa-gears', href: 'po.html' },
+        { id: 'p8', label: 'Danh mục', icon: 'fa-database', href: 'danhmuc.html' }
       ];
 
       if (!user) return <LoginModal onLogin={fetchData} loading={loading} errorMsg={authError} />;
