@@ -371,8 +371,10 @@
         { id: 'p2', label: '2. Khung pháp lý CĐS', icon: 'fa-landmark', href: 'phaply.html' },
         { id: 'p3', label: '3. Cơ hội kinh doanh', icon: 'fa-funnel-dollar', href: 'chkd.html' },
         { id: 'p4', label: '4. Quản lý POC', icon: 'fa-flask', href: 'poc.html' },
-        { id: 'p5', label: '5. Đấu thầu & Hợp đồng', icon: 'fa-file-contract', href: 'dauthau_hd.html' },
-        { id: 'p6', label: '6. Danh mục chuẩn', icon: 'fa-database', href: 'danhmuc.html' }
+        { id: 'p5', label: '5. Đấu thầu', icon: 'fa-gavel', href: 'dauthau.html' },
+        { id: 'p6', label: '6. Hợp đồng', icon: 'fa-file-contract', href: 'hopdong.html' },
+        { id: 'p7', label: '7. Triển khai', icon: 'fa-gears', href: 'po.html' },
+        { id: 'p8', label: '8. Danh mục chuẩn', icon: 'fa-database', href: 'danhmuc.html' }
       ];
 
       if (!user) return <LoginModal onLogin={fetchData} loading={loading} errorMsg={authError} />;
@@ -380,7 +382,7 @@
       return (
         <div className="min-h-screen flex bg-[#F4F7FB]">
           {/* =============== SIDEBAR ĐIỀU HƯỚNG (ĐỒNG BỘ TOÀN HỆ THỐNG) =============== */}
-          <aside className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-[#003B7A] text-white flex flex-col transition-all duration-200 shrink-0 shadow-xl z-20`}>
+          <aside className={`${sidebarOpen ? 'w-52' : 'w-16'} bg-[#003B7A] text-white flex flex-col transition-all duration-200 shrink-0 shadow-xl z-20`}>
             <div className="h-16 px-4 flex items-center justify-between border-b border-white/10">
               {sidebarOpen && (
                 <div className="flex items-center gap-2.5 overflow-hidden">
