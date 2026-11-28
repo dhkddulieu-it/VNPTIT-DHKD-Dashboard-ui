@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phần 1: Tổng quan SXKD & Dự báo Kế hoạch | VNPT-IT Ban KDGP</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
+  <style>
+    :root { --vnpt-navy: #003B7A; --vnpt-blue: #0094D9; --vnpt-green: #00B050; --vnpt-yellow: #FFC000; --vnpt-red: #D83A3A; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #F4F7FB; color: #1E293B; }
+    .kpi-card { transition: transform .15s ease, box-shadow .15s ease; }
+    .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -5px rgba(0, 59, 122, .12); }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 999px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    // ================== CẤU HÌNH KẾT NỐI ==================
+    // Dán URL Web App GAS (/exec) vào đây. Khi đã dán, web TUYỆT ĐỐI chỉ đọc dữ liệu thật.
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycby6E6r6KhZ54J6by2s1PF8MqtOSJu74GcyqO4GsFnSwWd-GmDScZFrS5Brq0IwXlO1N/exec";
+    const STORAGE_KEY_USER = "vnpt_dhkd_user_v1";
+
+    // Dữ liệu mẫu khớp dòng 6-7 bạn cung cấp (chỉ chạy khi GAS_API_URL để trống)
+    const DEMO_SXKD = [
+      { thang: "10/2026", ma_tinh: "QNH", nhomspdv_code: "ATTT", luong_spdv: "B,C", plo_code: "", dt_kh_luyke: 4151.70, dt_kh_thang: -831.51, dt_th_luyke: 24933.55, dt_th_thang: 1082.41 },
+      { thang: "10/2026", ma_tinh: "QNH", nhomspdv_code: "CNNT", luong_spdv: "B,C", plo_code: "", dt_kh_luyke: 890.33, dt_kh_thang: 139.33, dt_th_luyke: 132.33, dt_th_thang: 4.11 },
+      { thang: "10/2026", ma_tinh: "QNH", nhomspdv_code: "GOV+DLTM", luong_spdv: "A", plo_code: "PLO_CSDLDANGANH", dt_kh_luyke: 25000, dt_kh_thang: 2500, dt_th_luyke: 12000, dt_th_thang: 1500 },
+      { thang: "10/2026", ma_tinh: "THA", nhomspdv_code: "GOV+DLTM", luong_spdv: "A", plo_code: "PLO_HANHCHINHSO", dt_kh_luyke: 120000, dt_kh_thang: 12000, dt_th_luyke: 42000, dt_th_thang: 5200 }
+    ];
+
+    const DEMO_PIPELINE = [
+      { ma_tinh: "QNH", ma_chkd: "CHKD-QNH-007", nhomspdv_code: "GOV+DLTM", plo_code: "", ten_spdv: "VNPT DMIT", ten_duan: "Tạo lập, xây dựng, cập nhật CSDL ngành Công thương", ten_khachhang: "Sở Công thương", ngay_dukienchot: "2026-11-01", thang: "11/2026", trang_thai: "OPEN", trangthai_pipeline: "3. Triển khai thử nghiệm/POC", songay_trangthai: 88, tile_thang: 40, ngansach_duan: 10000, doanhthu_dubao: 4000 },
+      { ma_tinh: "QNH", ma_chkd: "CHKD-QNH-002", nhomspdv_code: "GOV+DLTM", plo_code: "", ten_spdv: "VNPT DMIT", ten_duan: "Tạo lập, xây dựng, cập nhật CSDL ngành Nội vụ", ten_khachhang: "Sở Nội vụ", ngay_dukienchot: "2026-07-01", thang: "07/2026", trang_thai: "CLOSED", trangthai_pipeline: "10. Hỗ trợ sau bán hàng", songay_trangthai: 0, tile_thang: 100, ngansach_duan: 9581.87, doanhthu_dubao: 9582 },
+      { ma_tinh: "THA", ma_chkd: "CHKD-THA-003", nhomspdv_code: "GOV+DLTM", plo_code: "PLO_HANHCHINHSO", ten_spdv: "VNPT ICS", ten_duan: "Xây dựng và triển khai hệ thống đài truyền thanh thông minh", ten_khachhang: "Sở KH&CN THA", ngay_dukienchot: "2026-12-15", thang: "12/2026", trang_thai: "OPEN", trangthai_pipeline: "4. Hình thành cơ hội khả thi (dự toán)", songay_trangthai: 15, tile_thang: 60, ngansach_duan: 118000, doanhthu_dubao: 70800 }
+    ];
+
+    // ================== HELPER ĐỊNH DẠNG & PHÂN LOẠI KỊCH BẢN ==================
+    const fmt = (n, dec = 0) => Number(n || 0).toLocaleString('vi-VN', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+
+    function parseMonthOrder(mmYYYY) {
+      const p = String(mmYYYY || '').split('/');
+      if (p.length !== 2) return 0;
+      return parseInt(p[1], 10) * 100 + parseInt(p[0], 10);
+    }
+
+    function classifyScenario(row) {
+      if (row.projPct >= 100) {
+        return {
+          code: 'SAFE', label: 'Về đích an toàn', color: 'green',
+          advice: 'Tập trung kiểm soát tiến độ nghiệm thu, thanh toán để ghi nhận đủ doanh thu trong năm.'
+        };
+      }
+      if (row.netGap > 0 && row.coverage < 1.5) {
+        return {
+          code: 'THIEU_PHEU', label: 'Thiếu phễu (Báo động)', color: 'red',
+          advice: 'Phễu CHKD quá mỏng (<1.5x Gap). Quay về Phần 2 (01_PHAPLY_NVU) rà soát nhiệm vụ có vốn để mở mới CHKD ngay.'
+        };
+      }
+      return {
+        code: 'NGHEN_CHOT', label: 'Nghẽn chốt Deal', color: 'yellow',
+        advice: 'Phễu có quy mô nhưng tỷ lệ thắng/chốt còn thấp. Điều phối CLO + PLO đẩy nhanh các Deal Top giá trị sang ký HĐ.'
+      };
+    }
+
+    // ================== COMPONENT BIỂU ĐỒ CHART.JS ==================
+    function ChartBox({ id, title, subtitle, type, data, options }) {
+      const canvasRef = useRef(null);
+      const chartRef = useRef(null);
+
+      useEffect(() => {
+        if (!canvasRef.current) return;
+        if (chartRef.current) chartRef.current.destroy();
+        chartRef.current = new Chart(canvasRef.current, { type, data, options });
+        return () => { if (chartRef.current) chartRef.current.destroy(); };
+      }, [type, data, options]);
+
+      return (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-col">
+          <div className="mb-3">
+            <h3 className="text-sm font-bold text-[#003B7A] uppercase tracking-wide">{title}</h3>
+            {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+          </div>
+          <div className="relative h-64 w-full">
+            <canvas ref={canvasRef} id={id}></canvas>
+          </div>
+        </div>
+      );
+    }
+
+    // ================== MÀN HÌNH ĐĂNG NHẬP ==================
+    function LoginModal({ onLogin, loading, errorMsg }) {
+      const [email, setEmail] = useState("");
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        if (email.trim()) onLogin(email.trim().toLowerCase());
+      };
+
+      return (
+        <div className="fixed inset-0 bg-[#003B7A]/90 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="bg-gradient-to-r from-[#003B7A] to-[#0094D9] p-6 text-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center text-xl font-bold">V</div>
+                <div>
+                  <div className="text-xs uppercase tracking-widest opacity-80">VNPT-IT • Ban KDGP</div>
+                  <h1 className="text-lg font-bold">War-Room Điều hành SXKD</h1>
+                </div>
+              </div>
+            </div>
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase mb-1.5">
+                  Email xác thực (DMPHANQUYEN)
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="ten.ban@vnpt.vn"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0094D9]"
+                />
+              </div>
+              {errorMsg && <div className="text-xs text-[#D83A3A] bg-red-50 border border-red-200 rounded-lg p-2.5">{errorMsg}</div>}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-2.5 bg-[#0094D9] hover:bg-[#007bb5] text-white font-semibold rounded-lg text-sm transition flex items-center justify-center gap-2"
+              >
+                {loading ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-right-to-bracket"></i>}
+                Đăng nhập hệ thống
+              </button>
+              <p className="text-[11px] text-slate-400 text-center">
+                Phân quyền tự động theo cấp L0 / CLO L1-L2-L3 / PLO từ Google Sheets Master.
+              </p>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    // ================== ỨNG DỤNG CHÍNH ==================
+    function App() {
+      const [user, setUser] = useState(() => {
+        try { return JSON.parse(localStorage.getItem(STORAGE_KEY_USER) || "null"); } catch { return null; }
+      });
+      const [sidebarOpen, setSidebarOpen] = useState(true);
+      const [sxkdData, setSxkdData] = useState([]);
+      const [pipeData, setPipeData] = useState([]);
+      const [updatedAt, setUpdatedAt] = useState("");
+      const [loading, setLoading] = useState(false);
+      const [authError, setAuthError] = useState("");
+
+      // Bộ lọc Header
+      const [fThang, setFThang] = useState("");
+      const [fTinh, setFTinh] = useState("ALL");
+      const [fNhom, setFNhom] = useState("ALL");
+      const [fLuong, setFLuong] = useState("ALL");
+      const [fPlo, setFPlo] = useState("ALL");
+
+      // Chế độ bảng & lọc nhanh
+      const [groupBy, setGroupBy] = useState("ma_tinh"); // 'ma_tinh' | 'nhomspdv_code'
+      const [quickTab, setQuickTab] = useState("ALL");
+      const [search, setSearch] = useState("");
+      const [detailGroup, setDetailGroup] = useState(null);
+
+      const fetchData = async (email) => {
+        setLoading(true);
+        setAuthError("");
+        try {
+          if (!GAS_API_URL) {
+            const demoUser = { authorized: true, email, name: email.split('@')[0], role: 'L0', scope: 'ALL' };
+            localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(demoUser));
+            setUser(demoUser);
+            setSxkdData(DEMO_SXKD);
+            setPipeData(DEMO_PIPELINE);
+            setUpdatedAt("Chế độ dữ liệu mẫu");
+            setLoading(false);
+            return;
+          }
+          const res = await fetch(`${GAS_API_URL}?action=getSxkdData&email=${encodeURIComponent(email)}`);
+          const json = await res.json();
+          if (json.status !== 'success') {
+            setAuthError(json.message || 'Không có quyền truy cập');
+            setUser(null);
+            localStorage.removeItem(STORAGE_KEY_USER);
+          } else {
+            localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(json.user));
+            setUser(json.user);
+            setSxkdData(json.sxkd || []);
+            setPipeData(json.pipeline || []);
+            setUpdatedAt(json.updatedAt || '');
+          }
+        } catch (err) {
+          setAuthError("Lỗi kết nối GAS API: " + err.message);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      useEffect(() => {
+        if (user && user.email) fetchData(user.email);
+      }, []);
+
+      // Danh sách kỳ (thang) sắp xếp mới nhất lên đầu & tự chọn kỳ mới nhất
+      const filterOpts = useMemo(() => {
+        const thangs = [...new Set(sxkdData.map(r => r.thang).filter(Boolean))]
+          .sort((a, b) => parseMonthOrder(b) - parseMonthOrder(a));
+        return {
+          thang: thangs,
+          tinh: [...new Set([...sxkdData.map(r => r.ma_tinh), ...pipeData.map(r => r.ma_tinh)].filter(Boolean))].sort(),
+          nhom: [...new Set([...sxkdData.map(r => r.nhomspdv_code), ...pipeData.map(r => r.nhomspdv_code)].filter(Boolean))].sort(),
+          luong: [...new Set(sxkdData.map(r => r.luong_spdv).filter(Boolean))].sort(),
+          plo: [...new Set([...sxkdData.map(r => r.plo_code), ...pipeData.map(r => r.plo_code)].filter(Boolean))].sort()
+        };
+      }, [sxkdData, pipeData]);
+
+      useEffect(() => {
+        if (!fThang && filterOpts.thang.length > 0) setFThang(filterOpts.thang[0]);
+      }, [filterOpts.thang, fThang]);
+
+      const handleLogout = () => {
+        localStorage.removeItem(STORAGE_KEY_USER);
+        setUser(null);
+        setSxkdData([]);
+        setPipeData([]);
+      };
+
+      // Lọc SXKD theo kỳ đang chọn + các chiều phân tích
+      const filteredSxkd = useMemo(() => {
+        return sxkdData.filter(r => {
+          if (fThang && r.thang !== fThang) return false;
+          if (fTinh !== "ALL" && r.ma_tinh !== fTinh) return false;
+          if (fNhom !== "ALL" && r.nhomspdv_code !== fNhom) return false;
+          if (fLuong !== "ALL" && r.luong_spdv !== fLuong) return false;
+          if (fPlo !== "ALL" && r.plo_code !== fPlo) return false;
+          return true;
+        });
+      }, [sxkdData, fThang, fTinh, fNhom, fLuong, fPlo]);
+
+      // Lọc Pipeline tương ứng (chỉ dùng OPEN cho Dự báo bù Gap)
+      const filteredPipe = useMemo(() => {
+        return pipeData.filter(r => {
+          if (fTinh !== "ALL" && r.ma_tinh !== fTinh) return false;
+          if (fNhom !== "ALL" && r.nhomspdv_code !== fNhom) return false;
+          if (fPlo !== "ALL" && r.plo_code !== fPlo) return false;
+          return true;
+        });
+      }, [pipeData, fTinh, fNhom, fPlo]);
+
+      // Tính 5 KPIs trọng tâm toàn cục
+      const kpis = useMemo(() => {
+        const kh = filteredSxkd.reduce((s, r) => s + Number(r.dt_kh_luyke || 0), 0);
+        const th = filteredSxkd.reduce((s, r) => s + Number(r.dt_th_luyke || 0), 0);
+        const htPct = kh > 0 ? (th / kh) * 100 : 0;
+        const gap = Math.max(0, kh - th);
+
+        const openDeals = filteredPipe.filter(p => String(p.trang_thai || '').toUpperCase() === 'OPEN');
+        const openBudget = openDeals.reduce((s, p) => s + Number(p.ngansach_duan || 0), 0);
+        const openForecast = openDeals.reduce((s, p) => s + Number(p.doanhthu_dubao || 0), 0);
+
+        const totalProjected = th + openForecast;
+        const projPct = kh > 0 ? (totalProjected / kh) * 100 : 0;
+        const netGap = Math.max(0, gap - openForecast);
+        const coverage = gap > 0 ? openBudget / gap : (openBudget > 0 ? 9.9 : 0);
+
+        return { kh, th, htPct, gap, openCount: openDeals.length, openBudget, openForecast, totalProjected, projPct, netGap, coverage };
+      }, [filteredSxkd, filteredPipe]);
+
+      // Tổng hợp bảng điều hành theo Địa bàn hoặc Nhóm SPDV
+      const summaryRows = useMemo(() => {
+        const map = {};
+        const ensure = (k) => {
+          if (!map[k]) map[k] = { key: k, kh: 0, th: 0, openCount: 0, openBudget: 0, openForecast: 0, closedCount: 0, openDeals: [] };
+          return map[k];
+        };
+
+        filteredSxkd.forEach(r => {
+          const k = r[groupBy] || '(Chưa phân loại)';
+          const m = ensure(k);
+          m.kh += Number(r.dt_kh_luyke || 0);
+          m.th += Number(r.dt_th_luyke || 0);
+        });
+
+        filteredPipe.forEach(p => {
+          const k = p[groupBy] || '(Chưa phân loại)';
+          const m = ensure(k);
+          const st = String(p.trang_thai || '').toUpperCase();
+          if (st === 'OPEN') {
+            m.openCount += 1;
+            m.openBudget += Number(p.ngansach_duan || 0);
+            m.openForecast += Number(p.doanhthu_dubao || 0);
+            m.openDeals.push(p);
+          } else if (st === 'CLOSED') {
+            m.closedCount += 1;
+          }
+        });
+
+        return Object.values(map).map(m => {
+          const htPct = m.kh > 0 ? (m.th / m.kh) * 100 : (m.th > 0 ? 100 : 0);
+          const gap = Math.max(0, m.kh - m.th);
+          const totalProjected = m.th + m.openForecast;
+          const projPct = m.kh > 0 ? (totalProjected / m.kh) * 100 : (totalProjected > 0 ? 100 : 0);
+          const netGap = Math.max(0, gap - m.openForecast);
+          const coverage = gap > 0 ? m.openBudget / gap : (m.openBudget > 0 ? 9.9 : 0);
+          const row = { ...m, htPct, gap, totalProjected, projPct, netGap, coverage };
+          row.scenario = classifyScenario(row);
+          row.openDeals.sort((a, b) => Number(b.doanhthu_dubao || 0) - Number(a.doanhthu_dubao || 0));
+          return row;
+        }).sort((a, b) => b.netGap - a.netGap || b.kh - a.kh);
+      }, [filteredSxkd, filteredPipe, groupBy]);
+
+      const visibleRows = useMemo(() => {
+        return summaryRows.filter(r => {
+          if (quickTab !== "ALL" && r.scenario.code !== quickTab) return false;
+          if (search.trim() && !r.key.toLowerCase().includes(search.toLowerCase())) return false;
+          return true;
+        });
+      }, [summaryRows, quickTab, search]);
+
+      // Biểu đồ 1: Cấu trúc Khả năng Hoàn thành Kế hoạch (Bridge)
+      const chartBridgeData = useMemo(() => ({
+        labels: ['Kế hoạch giao', 'Thực hiện lũy kế', 'Dự báo OPEN (Weighted)', 'Tổng Dự kiến (TH+DB)', 'Net Gap còn thiếu'],
+        datasets: [{
+          label: 'Triệu VNĐ',
+          data: [kpis.kh, kpis.th, kpis.openForecast, kpis.totalProjected, kpis.netGap],
+          backgroundColor: ['#003B7A', '#00B050', '#0094D9', '#0EA5E9', '#D83A3A'],
+          borderRadius: 6
+        }]
+      }), [kpis]);
+
+      // Biểu đồ 2: Top 8 Đơn vị theo Kế hoạch vs (Thực hiện + Dự báo)
+      const chartTopData = useMemo(() => {
+        const top = [...summaryRows].sort((a, b) => b.kh - a.kh).slice(0, 8);
+        return {
+          labels: top.map(r => r.key),
+          datasets: [
+            { label: 'Kế hoạch giao', data: top.map(r => r.kh), backgroundColor: '#CBD5E1', borderRadius: 4 },
+            { label: 'Thực hiện lũy kế', data: top.map(r => r.th), backgroundColor: '#003B7A', borderRadius: 4 },
+            { label: 'Dự báo OPEN', data: top.map(r => r.openForecast), backgroundColor: '#0094D9', borderRadius: 4 }
+          ]
+        };
+      }, [summaryRows]);
+
+      const navItems = [
+        { id: 'p1', label: '1. Tổng quan SXKD', icon: 'fa-chart-line', href: 'index.html', active: true },
+        { id: 'p2', label: '2. Đề án & Nhiệm vụ CĐS', icon: 'fa-landmark', href: 'dean.html' },
+        { id: 'p3', label: '3. Cơ hội kinh doanh', icon: 'fa-funnel-dollar', href: 'chkd.html' },
+        { id: 'p4', label: '4. Quản lý POC', icon: 'fa-flask', href: 'poc.html' },
+        { id: 'p5', label: '5. Đấu thầu & Hợp đồng', icon: 'fa-file-contract', href: 'dauthau_hd.html' },
+        { id: 'p6', label: '6. Danh mục chuẩn', icon: 'fa-database', href: 'danhmuc.html' }
+      ];
+
+      if (!user) return <LoginModal onLogin={fetchData} loading={loading} errorMsg={authError} />;
+
+      return (
+        <div className="min-h-screen flex bg-[#F4F7FB]">
+          {/* =============== SIDEBAR ĐIỀU HƯỚNG (ĐỒNG BỘ TOÀN HỆ THỐNG) =============== */}
+          <aside className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-[#003B7A] text-white flex flex-col transition-all duration-200 shrink-0 shadow-xl z-20`}>
+            <div className="h-16 px-4 flex items-center justify-between border-b border-white/10">
+              {sidebarOpen && (
+                <div className="flex items-center gap-2.5 overflow-hidden">
+                  <div className="w-8 h-8 rounded-lg bg-[#0094D9] flex items-center justify-center font-extrabold text-sm">VN</div>
+                  <div className="leading-tight truncate">
+                    <div className="text-xs font-bold tracking-wide">VNPT-IT • Ban KDGP</div>
+                    <div className="text-[10px] text-sky-200">Executive War-Room</div>
+                  </div>
+                </div>
+              )}
+              <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1.5 rounded-lg hover:bg-white/10 text-sky-200">
+                <i className={`fa-solid ${sidebarOpen ? 'fa-bars-staggered' : 'fa-bars'}`}></i>
+              </button>
+            </div>
+
+            <nav className="flex-1 py-4 px-2 space-y-1">
+              {navItems.map(item => (
+                <a
+                  key={item.id}
+                  href={item.href}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
+                    item.active ? 'bg-[#0094D9] text-white shadow-md' : 'text-sky-100/80 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <i className={`fa-solid ${item.icon} w-5 text-center`}></i>
+                  {sidebarOpen && <span className="truncate">{item.label}</span>}
+                </a>
+              ))}
+            </nav>
+
+            <div className="p-3 border-t border-white/10 bg-[#002D5E]">
+              {sidebarOpen ? (
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold truncate">{user.name}</div>
+                    <div className="text-[10px] text-sky-300 truncate">{user.role} • Phạm vi: {user.scope}</div>
+                  </div>
+                  <button onClick={handleLogout} title="Đăng xuất" className="p-2 rounded-lg hover:bg-red-500/20 text-red-300">
+                    <i className="fa-solid fa-right-from-bracket"></i>
+                  </button>
+                </div>
+              ) : (
+                <button onClick={handleLogout} title="Đăng xuất" className="w-full p-2 rounded-lg hover:bg-red-500/20 text-red-300">
+                  <i className="fa-solid fa-right-from-bracket"></i>
+                </button>
+              )}
+            </div>
+          </aside>
+
+          {/* =============== KHUNG NỘI DUNG CHÍNH =============== */}
+          <div className="flex-1 flex flex-col min-w-0">
+            {!GAS_API_URL && (
+              <div className="bg-amber-50 border-b border-amber-300 px-6 py-2 text-xs text-amber-900">
+                <i className="fa-solid fa-triangle-exclamation mr-1.5 text-amber-600"></i>
+                <b>Đang chạy dữ liệu mẫu:</b> Dán link Web App GAS (<code>/exec</code>) vào biến <code>GAS_API_URL</code> trong <code>index.html</code> để kết nối dữ liệu thật.
+              </div>
+            )}
+
+            {/* HEADER 2 CỘT + BỘ LỌC ĐA CHIỀU */}
+            <header className="bg-white border-b border-slate-200 px-6 py-3.5 sticky top-0 z-10 shadow-sm">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-[#0094D9]">
+                    Phần 1 • 02_KEHOACH_SXKD & 03_PIPELINE_DUAN (ĐVT: Triệu VNĐ)
+                  </div>
+                  <h1 className="text-lg font-extrabold text-[#003B7A]">
+                    Tổng quan Thực hiện Kế hoạch SXKD & Dự báo Về đích từ Pipeline
+                  </h1>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <select value={fThang} onChange={e => setFThang(e.target.value)} className="text-xs border border-[#0094D9] rounded-lg px-2.5 py-1.5 bg-sky-50 font-bold text-[#003B7A]">
+                    {filterOpts.thang.map(v => <option key={v} value={v}>Kỳ: {v}</option>)}
+                  </select>
+                  <select value={fTinh} onChange={e => setFTinh(e.target.value)} className="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 bg-slate-50 font-medium">
+                    <option value="ALL">Địa bàn: Tất cả</option>
+                    {filterOpts.tinh.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                  <select value={fNhom} onChange={e => setFNhom(e.target.value)} className="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 bg-slate-50 font-medium">
+                    <option value="ALL">Nhóm SPDV: Tất cả</option>
+                    {filterOpts.nhom.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                  <select value={fLuong} onChange={e => setFLuong(e.target.value)} className="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 bg-slate-50 font-medium">
+                    <option value="ALL">Luồng: Tất cả</option>
+                    {filterOpts.luong.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                  <select value={fPlo} onChange={e => setFPlo(e.target.value)} className="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 bg-slate-50 font-medium">
+                    <option value="ALL">PLO: Tất cả</option>
+                    {filterOpts.plo.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                  <button
+                    onClick={() => fetchData(user.email)}
+                    className="px-3 py-1.5 bg-[#0094D9] hover:bg-[#007bb5] text-white rounded-lg text-xs font-semibold flex items-center gap-1.5"
+                  >
+                    <i className={`fa-solid fa-rotate ${loading ? 'fa-spin' : ''}`}></i> Đồng bộ
+                  </button>
+                </div>
+              </div>
+            </header>
+
+            <main className="flex-1 p-6 space-y-5 max-w-[1600px] w-full mx-auto">
+              {/* TẦNG 1: 5 THẺ KPI TRỌNG TÂM */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+                <div className="kpi-card bg-white rounded-xl border border-slate-200 p-4 border-l-4 border-l-[#003B7A]">
+                  <div className="text-xs font-semibold text-slate-500 uppercase">Thực hiện / KH lũy kế (KPI 1)</div>
+                  <div className="mt-2 flex items-baseline gap-1.5">
+                    <span className="text-2xl font-extrabold text-[#003B7A]">{fmt(kpis.htPct, 1)}%</span>
+                    <span className="text-xs text-slate-500">({fmt(kpis.th)} / {fmt(kpis.kh)})</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-1.5 rounded-full mt-2 overflow-hidden">
+                    <div className="bg-[#0094D9] h-full" style={{ width: `${Math.min(100, kpis.htPct)}%` }}></div>
+                  </div>
+                </div>
+
+                <div className="kpi-card bg-white rounded-xl border border-slate-200 p-4 border-l-4 border-l-[#D83A3A]">
+                  <div className="text-xs font-semibold text-slate-500 uppercase">Gap cần bù (trVND)</div>
+                  <div className="mt-2 flex items-baseline gap-1.5">
+                    <span className="text-2xl font-extrabold text-[#D83A3A]">{fmt(kpis.gap)}</span>
+                    <span className="text-xs text-slate-500">tr</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-slate-500">Phần doanh thu phải bù để đạt KH</div>
+                </div>
+
+                <div className="kpi-card bg-white rounded-xl border border-slate-200 p-4 border-l-4 border-l-[#0094D9]">
+                  <div className="text-xs font-semibold text-slate-500 uppercase">Dự báo OPEN (KPI 6)</div>
+                  <div className="mt-2 flex items-baseline gap-1.5">
+                    <span className="text-2xl font-extrabold text-[#0094D9]">{fmt(kpis.openForecast)}</span>
+                    <span className="text-xs text-slate-500">tr ({kpis.openCount} deal)</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-slate-500">Tổng phễu mở: <b>{fmt(kpis.openBudget)} tr</b></div>
+                </div>
+
+                <div className={`kpi-card bg-white rounded-xl border border-slate-200 p-4 border-l-4 ${
+                  kpis.projPct >= 100 ? 'border-l-[#00B050]' : kpis.projPct >= 85 ? 'border-l-[#FFC000]' : 'border-l-[#D83A3A]'
+                }`}>
+                  <div className="text-xs font-semibold text-slate-500 uppercase">Dự kiến Hoàn thành</div>
+                  <div className="mt-2 flex items-baseline gap-1.5">
+                    <span className={`text-2xl font-extrabold ${
+                      kpis.projPct >= 100 ? 'text-[#00B050]' : kpis.projPct >= 85 ? 'text-amber-600' : 'text-[#D83A3A]'
+                    }`}>
+                      {fmt(kpis.projPct, 1)}%
+                    </span>
+                    <span className="text-xs text-slate-500">({fmt(kpis.totalProjected)} tr)</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-slate-500">Thực hiện + Dự báo khả thi</div>
+                </div>
+
+                <div className="kpi-card bg-white rounded-xl border border-slate-200 p-4 border-l-4 border-l-[#FFC000]">
+                  <div className="text-xs font-semibold text-slate-500 uppercase">Phủ Phễu & Net Gap</div>
+                  <div className="mt-2 flex items-baseline gap-2">
+                    <span className={`text-2xl font-extrabold ${kpis.coverage >= 3 ? 'text-[#00B050]' : kpis.coverage >= 1.5 ? 'text-amber-600' : 'text-[#D83A3A]'}`}>
+                      {fmt(kpis.coverage, 1)}x
+                    </span>
+                    <span className="text-xs text-[#D83A3A] font-semibold">Thiếu: {fmt(kpis.netGap)} tr</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-slate-500">Chuẩn an toàn phủ phễu: ≥ 3.0x</div>
+                </div>
+              </div>
+
+              {/* TẦNG 2: 2 BIỂU ĐỒ PHÂN TÍCH TRỰC QUAN */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <ChartBox
+                  id="chartBridge"
+                  title="Cấu trúc Khả năng Về đích Kế hoạch (trVND)"
+                  subtitle="Đối chiếu Kế hoạch giao với Thực hiện lũy kế + Dự báo OPEN từ 03_PIPELINE_DUAN"
+                  type="bar"
+                  data={chartBridgeData}
+                  options={{
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                  }}
+                />
+                <ChartBox
+                  id="chartTop"
+                  title={`Top 8 ${groupBy === 'ma_tinh' ? 'Địa bàn' : 'Nhóm SPDV'}: Kế hoạch vs (Thực hiện + Dự báo)`}
+                  subtitle="So sánh nhanh đơn vị nào đủ lực về đích và đơn vị nào hụt phễu"
+                  type="bar"
+                  data={chartTopData}
+                  options={{
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } }
+                  }}
+                />
+              </div>
+
+              {/* TẦNG 3: BẢNG ĐIỀU HÀNH ĐỊA BÀN / NHÓM SPDV & TOP DEAL GÁNH FORECAST */}
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="p-4 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="inline-flex rounded-lg bg-slate-100 p-1">
+                      <button
+                        onClick={() => setGroupBy("ma_tinh")}
+                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${
+                          groupBy === "ma_tinh" ? "bg-[#003B7A] text-white" : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        Theo Địa bàn
+                      </button>
+                      <button
+                        onClick={() => setGroupBy("nhomspdv_code")}
+                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${
+                          groupBy === "nhomspdv_code" ? "bg-[#003B7A] text-white" : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        Theo Nhóm SPDV
+                      </button>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1">
+                      {[
+                        { id: 'ALL', label: `Tất cả (${summaryRows.length})` },
+                        { id: 'THIEU_PHEU', label: '🔴 Thiếu phễu' },
+                        { id: 'NGHEN_CHOT', label: '🟡 Nghẽn chốt Deal' },
+                        { id: 'SAFE', label: '🟢 Về đích an toàn' }
+                      ].map(t => (
+                        <button
+                          key={t.id}
+                          onClick={() => setQuickTab(t.id)}
+                          className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition ${
+                            quickTab === t.id ? 'bg-[#0094D9] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="relative w-full lg:w-64">
+                    <i className="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={e => setSearch(e.target.value)}
+                      placeholder="Tìm mã tỉnh / nhóm SPDV..."
+                      className="w-full pl-8 pr-3 py-1.5 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#0094D9]"
+                    />
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-50 text-[#003B7A] uppercase text-[11px] border-b border-slate-200">
+                        <th className="py-3 px-3 font-bold">{groupBy === 'ma_tinh' ? 'Địa bàn' : 'Nhóm SPDV'}</th>
+                        <th className="py-3 px-3 font-bold text-right">KH Lũy kế</th>
+                        <th className="py-3 px-3 font-bold text-right">TH Lũy kế (% HT)</th>
+                        <th className="py-3 px-3 font-bold text-right">Gap cần bù</th>
+                        <th className="py-3 px-3 font-bold text-right">Dự báo OPEN (Deal)</th>
+                        <th className="py-3 px-3 font-bold text-right">Dự kiến HT (%)</th>
+                        <th className="py-3 px-3 font-bold text-right">Net Gap / Phủ phễu</th>
+                        <th className="py-3 px-3 font-bold">Kịch bản Chỉ đạo</th>
+                        <th className="py-3 px-3 font-bold text-center">Soi Deal</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {visibleRows.length === 0 ? (
+                        <tr><td colSpan="9" className="py-8 text-center text-slate-400">Không có dữ liệu phù hợp bộ lọc.</td></tr>
+                      ) : visibleRows.map(r => (
+                        <tr key={r.key} className="hover:bg-sky-50/40 transition">
+                          <td className="py-3 px-3 font-extrabold text-[#003B7A]">{r.key}</td>
+                          <td className="py-3 px-3 text-right font-semibold">{fmt(r.kh)}</td>
+                          <td className="py-3 px-3 text-right">
+                            <div className="font-bold text-slate-800">{fmt(r.th)}</div>
+                            <div className="text-[10px] text-slate-500">{fmt(r.htPct, 1)}%</div>
+                          </td>
+                          <td className="py-3 px-3 text-right font-bold text-[#D83A3A]">{fmt(r.gap)}</td>
+                          <td className="py-3 px-3 text-right">
+                            <div className="font-bold text-[#0094D9]">{fmt(r.openForecast)}</div>
+                            <div className="text-[10px] text-slate-500">{r.openCount} deal ({fmt(r.openBudget)} tr)</div>
+                          </td>
+                          <td className="py-3 px-3 text-right">
+                            <span className={`px-2 py-0.5 rounded-full font-bold text-[11px] ${
+                              r.projPct >= 100 ? 'bg-emerald-100 text-[#00B050]' : r.projPct >= 85 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-[#D83A3A]'
+                            }`}>
+                              {fmt(r.projPct, 1)}%
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-right">
+                            <div className={`font-bold ${r.netGap > 0 ? 'text-[#D83A3A]' : 'text-[#00B050]'}`}>
+                              {r.netGap > 0 ? `-${fmt(r.netGap)}` : 'Đủ bù'}
+                            </div>
+                            <div className="text-[10px] text-slate-500">Coverage: {fmt(r.coverage, 1)}x</div>
+                          </td>
+                          <td className="py-3 px-3">
+                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold ${
+                              r.scenario.color === 'red' ? 'bg-red-100 text-[#D83A3A]' :
+                              r.scenario.color === 'yellow' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-[#00B050]'
+                            }`}>
+                              {r.scenario.label}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <button
+                              onClick={() => setDetailGroup(r)}
+                              className="px-2.5 py-1.5 bg-[#0094D9]/10 hover:bg-[#0094D9] text-[#0094D9] hover:text-white rounded-lg font-semibold transition"
+                            >
+                              Chi tiết
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </main>
+
+            {/* FOOTER ĐỒNG BỘ HỆ THỐNG */}
+            <footer className="bg-white border-t border-slate-200 px-6 py-3 text-[11px] text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2">
+              <div>© 2026 <b>VNPT-IT | Ban KDGP - TTĐHKD</b> • Hệ thống Điều hành SXKD & Quản trị Dữ liệu (Fullstack Sheets → GitHub)</div>
+              <div>Đồng bộ dữ liệu: <b className="text-[#003B7A]">{updatedAt}</b></div>
+            </footer>
+          </div>
+
+          {/* =============== MODAL SOI TOP DEAL GÁNH FORECAST & KHUYẾN NGHỊ CHỈ ĐẠO =============== */}
+          {detailGroup && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full overflow-hidden">
+                <div className="bg-[#003B7A] text-white px-5 py-3.5 flex justify-between items-center">
+                  <div>
+                    <div className="text-[10px] uppercase text-sky-300">Kỳ {fThang} • {groupBy === 'ma_tinh' ? 'Địa bàn' : 'Nhóm SPDV'}</div>
+                    <h2 className="text-base font-bold">{detailGroup.key} — {detailGroup.scenario.label}</h2>
+                  </div>
+                  <button onClick={() => setDetailGroup(null)} className="text-white/70 hover:text-white">
+                    <i className="fa-solid fa-xmark text-lg"></i>
+                  </button>
+                </div>
+
+                <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <div><span className="text-slate-400">KH / TH Lũy kế:</span><b className="block text-[#003B7A]">{fmt(detailGroup.th)} / {fmt(detailGroup.kh)} tr</b></div>
+                    <div><span className="text-slate-400">Gap cần bù:</span><b className="block text-[#D83A3A]">{fmt(detailGroup.gap)} tr</b></div>
+                    <div><span className="text-slate-400">Dự báo OPEN:</span><b className="block text-[#0094D9]">{fmt(detailGroup.openForecast)} tr ({detailGroup.openCount} deal)</b></div>
+                    <div><span className="text-slate-400">Dự kiến HT / Net Gap:</span><b className="block">{fmt(detailGroup.projPct, 1)}% • Thiếu {fmt(detailGroup.netGap)} tr</b></div>
+                  </div>
+
+                  <div className={`p-3 rounded-xl border ${
+                    detailGroup.scenario.color === 'red' ? 'bg-red-50 border-red-200 text-red-900' :
+                    detailGroup.scenario.color === 'yellow' ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                  }`}>
+                    <div className="font-bold mb-0.5"><i className="fa-solid fa-bullseye mr-1.5"></i>Đề xuất Chỉ đạo điều hành:</div>
+                    <div>{detailGroup.scenario.advice}</div>
+                  </div>
+
+                  <div>
+                    <div className="font-bold text-[#003B7A] mb-2 uppercase text-[11px]">
+                      Danh sách CHKD đang mở (OPEN) gánh Dự báo ({detailGroup.openDeals.length} cơ hội)
+                    </div>
+                    {detailGroup.openDeals.length === 0 ? (
+                      <div className="p-4 bg-slate-50 rounded-lg text-center text-slate-400">Chưa có cơ hội OPEN nào trong 03_PIPELINE_DUAN.</div>
+                    ) : (
+                      <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                        <table className="w-full text-left border-collapse text-[11px]">
+                          <thead>
+                            <tr className="bg-slate-50 text-[#003B7A] border-b border-slate-200">
+                              <th className="py-2 px-2.5">Mã CHKD / Dự án</th>
+                              <th className="py-2 px-2.5">Giai đoạn / Ngâm</th>
+                              <th className="py-2 px-2.5 text-right">Ngân sách</th>
+                              <th className="py-2 px-2.5 text-right">Win%</th>
+                              <th className="py-2 px-2.5 text-right">Dự báo</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {detailGroup.openDeals.slice(0, 15).map((d, i) => (
+                              <tr key={d.ma_chkd || i}>
+                                <td className="py-2 px-2.5">
+                                  <div className="font-bold text-slate-800">{d.ma_chkd}</div>
+                                  <div className="text-slate-600 line-clamp-1">{d.ten_duan}</div>
+                                  <div className="text-[10px] text-slate-400">{d.ten_khachhang} • Dự kiến chốt: {d.thang || d.ngay_dukienchot || '—'}</div>
+                                </td>
+                                <td className="py-2 px-2.5">
+                                  <div>{d.trangthai_pipeline || '—'}</div>
+                                  {Number(d.songay_trangthai) > 30 && (
+                                    <span className="inline-block mt-0.5 px-1.5 py-0.5 bg-red-100 text-[#D83A3A] rounded font-bold text-[10px]">
+                                      Ngâm {d.songay_trangthai} ngày
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="py-2 px-2.5 text-right font-medium">{fmt(d.ngansach_duan)}</td>
+                                <td className="py-2 px-2.5 text-right">{fmt(d.tile_thang)}%</td>
+                                <td className="py-2 px-2.5 text-right font-bold text-[#0094D9]">{fmt(d.doanhthu_dubao)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex justify-end">
+                  <button onClick={() => setDetailGroup(null)} className="px-4 py-2 rounded-lg text-xs font-semibold bg-[#003B7A] text-white hover:bg-[#002855]">Đóng</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
