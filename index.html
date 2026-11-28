@@ -10,9 +10,16 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     :root { --vnpt-navy: #003B7A; --vnpt-blue: #0094D9; --vnpt-green: #00B050; --vnpt-yellow: #FFC000; --vnpt-red: #D83A3A; }
-    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #F4F7FB; color: #1E293B; }
+    body, button, input, select, textarea {
+      font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #F4F7FB;
+      color: #1E293B;
+    }
     .kpi-card { transition: transform .15s ease, box-shadow .15s ease; }
     .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -5px rgba(0, 59, 122, .12); }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -24,6 +31,7 @@
 
   <script type="text/babel">
     const { useState, useEffect, useMemo, useRef } = React;
+    Chart.defaults.font.family = "'Nunito', sans-serif"; // Đồng bộ font cho toàn bộ biểu đồ
 
     // ================== CẤU HÌNH KẾT NỐI ==================
     // Dán URL Web App GAS (/exec) vào đây. Khi đã dán, web TUYỆT ĐỐI chỉ đọc dữ liệu thật.
