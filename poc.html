@@ -10,9 +10,16 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     :root { --vnpt-navy: #003B7A; --vnpt-blue: #0094D9; --vnpt-green: #00B050; --vnpt-yellow: #FFC000; --vnpt-red: #D83A3A; }
-    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #F4F7FB; color: #1E293B; }
+    body, button, input, select, textarea {
+      font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #F4F7FB;
+      color: #1E293B;
+    }
     .kpi-card { transition: transform .15s ease, box-shadow .15s ease; }
     .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -5px rgba(0, 59, 122, .12); }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -24,6 +31,7 @@
 
   <script type="text/babel">
     const { useState, useEffect, useMemo, useRef } = React;
+    Chart.defaults.font.family = "'Nunito', sans-serif"; // Đồng bộ font cho toàn bộ biểu đồ
 
     // ================== CẤU HÌNH KẾT NỐI ==================
     // Thay URL Web App GAS thật vào đây. Để trống sẽ tự chạy dữ liệu mẫu từ dòng 6-7 của bạn.
@@ -360,14 +368,14 @@
       }, [filteredData]);
 
       const navItems = [
-        { id: 'p1', label: '1. Tổng quan SXKD', icon: 'fa-chart-line', href: 'index.html' },
-        { id: 'p2', label: '2. Khung pháp lý CĐS', icon: 'fa-landmark', href: 'phaply.html' },
-        { id: 'p3', label: '3. Cơ hội kinh doanh', icon: 'fa-funnel-dollar', href: 'chkd.html' },
-        { id: 'p4', label: '4. Quản lý POC', icon: 'fa-flask', href: 'poc.html', active: true },
-        { id: 'p5', label: '5. Đấu thầu', icon: 'fa-gavel', href: 'dauthau.html' },
-        { id: 'p6', label: '6. Hợp đồng', icon: 'fa-file-contract', href: 'hopdong.html' },
-        { id: 'p7', label: '7. Triển khai', icon: 'fa-gears', href: 'po.html' },
-        { id: 'p8', label: '8. Danh mục chuẩn', icon: 'fa-database', href: 'danhmuc.html' }
+        { id: 'p1', label: 'Tổng quan SXKD', icon: 'fa-chart-line', href: 'index.html' },
+        { id: 'p2', label: 'Khung pháp lý CĐS', icon: 'fa-landmark', href: 'phaply.html' },
+        { id: 'p3', label: 'Cơ hội kinh doanh', icon: 'fa-funnel-dollar', href: 'chkd.html' },
+        { id: 'p4', label: 'Quản lý POC', icon: 'fa-flask', href: 'poc.html', active: true },
+        { id: 'p5', label: 'Đấu thầu', icon: 'fa-gavel', href: 'dauthau.html' },
+        { id: 'p6', label: 'Hợp đồng', icon: 'fa-file-contract', href: 'hopdong.html' },
+        { id: 'p7', label: 'Triển khai', icon: 'fa-gears', href: 'po.html' },
+        { id: 'p8', label: 'Danh mục', icon: 'fa-database', href: 'danhmuc.html' }
       ];
 
       if (!user) return <LoginModal onLogin={fetchData} loading={loading} errorMsg={authError} />;
